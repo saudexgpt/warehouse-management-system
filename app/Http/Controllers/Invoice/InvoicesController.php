@@ -28,294 +28,294 @@ use Illuminate\Http\Request;
 
 class InvoicesController extends Controller
 {
-    public function checkInvoiceItemsWithoutWaybill()
-    {
-        $invoice_items = InvoiceItem::has('waybillItems', '<', 1)->with('batches')->where('quantity_supplied', '>', 0)->get();
+    // public function checkInvoiceItemsWithoutWaybill()
+    // {
+    //     $invoice_items = InvoiceItem::has('waybillItems', '<', 1)->with('batches')->where('quantity_supplied', '>', 0)->get();
 
-        foreach ($invoice_items as $invoice_item) {
-            $invoice_item->batches()->delete();
-            $invoice_item->quantity_supplied = 0;
-            $invoice_item->save();
-        }
-    }
-    public function correctDispatchProductDate()
-    {
-        set_time_limit(0);
-        $waybills = Waybill::where('status', '!=', 'pending')->get();
-        foreach ($waybills as $waybill) {
-            $dispatch_products = $waybill->dispatchProducts;
-            foreach ($dispatch_products as $dispatch_product) {
-                $dispatch_product->created_at = $waybill->created_at;
-                $dispatch_product->save();
-            }
-        }
-        return 'true';
-    }
-    public function stabilizeInvoiceItems()
-    {
-        set_time_limit(0);
-        $invoice_items = InvoiceItem::where('remitted', 0)->where('quantity_supplied', '>', 0)->get();
-        foreach ($invoice_items as $invoice_item) {
-            $this->createInvoiceItemBatches($invoice_item, [], $invoice_item->quantity_supplied);
-            $invoice_item->remitted = 1;
-            $invoice_item->save();
-        }
-        return 'true';
-    }
+    //     foreach ($invoice_items as $invoice_item) {
+    //         $invoice_item->batches()->delete();
+    //         $invoice_item->quantity_supplied = 0;
+    //         $invoice_item->save();
+    //     }
+    // }
+    // public function correctDispatchProductDate()
+    // {
+    //     set_time_limit(0);
+    //     $waybills = Waybill::where('status', '!=', 'pending')->get();
+    //     foreach ($waybills as $waybill) {
+    //         $dispatch_products = $waybill->dispatchProducts;
+    //         foreach ($dispatch_products as $dispatch_product) {
+    //             $dispatch_product->created_at = $waybill->created_at;
+    //             $dispatch_product->save();
+    //         }
+    //     }
+    //     return 'true';
+    // }
+    // public function stabilizeInvoiceItems()
+    // {
+    //     set_time_limit(0);
+    //     $invoice_items = InvoiceItem::where('remitted', 0)->where('quantity_supplied', '>', 0)->get();
+    //     foreach ($invoice_items as $invoice_item) {
+    //         $this->createInvoiceItemBatches($invoice_item, [], $invoice_item->quantity_supplied);
+    //         $invoice_item->remitted = 1;
+    //         $invoice_item->save();
+    //     }
+    //     return 'true';
+    // }
 
-    public function deliverProducts()
-    {
-        set_time_limit(0);
-        $waybills = Waybill::where('remitted', 0)->where('status', '!=', 'pending')->get();
-        foreach ($waybills as $waybill) {
-            $waybillItems = $waybill->waybillItems()->where('remitted', 0)->get();
+    // public function deliverProducts()
+    // {
+    //     set_time_limit(0);
+    //     $waybills = Waybill::where('remitted', 0)->where('status', '!=', 'pending')->get();
+    //     foreach ($waybills as $waybill) {
+    //         $waybillItems = $waybill->waybillItems()->where('remitted', 0)->get();
 
-            $status = $waybill->status;
-            if ($status != 'delivered') {
-                $status = 'on transit';
-            }
-            $this->sendItemInStockForDelivery($waybillItems, $status);
-            $waybill->remitted = 1;
-            $waybill->save();
-        }
-        return 'true';
-    }
+    //         $status = $waybill->status;
+    //         if ($status != 'delivered') {
+    //             $status = 'on transit';
+    //         }
+    //         $this->sendItemInStockForDelivery($waybillItems, $status);
+    //         $waybill->remitted = 1;
+    //         $waybill->save();
+    //     }
+    //     return 'true';
+    // }
 
-    private function dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $quantity, $status)
-    {
-        $dispatched_product = new DispatchedProduct();
-        $dispatched_product->warehouse_id = $warehouse_id;
-        $dispatched_product->item_stock_sub_batch_id = $item_stock_batch->id;
-        $dispatched_product->waybill_id = $waybill_item->waybill_id;
-        $dispatched_product->waybill_item_id = $waybill_item->id;
-        $dispatched_product->quantity_supplied = $quantity;
-        $dispatched_product->remitted = 1;
-        $dispatched_product->instant_balance = $item_stock_batch->balance;
-        $dispatched_product->status = $status;
-        $dispatched_product->save();
-    }
-    public function sendItemInStockForDelivery($waybill_items, $status = 'on transit')
-    {
-        foreach ($waybill_items as $waybill_item) {
+    // private function dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $quantity, $status)
+    // {
+    //     $dispatched_product = new DispatchedProduct();
+    //     $dispatched_product->warehouse_id = $warehouse_id;
+    //     $dispatched_product->item_stock_sub_batch_id = $item_stock_batch->id;
+    //     $dispatched_product->waybill_id = $waybill_item->waybill_id;
+    //     $dispatched_product->waybill_item_id = $waybill_item->id;
+    //     $dispatched_product->quantity_supplied = $quantity;
+    //     $dispatched_product->remitted = 1;
+    //     $dispatched_product->instant_balance = $item_stock_batch->balance;
+    //     $dispatched_product->status = $status;
+    //     $dispatched_product->save();
+    // }
+    // public function sendItemInStockForDelivery($waybill_items, $status = 'on transit')
+    // {
+    //     foreach ($waybill_items as $waybill_item) {
 
-            $warehouse_id = $waybill_item->warehouse_id;
-            $waybill_quantity = $waybill_item->quantity;
-            $invoice_item_id = $waybill_item->invoice_item_id;
-            $invoice_item_batches = InvoiceItemBatch::with('itemStockBatch')->where('invoice_item_id', $invoice_item_id)->where('quantity', '>', '0')->get();
-            // $items_in_stock= ItemStock::where(['warehouse_id' => $warehouse_id, 'item_id' => $waybill_item->item_id])
-            //     ->where('balance', '>', '0')->orderBy('id')->get();
-            // $item_stock_sub_batches = ItemStockSubBatch::with('itemStock')->where(['warehouse_id' => $warehouse_id, 'item_id' => $waybill_item->item_id])
-            //     ->where('balance', '>', '0')->orderBy('id')->get();
-            if ($invoice_item_batches->count() > 0) {
-                foreach ($invoice_item_batches as $invoice_item_batch) :
+    //         $warehouse_id = $waybill_item->warehouse_id;
+    //         $waybill_quantity = $waybill_item->quantity;
+    //         $invoice_item_id = $waybill_item->invoice_item_id;
+    //         $invoice_item_batches = InvoiceItemBatch::with('itemStockBatch')->where('invoice_item_id', $invoice_item_id)->where('quantity', '>', '0')->get();
+    //         // $items_in_stock= ItemStock::where(['warehouse_id' => $warehouse_id, 'item_id' => $waybill_item->item_id])
+    //         //     ->where('balance', '>', '0')->orderBy('id')->get();
+    //         // $item_stock_sub_batches = ItemStockSubBatch::with('itemStock')->where(['warehouse_id' => $warehouse_id, 'item_id' => $waybill_item->item_id])
+    //         //     ->where('balance', '>', '0')->orderBy('id')->get();
+    //         if ($invoice_item_batches->count() > 0) {
+    //             foreach ($invoice_item_batches as $invoice_item_batch) :
 
-                    $for_supply = $invoice_item_batch->quantity;
-                    $item_stock_batch = $invoice_item_batch->itemStockBatch;
-                    $item_id = $item_stock_batch->item_id;
+    //                 $for_supply = $invoice_item_batch->quantity;
+    //                 $item_stock_batch = $invoice_item_batch->itemStockBatch;
+    //                 $item_id = $item_stock_batch->item_id;
 
-                    if ($waybill_quantity <= $for_supply) {
-                        $invoice_item_batch->quantity -= $waybill_quantity;
-                        $invoice_item_batch->save();
+    //                 if ($waybill_quantity <= $for_supply) {
+    //                     $invoice_item_batch->quantity -= $waybill_quantity;
+    //                     $invoice_item_batch->save();
 
-                        if ($item_stock_batch->balance > 0) {
-                            if ($item_stock_batch->balance >= $waybill_quantity) {
-                                $item_stock_batch->reserved_for_supply -= $waybill_quantity;
-                                if ($status == 'on transit') {
-                                    $item_stock_batch->in_transit += $waybill_quantity;
-                                } else {
-                                    $item_stock_batch->supplied += $waybill_quantity;
-                                }
+    //                     if ($item_stock_batch->balance > 0) {
+    //                         if ($item_stock_batch->balance >= $waybill_quantity) {
+    //                             $item_stock_batch->reserved_for_supply -= $waybill_quantity;
+    //                             if ($status == 'on transit') {
+    //                                 $item_stock_batch->in_transit += $waybill_quantity;
+    //                             } else {
+    //                                 $item_stock_batch->supplied += $waybill_quantity;
+    //                             }
 
-                                $item_stock_batch->balance -=  $waybill_quantity;
-                                $item_stock_batch->save();
+    //                             $item_stock_batch->balance -=  $waybill_quantity;
+    //                             $item_stock_batch->save();
 
-                                $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $waybill_quantity, $status);
+    //                             $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $waybill_quantity, $status);
 
-                                $waybill_quantity = 0;
-                            } else {
-                                $waybill_quantity -= $item_stock_batch->balance;
-                                $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $item_stock_batch->balance, $status);
-                                $item_stock_batch->reserved_for_supply -=
-                                    $item_stock_batch->balance;
-                                if ($status == 'on transit') {
-                                    $item_stock_batch->in_transit += $item_stock_batch->balance;
-                                } else {
-                                    $item_stock_batch->supplied += $item_stock_batch->balance;
-                                }
-                                $item_stock_batch->balance =  0;
-                                $item_stock_batch->save();
+    //                             $waybill_quantity = 0;
+    //                         } else {
+    //                             $waybill_quantity -= $item_stock_batch->balance;
+    //                             $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $item_stock_batch->balance, $status);
+    //                             $item_stock_batch->reserved_for_supply -=
+    //                                 $item_stock_batch->balance;
+    //                             if ($status == 'on transit') {
+    //                                 $item_stock_batch->in_transit += $item_stock_batch->balance;
+    //                             } else {
+    //                                 $item_stock_batch->supplied += $item_stock_batch->balance;
+    //                             }
+    //                             $item_stock_batch->balance =  0;
+    //                             $item_stock_batch->save();
 
-                                $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
-                                foreach ($next_item_stock_batches as $next_item_stock_batch) {
-                                    if ($waybill_quantity <= $next_item_stock_batch->balance) {
+    //                             $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
+    //                             foreach ($next_item_stock_batches as $next_item_stock_batch) {
+    //                                 if ($waybill_quantity <= $next_item_stock_batch->balance) {
 
-                                        if ($status == 'on transit') {
-                                            $next_item_stock_batch->in_transit += $waybill_quantity;
-                                        } else {
-                                            $next_item_stock_batch->supplied += $waybill_quantity;
-                                        }
-                                        $next_item_stock_batch->balance -=  $waybill_quantity;
-                                        $next_item_stock_batch->save();
+    //                                     if ($status == 'on transit') {
+    //                                         $next_item_stock_batch->in_transit += $waybill_quantity;
+    //                                     } else {
+    //                                         $next_item_stock_batch->supplied += $waybill_quantity;
+    //                                     }
+    //                                     $next_item_stock_batch->balance -=  $waybill_quantity;
+    //                                     $next_item_stock_batch->save();
 
-                                        $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $waybill_quantity, $status);
+    //                                     $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $waybill_quantity, $status);
 
-                                        $waybill_quantity = 0;
-                                        break;
-                                    } else {
-                                        if ($status == 'on transit') {
-                                            $next_item_stock_batch->in_transit +=
-                                                $next_item_stock_batch->balance;
-                                        } else {
-                                            $next_item_stock_batch->supplied +=
-                                                $next_item_stock_batch->balance;
-                                        }
-                                        $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance, $status);
+    //                                     $waybill_quantity = 0;
+    //                                     break;
+    //                                 } else {
+    //                                     if ($status == 'on transit') {
+    //                                         $next_item_stock_batch->in_transit +=
+    //                                             $next_item_stock_batch->balance;
+    //                                     } else {
+    //                                         $next_item_stock_batch->supplied +=
+    //                                             $next_item_stock_batch->balance;
+    //                                     }
+    //                                     $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance, $status);
 
-                                        $waybill_quantity -= $next_item_stock_batch->balance;
-                                        $next_item_stock_batch->balance =  0;
-                                        $next_item_stock_batch->save();
-                                    }
-                                }
-                            }
-                        } else {
-                            $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
-                            foreach ($next_item_stock_batches as $next_item_stock_batch) {
-                                if ($waybill_quantity <= $next_item_stock_batch->balance) {
-                                    if ($status == 'on transit') {
-                                        $next_item_stock_batch->in_transit += $waybill_quantity;
-                                    } else {
-                                        $next_item_stock_batch->supplied += $waybill_quantity;
-                                    }
-                                    $next_item_stock_batch->balance -=  $waybill_quantity;
-                                    $next_item_stock_batch->save();
+    //                                     $waybill_quantity -= $next_item_stock_batch->balance;
+    //                                     $next_item_stock_batch->balance =  0;
+    //                                     $next_item_stock_batch->save();
+    //                                 }
+    //                             }
+    //                         }
+    //                     } else {
+    //                         $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
+    //                         foreach ($next_item_stock_batches as $next_item_stock_batch) {
+    //                             if ($waybill_quantity <= $next_item_stock_batch->balance) {
+    //                                 if ($status == 'on transit') {
+    //                                     $next_item_stock_batch->in_transit += $waybill_quantity;
+    //                                 } else {
+    //                                     $next_item_stock_batch->supplied += $waybill_quantity;
+    //                                 }
+    //                                 $next_item_stock_batch->balance -=  $waybill_quantity;
+    //                                 $next_item_stock_batch->save();
 
-                                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $waybill_quantity, $status);
+    //                                 $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $waybill_quantity, $status);
 
-                                    $waybill_quantity = 0;
-                                    break;
-                                } else {
+    //                                 $waybill_quantity = 0;
+    //                                 break;
+    //                             } else {
 
-                                    if ($status == 'on transit') {
-                                        $next_item_stock_batch->in_transit += $next_item_stock_batch->balance;
-                                    } else {
-                                        $next_item_stock_batch->supplied += $next_item_stock_batch->balance;
-                                    }
-                                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance, $status);
+    //                                 if ($status == 'on transit') {
+    //                                     $next_item_stock_batch->in_transit += $next_item_stock_batch->balance;
+    //                                 } else {
+    //                                     $next_item_stock_batch->supplied += $next_item_stock_batch->balance;
+    //                                 }
+    //                                 $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance, $status);
 
-                                    $waybill_quantity -= $next_item_stock_batch->balance;
-                                    $next_item_stock_batch->balance =  0;
-                                    $next_item_stock_batch->save();
-                                }
-                            }
-                        }
-                        //// also update item_stocks table/////////
-                        // $invoice_item_batch->itemStockBatch->itemStock->in_transit +=  $waybill_quantity;
-                        // $invoice_item_batch->itemStockBatch->itemStock->balance -=  $waybill_quantity;
-                        // $invoice_item_batch->itemStockBatch->itemStock->save();
-
-
-
-                        $waybill_quantity = 0; //we have sent all items for delivery
-                        break;
-                    } else {
-                        $invoice_item_batch->quantity = 0;
-                        $invoice_item_batch->save();
-
-                        if ($item_stock_batch->balance > 0) {
-                            if ($item_stock_batch->balance >= $for_supply) {
-                                $item_stock_batch->reserved_for_supply -= $for_supply;
-                                if ($status == 'on transit') {
-                                    $item_stock_batch->in_transit += $for_supply;
-                                } else {
-                                    $item_stock_batch->supplied += $for_supply;
-                                }
-
-                                $item_stock_batch->balance -=  $for_supply;
-                                $item_stock_batch->save();
-
-                                $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $for_supply, $status);
-                            } else {
-                                $for_supply -= $item_stock_batch->balance;
-                                $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $item_stock_batch->balance, $status);
-                                $item_stock_batch->reserved_for_supply -=
-                                    $item_stock_batch->balance;
-                                if ($status == 'on transit') {
-                                    $item_stock_batch->in_transit += $item_stock_batch->balance;
-                                } else {
-                                    $item_stock_batch->supplied += $item_stock_batch->balance;
-                                }
-
-                                $item_stock_batch->balance =  0;
-                                $item_stock_batch->save();
-
-                                $next_item_stock_batches2 = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
-                                foreach ($next_item_stock_batches2 as $next_item_stock_batch2) {
-                                    if ($for_supply <= $next_item_stock_batch2->balance) {
-                                        if ($status == 'on transit') {
-                                            $next_item_stock_batch2->in_transit += $for_supply;
-                                        } else {
-                                            $next_item_stock_batch2->supplied += $for_supply;
-                                        }
-
-                                        $next_item_stock_batch2->balance -=  $for_supply;
-                                        $next_item_stock_batch2->save();
-                                        $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $for_supply, $status);
-                                        //$for_supply = 0;
-                                        break;
-                                    } else {
-                                        if ($status == 'on transit') {
-                                            $next_item_stock_batch2->in_transit += $next_item_stock_batch2->balance;
-                                        } else {
-                                            $next_item_stock_batch2->supplied += $next_item_stock_batch2->balance;
-                                        }
-
-                                        $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $next_item_stock_batch2->balance, $status);
-                                        $for_supply -= $next_item_stock_batch2->balance;
-
-                                        $next_item_stock_batch2->balance =  0;
-                                        $next_item_stock_batch2->save();
-                                    }
-                                }
-                            }
-                        } else {
-                            $next_item_stock_batches2 = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
-                            foreach ($next_item_stock_batches2 as $next_item_stock_batch2) {
-                                if ($for_supply <= $next_item_stock_batch2->balance) {
-                                    if ($status == 'on transit') {
-                                        $next_item_stock_batch2->in_transit += $for_supply;
-                                    } else {
-                                        $next_item_stock_batch2->supplied += $for_supply;
-                                    }
-                                    $next_item_stock_batch2->balance -=  $for_supply;
-                                    $next_item_stock_batch2->save();
-                                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $for_supply, $status);
-                                    //$for_supply = 0;
-                                    break;
-                                } else {
-
-                                    if ($status == 'on transit') {
-                                        $next_item_stock_batch2->in_transit += $next_item_stock_batch2->balance;
-                                    } else {
-                                        $next_item_stock_batch2->supplied += $next_item_stock_batch2->balance;
-                                    }
-                                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $next_item_stock_batch2->balance, $status);
-                                    $for_supply -= $next_item_stock_batch2->balance;
-
-                                    $next_item_stock_batch2->balance =  0;
-                                    $next_item_stock_batch2->save();
-                                }
-                            }
-                        }
+    //                                 $waybill_quantity -= $next_item_stock_batch->balance;
+    //                                 $next_item_stock_batch->balance =  0;
+    //                                 $next_item_stock_batch->save();
+    //                             }
+    //                         }
+    //                     }
+    //                     //// also update item_stocks table/////////
+    //                     // $invoice_item_batch->itemStockBatch->itemStock->in_transit +=  $waybill_quantity;
+    //                     // $invoice_item_batch->itemStockBatch->itemStock->balance -=  $waybill_quantity;
+    //                     // $invoice_item_batch->itemStockBatch->itemStock->save();
 
 
-                        $waybill_quantity -= $for_supply;
-                    }
-                endforeach;
-            }
-            $waybill_item->remitted = 1;
-            $waybill_item->save();
-        }
-    }
+
+    //                     $waybill_quantity = 0; //we have sent all items for delivery
+    //                     break;
+    //                 } else {
+    //                     $invoice_item_batch->quantity = 0;
+    //                     $invoice_item_batch->save();
+
+    //                     if ($item_stock_batch->balance > 0) {
+    //                         if ($item_stock_batch->balance >= $for_supply) {
+    //                             $item_stock_batch->reserved_for_supply -= $for_supply;
+    //                             if ($status == 'on transit') {
+    //                                 $item_stock_batch->in_transit += $for_supply;
+    //                             } else {
+    //                                 $item_stock_batch->supplied += $for_supply;
+    //                             }
+
+    //                             $item_stock_batch->balance -=  $for_supply;
+    //                             $item_stock_batch->save();
+
+    //                             $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $for_supply, $status);
+    //                         } else {
+    //                             $for_supply -= $item_stock_batch->balance;
+    //                             $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $item_stock_batch->balance, $status);
+    //                             $item_stock_batch->reserved_for_supply -=
+    //                                 $item_stock_batch->balance;
+    //                             if ($status == 'on transit') {
+    //                                 $item_stock_batch->in_transit += $item_stock_batch->balance;
+    //                             } else {
+    //                                 $item_stock_batch->supplied += $item_stock_batch->balance;
+    //                             }
+
+    //                             $item_stock_batch->balance =  0;
+    //                             $item_stock_batch->save();
+
+    //                             $next_item_stock_batches2 = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
+    //                             foreach ($next_item_stock_batches2 as $next_item_stock_batch2) {
+    //                                 if ($for_supply <= $next_item_stock_batch2->balance) {
+    //                                     if ($status == 'on transit') {
+    //                                         $next_item_stock_batch2->in_transit += $for_supply;
+    //                                     } else {
+    //                                         $next_item_stock_batch2->supplied += $for_supply;
+    //                                     }
+
+    //                                     $next_item_stock_batch2->balance -=  $for_supply;
+    //                                     $next_item_stock_batch2->save();
+    //                                     $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $for_supply, $status);
+    //                                     //$for_supply = 0;
+    //                                     break;
+    //                                 } else {
+    //                                     if ($status == 'on transit') {
+    //                                         $next_item_stock_batch2->in_transit += $next_item_stock_batch2->balance;
+    //                                     } else {
+    //                                         $next_item_stock_batch2->supplied += $next_item_stock_batch2->balance;
+    //                                     }
+
+    //                                     $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $next_item_stock_batch2->balance, $status);
+    //                                     $for_supply -= $next_item_stock_batch2->balance;
+
+    //                                     $next_item_stock_batch2->balance =  0;
+    //                                     $next_item_stock_batch2->save();
+    //                                 }
+    //                             }
+    //                         }
+    //                     } else {
+    //                         $next_item_stock_batches2 = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
+    //                         foreach ($next_item_stock_batches2 as $next_item_stock_batch2) {
+    //                             if ($for_supply <= $next_item_stock_batch2->balance) {
+    //                                 if ($status == 'on transit') {
+    //                                     $next_item_stock_batch2->in_transit += $for_supply;
+    //                                 } else {
+    //                                     $next_item_stock_batch2->supplied += $for_supply;
+    //                                 }
+    //                                 $next_item_stock_batch2->balance -=  $for_supply;
+    //                                 $next_item_stock_batch2->save();
+    //                                 $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $for_supply, $status);
+    //                                 //$for_supply = 0;
+    //                                 break;
+    //                             } else {
+
+    //                                 if ($status == 'on transit') {
+    //                                     $next_item_stock_batch2->in_transit += $next_item_stock_batch2->balance;
+    //                                 } else {
+    //                                     $next_item_stock_batch2->supplied += $next_item_stock_batch2->balance;
+    //                                 }
+    //                                 $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $next_item_stock_batch2->balance, $status);
+    //                                 $for_supply -= $next_item_stock_batch2->balance;
+
+    //                                 $next_item_stock_batch2->balance =  0;
+    //                                 $next_item_stock_batch2->save();
+    //                             }
+    //                         }
+    //                     }
+
+
+    //                     $waybill_quantity -= $for_supply;
+    //                 }
+    //             endforeach;
+    //         }
+    //         $waybill_item->remitted = 1;
+    //         $waybill_item->save();
+    //     }
+    // }
 
     /**
      * Display a listing of the resource.

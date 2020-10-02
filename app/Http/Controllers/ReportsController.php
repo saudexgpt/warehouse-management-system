@@ -13,6 +13,7 @@ use App\Models\Logistics\VehicleExpense;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStock;
 use App\Models\Stock\ItemStockSubBatch;
+use App\Models\Transfers\TransferRequestDispatchedProduct;
 use App\Models\Warehouse\Warehouse;
 use App\Notification;
 use Carbon\Carbon;
@@ -577,10 +578,18 @@ class ReportsController extends Controller
             ->select('*', \DB::raw('SUM(quantity) as quantity'))
             ->first();
         $previous_outbound = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
+            ->having('warehouse_id', $warehouse_id)
             ->where('item_stock_sub_batches.item_id', $item_id)
             ->where('dispatched_products.created_at', '<', $date_from)
             ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
             ->orderby('dispatched_products.created_at')->first();
+
+        $previous_transfer_outbound = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
+            ->having('supply_warehouse_id', $warehouse_id)
+            ->where('item_stock_sub_batches.item_id', $item_id)
+            ->where('transfer_request_dispatched_products.created_at', '<', $date_from)
+            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
+            ->orderby('transfer_request_dispatched_products.created_at')->first();
         // return [
         //     'total' => $total_stock_till_date,
         //     'previous_outbound' => $previous_outbound,
@@ -594,7 +603,9 @@ class ReportsController extends Controller
         $bincards = [];
         $quantity_in_stock = ($total_stock_till_date) ? $total_stock_till_date->quantity : 0;
         $quantity_supplied = ($previous_outbound) ? $previous_outbound->quantity_supplied : 0;
-        $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied;
+        $transfer_item_quantity_supplied = ($previous_transfer_outbound) ? $previous_transfer_outbound->quantity_supplied : 0;
+
+        $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied;
         foreach ($inbounds as $inbound) {
             //$running_balance += $inbound->quantity;
             $bincards[]  = [
@@ -630,6 +641,29 @@ class ReportsController extends Controller
                 'date' => $outbound->created_at,
                 'invoice_no' => $outbound->waybillItem->invoice->invoice_number,
                 'waybill_grn' => $outbound->waybill->waybill_no,
+                'quantity_transacted' => $outbound->quantity_supplied,
+                'in' => '',
+                'out' => $outbound->quantity_supplied,
+                'balance' => 0, // initially set to zero
+                'packaging' => $outbound->itemStock->item->package_type,
+                'physical_quantity' => '',
+                'sign' => '',
+            ];
+        }
+        $outbounds2 = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
+            ->groupBy('transfer_request_waybill_id')
+            ->having('supply_warehouse_id', $warehouse_id)
+            ->where('item_stock_sub_batches.item_id', $item_id)
+            ->where('transfer_request_dispatched_products.created_at', '>=', $date_from)
+            ->where('transfer_request_dispatched_products.created_at', '<=', $date_to)
+            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
+        foreach ($outbounds2 as $outbound) {
+            //$running_balance -= $outbound->quantity_supplied;
+            $bincards[] = [
+                'type' => 'out_bound',
+                'date' => $outbound->created_at,
+                'invoice_no' => $outbound->transferWaybillItem->invoice->request_number,
+                'waybill_grn' => $outbound->transferWaybill->transfer_request_waybill_no,
                 'quantity_transacted' => $outbound->quantity_supplied,
                 'in' => '',
                 'out' => $outbound->quantity_supplied,
