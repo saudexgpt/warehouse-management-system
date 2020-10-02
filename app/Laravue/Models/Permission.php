@@ -1,4 +1,5 @@
 <?php
+
 /**
  * File Permission.php
  *
@@ -8,6 +9,7 @@
  */
 
 namespace App\Laravue\Models;
+
 use App\Laravue\Acl;
 use Illuminate\Database\Query\Builder;
 

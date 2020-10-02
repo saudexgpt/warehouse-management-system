@@ -30,8 +30,10 @@ import solidGauge from 'highcharts/modules/solid-gauge';
 import stockInit from 'highcharts/modules/stock';
 import { ServerTable, ClientTable, Event } from 'vue-tables-2';
 import DateRangePicker from 'vue-mj-daterangepicker';
+import Watermark from './watermark';
 // import Pusher from 'pusher-js';
 // import Echo from 'laravel-echo';
+// import { Notification } from 'element-ui';
 // // import VueTimeago from 'vue-timeago';
 
 // Vue.use(VueTimeago, {
@@ -56,22 +58,35 @@ import DateRangePicker from 'vue-mj-daterangepicker';
 
 // const src = 'alert.mp3';
 // const audio = new Audio(src);
-
+// playAudio();
 // var channel = window.Echo.channel('my-channel');
 // channel.listen('.my-event', function(data) {
 //   alert(JSON.stringify(data));
 // });
-// window.Echo.private('App.Laravue.Models.User.' + 4)
+// const currentUserId = store.getters.userId;
+// window.Echo.private('App.Laravue.Models.User.' + currentUserId)
 //   .notification((notification) => {
-//     console.log(notification.type);
-//     audio.play();
+//     Notification({
+//       title: notification.title,
+//       message: notification.description,
+//       type: 'success',
+//       duration: 10000,
+//     });
+//     playAudio();
 //   });
-
+// async function playAudio() {
+//   try {
+//     await audio.play();
+//   } catch (err) {
+//     // playAudio();
+//   }
+// }
+Vue.use(Watermark);
 const eventsHub = new Vue();
 Vue.use(IdleVue, {
   eventEmitter: eventsHub,
   store,
-  idleTime: 300000, // 300 seconds i.e 5 mins
+  idleTime: 1800000, // 1800 seconds i.e 30 mins
   startAtIdle: false,
 });
 Vue.use(HighchartsVue);
@@ -122,4 +137,5 @@ new Vue({
   store,
   i18n,
   render: h => h(App),
+
 });

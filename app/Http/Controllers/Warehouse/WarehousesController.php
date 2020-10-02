@@ -25,7 +25,7 @@ class WarehousesController extends Controller
 
         if ($user->isAdmin()) {
             $warehouses = Warehouse::with('users')->get();
-        }else{
+        } else {
 
             $warehouses = $user->warehouses;
         }
@@ -70,7 +70,8 @@ class WarehousesController extends Controller
         $title = "Staff assigned to $warehouse->name";
         $description = "Staff assigned to $warehouse->name by $actor->name ($actor->email)";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
         return response()->json(compact('warehouse_users'), 200);
     }
 
@@ -109,7 +110,8 @@ class WarehousesController extends Controller
         $title = "Created new warehouse";
         $description = "$actor->name ($actor->email) created $warehouse->name";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($warehouse);
     }
 
@@ -134,7 +136,8 @@ class WarehousesController extends Controller
         $title = "Updated warehouse information";
         $description = "$actor->name ($actor->email) updated $warehouse->name information";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($warehouse);
     }
 
@@ -151,7 +154,8 @@ class WarehousesController extends Controller
         $title = "Deleted $warehouse->name";
         $description = "$actor->name ($actor->email) deleted $warehouse->name information";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
         $warehouse->delete();
         return response()->json(null, 204);
     }

@@ -41,7 +41,7 @@ import Fleets from './fleets';
 import Users from '@/app/users/List';
 const necessaryParams = new Resource('fetch-necessary-params');
 export default {
-  name: 'DownloadableReport',
+  name: 'DownloadReports',
   components: {
     Inbounds, Outbounds, Products, Fleets, Users,
   },

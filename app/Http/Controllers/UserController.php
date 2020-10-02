@@ -32,7 +32,7 @@ use Validator;
  */
 class UserController extends Controller
 {
-    const ITEM_PER_PAGE = 1000;
+    const ITEM_PER_PAGE = 20;
 
     /**
      * Display a listing of the user resource.
@@ -44,7 +44,7 @@ class UserController extends Controller
     {
         $searchParams = $request->all();
         $userQuery = User::query();
-        $limit = 5000; // Arr::get($searchParams, 'limit', static::ITEM_PER_PAGE);
+        $limit = 20; // Arr::get($searchParams, 'limit', static::ITEM_PER_PAGE);
         $role = Arr::get($searchParams, 'role', '');
         $keyword = Arr::get($searchParams, 'keyword', '');
         $userQuery->where('user_type', '!=', 'developer');
@@ -55,6 +55,7 @@ class UserController extends Controller
         } else {
             $userQuery->whereHas('roles', function ($q) use ($role) {
                 $q->where('name', '!=', 'customer');
+                $q->where('name', '!=', 'driver');
             });
         }
 
@@ -67,7 +68,7 @@ class UserController extends Controller
     }
     public function addBulkCustomers(Request $request)
     {
-        $user = $this->getUser();
+        $actor = $this->getUser();
         $bulk_data = json_decode(json_encode($request->bulk_data));
         // try {
         $count = 0;
@@ -106,8 +107,9 @@ class UserController extends Controller
         }
 
         $title = "Bulk upload of customers";
-        $description = "Customers were added in bulk by " . $user->name;
-        $this->logUserActivity($title, $description);
+        $description = "Customers were added in bulk by " . $actor->name;
+        $roles = ['assistant admin', 'warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
         return response()->json([], 200);
     }
     public function addCustomer(Request $request)
@@ -144,10 +146,11 @@ class UserController extends Controller
         $customer->save();
         $customer->user = $customer->user;
         // log this activity
-        $user = $this->getUser();
+        $actor = $this->getUser();
         $title = "New customer added";
-        $description = ucwords($new_user->name) . " was added as new customer by $user->name ($user->email)";
-        $this->logUserActivity($title, $description);
+        $description = ucwords($new_user->name) . " was added as new customer by $actor->name ($actor->email)";
+        $roles = ['assistant admin', 'warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
         return response()->json(compact('customer'), 200);
         // } catch (\Exception $exception) {
         //     return response()->json(compact('exception'), 500);
@@ -175,10 +178,11 @@ class UserController extends Controller
             $user = $this->getUser();
             $title = "New driver added";
             $description = ucwords($new_user->name) . " was added as new driver by $user->name ($user->email)";
-            $this->logUserActivity($title, $description);
+            $roles = ['assistant admin', 'warehouse manager'];
+            $this->logUserActivity($title, $description, $roles);
             return response()->json(compact('driver'), 200);
         } catch (\Exception $exception) {
-            return response()->json(compact('exception'), 500);
+            return response()->json(['message' => 'Check your form for duplicate entries like email'], 500);
         }
     }
     public function updateDriver(Request $request, Driver $driver)
@@ -195,7 +199,8 @@ class UserController extends Controller
         // log this activity
         $title = "Driver information updated";
         $description = ucwords($user->name) . "'s information was updated.";
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
     }
     /**
      * Store a newly created resource in storage.
@@ -251,6 +256,18 @@ class UserController extends Controller
         return new UserResource($user);
     }
 
+    public function assignRole(Request $request, User $user)
+    {
+        $actor = $this->getUser();
+        if ($actor->isAdmin()) {
+            $role = Role::findByName($request->role);
+            $user->syncRoles($role);
+            $title = "User assigned role";
+            $description = ucwords($user->name) . " was assigned the role of " . $request->role . " by $actor->name ($actor->email)";
+            $this->logUserActivity($title, $description);
+            return new UserResource($user);
+        }
+    }
     /**
      * Update the specified resource in storage.
      *
@@ -425,9 +442,30 @@ class UserController extends Controller
         }
 
         try {
+            $actor = $this->getUser();
+            $title = "User Deleted";
+            $description = ucwords($user->name) . " was deleted by " . $actor->name;
+            $this->logUserActivity($title, $description);
             $user->delete();
         } catch (\Exception $ex) {
-            response()->json(['error' => $ex->getMessage()], 403);
+            return response()->json(['error' => $ex->getMessage()], 403);
+        }
+
+        return response()->json(null, 204);
+    }
+
+    public function destroyCustomer(User $user)
+    {
+        $customer = Customer::where('user_id', $user->id)->first();
+        try {
+            $actor = $this->getUser();
+            $title = "Customer Deleted";
+            $description = ucwords($user->name) . " was deleted by " . $actor->name;
+            $this->logUserActivity($title, $description);
+            $customer->delete();
+            $user->delete();
+        } catch (\Exception $ex) {
+            return response()->json(['error' => $ex->getMessage()], 403);
         }
 
         return response()->json(null, 204);

@@ -43,7 +43,8 @@ class ReturnsController extends Controller
         $title = "Products returned";
         $description = "Products were returned to " . $returned_product->warehouse->name . " by  $returned_product->customer_name. Details created by $user->name ($user->email)";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($returned_product);
     }
     /**
@@ -71,16 +72,16 @@ class ReturnsController extends Controller
 
         $user = $this->getUser();
         $title = "Returned products updated";
-        $description = "Product returned with entry id: ". $returned_product->id." was modified by $user->name ($user->email)";
+        $description = "Product returned with entry id: " . $returned_product->id . " was modified by $user->name ($user->email)";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($returned_product);
     }
     public function show(ReturnedProduct $returned_product)
     {
 
-        $returned_product = $returned_product->with(['warehouse', 'item'])->find($returned_product->id);
+        $returned_product = $returned_product->with(['warehouse', 'item', 'stocker', 'confirmer'])->find($returned_product->id);
         return response()->json(compact('returned_product'), 200);
     }
-
 }

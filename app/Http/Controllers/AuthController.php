@@ -1,4 +1,5 @@
 <?php
+
 /**
  * File AuthController.php
  *
@@ -6,6 +7,7 @@
  * @package Laravue
  * @version 1.0
  */
+
 namespace App\Http\Controllers;
 
 use App\Laravue\JsonResponse;
@@ -74,8 +76,8 @@ class AuthController extends Controller
         $user = $request->user();
         $token = $user->createToken('laravue');
         $user_resource = new UserResource($user);
-        $title = "Logged in";
-        $description = $user->name.' logged in to the portal';
+        $title = "Log in action";
+        $description = $user->name . ' logged in to the portal';
         $this->logUserActivity($title, $description);
 
         return response()->json($user_resource, Response::HTTP_OK)->header('Authorization', $token->plainTextToken);
@@ -84,7 +86,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $user = $request->user();
-        $title = "Logged out";
+        $title = "Log out action";
         $description = $user->name . ' logged out of the portal';
         $this->logUserActivity($title, $description);
         $request->user()->tokens()->delete();

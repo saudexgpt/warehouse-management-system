@@ -5,7 +5,7 @@ import { getToken, setToken } from '@/utils/auth';
 // Create axios instance
 const service = axios.create({
   baseURL: process.env.MIX_BASE_API,
-  timeout: 120000, // Request timeout
+  timeout: 300000, // Request timeout
 });
 
 // Request intercepter
@@ -37,16 +37,16 @@ service.interceptors.response.use(
   },
   error => {
     let message = error.message;
-    if (error.response.data && error.response.data.errors) {
-      message = error.response.data.errors;
-    } else if (error.response.data && error.response.data.error) {
-      message = error.response.data.error;
+    if (error.response.data && error.response.data.messages) {
+      message = error.response.data.messages;
+    } else if (error.response.data && error.response.data.message) {
+      message = error.response.data.message;
     }
-
+    console.log(message);
     Message({
       message: message,
       type: 'error',
-      duration: 5 * 1000,
+      duration: 10 * 1000,
     });
     return Promise.reject(error);
   },

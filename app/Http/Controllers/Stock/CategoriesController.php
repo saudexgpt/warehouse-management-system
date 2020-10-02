@@ -55,7 +55,8 @@ class CategoriesController extends Controller
         $title = "New product category added";
         $description = "New product category $name added by $actor->name ($actor->email)";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         return response()->json(['message' => 'Duplicate Name'], 200);
     }
 
@@ -75,7 +76,8 @@ class CategoriesController extends Controller
         $title = "Product category updated";
         $description = "Product category $category->name updated by $actor->name ($actor->email) to $request->name";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         $category->name = $request->name;
         $category->save();
 
@@ -95,7 +97,8 @@ class CategoriesController extends Controller
         $title = "Product category deleted";
         $description = "Product category $category->name deleted by $actor->name ($actor->email)";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         $category->delete();
         return response()->json(null, 204);
     }

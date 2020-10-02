@@ -1,7 +1,7 @@
 <template>
   <el-card v-if="user.name">
     <el-tabs v-model="activeActivity">
-      <el-tab-pane label="Activities" name="first">
+      <!-- <el-tab-pane label="Activities" name="first">
         <div class="block">
           <legend>{{ user.name }}'s Activity Trail</legend>
           <el-timeline style="height: 400px; overflow:auto;">
@@ -13,8 +13,8 @@
             </el-timeline-item>
           </el-timeline>
         </div>
-      </el-tab-pane>
-      <el-tab-pane v-if="user.can_edit" v-loading="updating" label="Update Profile" name="second">
+      </el-tab-pane> -->
+      <el-tab-pane v-if="user.can_edit" v-loading="updating" label="Update Profile" name="first">
         <el-form-item label="Name">
           <el-input v-model="user.name" :disabled="user.role === 'admin'" />
         </el-form-item>
@@ -33,7 +33,7 @@
           </el-button>
         </el-form-item>
       </el-tab-pane>
-      <el-tab-pane v-if="user.can_edit" v-loading="updating" label="Update Password" name="third">
+      <el-tab-pane v-if="user.can_edit" v-loading="updating" label="Update Password" name="second">
         <el-form-item label="Email">
           <el-input v-model="user.email" :disabled="true" />
         </el-form-item>

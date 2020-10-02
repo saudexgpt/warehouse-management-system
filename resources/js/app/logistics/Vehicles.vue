@@ -34,7 +34,12 @@
             </div>
             <div slot="drivers" slot-scope="props">
               <span v-for="(vehicle_driver, index) in props.row.vehicle_drivers" :key="index">
-                {{ vehicle_driver.driver.user.name+' ('+vehicle_driver.type+' Driver)' }}<br>
+                <div v-if="vehicle_driver.driver">
+                  <div v-if="vehicle_driver.driver.user">
+                    {{ vehicle_driver.driver.user.name+' ('+vehicle_driver.type+' Driver)' }}<br>
+                  </div>
+                </div>
+
               </span>
             </div>
             <div slot="action" slot-scope="props">
@@ -293,8 +298,12 @@ export default {
           var drivers = '';
           if (vehicle_drivers.length > 0) {
             vehicle_drivers.forEach(element => {
-              var name = element.driver.user.name;
-              drivers += name + ', ';
+              if (element.driver) {
+                if (element.driver.user) {
+                  var name = element.driver.user.name;
+                  drivers += name + ', ';
+                }
+              }
             });
           }
           return drivers;

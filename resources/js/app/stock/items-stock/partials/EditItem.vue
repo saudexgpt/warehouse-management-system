@@ -12,13 +12,13 @@
           <el-row :gutter="5" class="padded">
             <el-col :xs="24" :sm="12" :md="12">
               <label for="">Select Warehouse</label>
-              <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" class="span">
+              <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable class="span">
                 <el-option v-for="(warehouse, index) in params.warehouses" :key="index" :value="warehouse.id" :label="warehouse.name" />
 
               </el-select>
 
               <label for="">Select Product</label>
-              <el-select v-model="form.item_id" placeholder="Select Product" class="span">
+              <el-select v-model="form.item_id" placeholder="Select Product" filterable class="span">
                 <el-option v-for="(item, index) in params.items" :key="index" :value="item.id" :label="item.name" />
 
               </el-select>
@@ -36,8 +36,8 @@
           </el-row>
           <el-row :gutter="2" class="padded">
             <el-col :xs="24" :sm="6" :md="6">
-              <el-button type="primary" @click="editProduct"><svg-icon icon-class="edit" />
-                Edit
+              <el-button type="success" @click="editProduct"><svg-icon icon-class="edit" />
+                Update
               </el-button>
             </el-col>
           </el-row>

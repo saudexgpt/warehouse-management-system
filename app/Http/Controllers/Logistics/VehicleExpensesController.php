@@ -29,10 +29,10 @@ class VehicleExpensesController extends Controller
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
             $status = $request->status;
             $panel = $request->panel;
-            $vehicle_expenses = VehicleExpense::with(['vehicle', 'expenseDetails', 'engineer'])->where($option)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
-        }else {
+            $vehicle_expenses = VehicleExpense::with(['confirmer', 'vehicle', 'expenseDetails', 'engineer'])->where($option)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
+        } else {
             $status = $request->status;
-            $vehicle_expenses = VehicleExpense::with(['vehicle', 'expenseDetails', 'engineer'])->where($option)->orderBy('id', 'DESC')->get();
+            $vehicle_expenses = VehicleExpense::with(['confirmer', 'vehicle', 'expenseDetails', 'engineer'])->where($option)->orderBy('id', 'DESC')->get();
         }
 
         return response()->json(compact('vehicle_expenses'), 200);
@@ -70,7 +70,7 @@ class VehicleExpensesController extends Controller
 
 
         // $vehicle_expense->service_date = date('Y-m-d H:i:s', strtotime($request->service_date));
-        if($vehicle_expense->save()) {
+        if ($vehicle_expense->save()) {
             $servicing_details = json_decode(json_encode($request->servicing_details));
             foreach ($servicing_details as $servicing_detail) {
                 if ($servicing_detail->vehicle_part != null) {
@@ -88,7 +88,8 @@ class VehicleExpensesController extends Controller
         $actor = $this->getUser();
         $title = "Vehicle Expenses Request";
         $description = "Vehicle (" . $vehicle_expense->vehicle->plate_no . ") expenses request was made by $actor->name ($actor->email) on " . $vehicle_expense->created_at;
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($vehicle_expense);
     }
 
@@ -100,7 +101,7 @@ class VehicleExpensesController extends Controller
      */
     public function show(VehicleExpense $vehicleExpense)
     {
-        $vehicle_expense = $vehicleExpense->with(['vehicle', 'expenseDetails', 'engineer'])->find($vehicleExpense->id);
+        $vehicle_expense = $vehicleExpense->with(['confirmer', 'vehicle', 'expenseDetails', 'engineer'])->find($vehicleExpense->id);
         return response()->json(compact('vehicle_expense'), 200);
     }
 
@@ -127,11 +128,12 @@ class VehicleExpensesController extends Controller
     {
         $vehicleExpense->status = $request->status;
         $vehicleExpense->save();
-    // log this action
+        // log this action
         $actor = $this->getUser();
         $title = "Vehicle Expenses Approval";
-        $description = "Vehicle (".$vehicleExpense->vehicle->plate_no.") expenses request, made on " .$vehicleExpense->created_at.", is  $vehicleExpense->status by $actor->name ($actor->email)";
-        $this->logUserActivity($title, $description);
+        $description = "Vehicle (" . $vehicleExpense->vehicle->plate_no . ") expenses request, made on " . $vehicleExpense->created_at . ", is  $vehicleExpense->status by $actor->name ($actor->email)";
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($vehicleExpense);
     }
 
@@ -147,11 +149,12 @@ class VehicleExpensesController extends Controller
             $automobile_engineer->workshop_address = $request->workshop_address;
             $automobile_engineer->save();
 
-        // log this activity
+            // log this activity
             $actor = $this->getUser();
             $title = "New automobile engineer added";
             $description = ucwords($automobile_engineer->name) . " was added as company automobile engineer. From $company_name by $actor->name ($actor->email)";
-            $this->logUserActivity($title, $description);
+            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+            $this->logUserActivity($title, $description, $roles);
             return response()->json(compact('automobile_engineer'), 200);
         } catch (\Exception $exception) {
             return response()->json(compact('exception'), 500);
@@ -172,7 +175,8 @@ class VehicleExpensesController extends Controller
             $actor = $this->getUser();
             $title = "Automobile engineer info updated";
             $description = ucwords($automobile_engineer->name) . "'s automobile engineer info was updated $actor->name ($actor->email)";
-            $this->logUserActivity($title, $description);
+            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+            $this->logUserActivity($title, $description, $roles);
             return response()->json(compact('automobile_engineer'), 200);
         } catch (\Exception $exception) {
             return response()->json(compact('exception'), 500);

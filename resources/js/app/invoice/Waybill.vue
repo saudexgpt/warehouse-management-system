@@ -50,15 +50,27 @@
           </el-button>
         </div>
         <v-client-table v-model="waybills" :columns="columns" :options="options">
+          <div slot="invoices" slot-scope="props">
+            <div v-if="props.row.invoices.length > 0">
+              <span v-for="(invoice, invoice_index) in props.row.invoices" :key="invoice_index">
+                {{ invoice.invoice_number }},
+              </span>
+              {{ }}
+            </div>
+          </div>
           <div slot="dispatchers" slot-scope="{row}">
             <div v-if="row.dispatcher">
               <span v-for="(vehicle_driver, index) in row.dispatcher.vehicle.vehicle_drivers" :key="index">
-                {{ vehicle_driver.driver.user.name }}<br>
+                {{ (vehicle_driver.driver) ? vehicle_driver.driver.user.name : '' }}<br>
               </span>
             </div>
             <div v-else>
               Not assigned
             </div>
+          </div>
+
+          <div slot="trip_no" slot-scope="props">
+            {{ (props.row.trips.length > 0) ? props.row.trips[0].trip_no : '' }}
           </div>
           <div slot="created_at" slot-scope="props">
             {{ moment(props.row.created_at).format('MMMM Do YYYY, h:mm:ss a') }}
@@ -126,7 +138,7 @@ export default {
         { code: 'delivered', name: 'Delivered' },
       ],
       currency: '',
-      columns: ['action', 'waybill_no', 'dispatchers', 'created_at', 'status', 'updated_at'],
+      columns: ['action', 'waybill_no', 'invoices', 'dispatch_company', 'dispatchers', 'trip_no', 'created_at', 'status', 'updated_at'],
 
       options: {
         headings: {
@@ -134,13 +146,14 @@ export default {
           created_at: 'Date Generated',
           updated_at: 'Status Date',
           status: 'Waybill Status',
-          'dispatchers': 'Dispatchers',
+          dispatchers: 'Dispatchers',
+          trip_no: 'Trip No.',
 
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: ['created_at', 'updated_at'],
-        filterable: ['invoice.invoice_number', 'waybill_no', 'created_at', 'updated_at'],
+        filterable: ['invoice.invoice_number', 'invoices', 'waybill_no', 'trip_no', 'created_at', 'updated_at'],
       },
       page: {
         option: 'list',

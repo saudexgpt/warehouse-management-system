@@ -8,9 +8,18 @@ const permissionRoutes = {
   meta: {
     title: 'Reports',
     icon: 'el-icon-s-data',
-    permissions: ['view reports'],
   },
   children: [
+    {
+      path: 'bin-card',
+      component: () => import('@/app/reports/BinCard'),
+      name: 'BinCard',
+      meta: {
+        title: 'Bin Card',
+        icon: 'el-icon-s-management',
+        permissions: ['view reports'],
+      },
+    },
     {
       path: 'graphical-reports',
       component: () => import('@/app/reports/index'),
@@ -39,6 +48,17 @@ const permissionRoutes = {
         title: 'Audit Trail',
         icon: 'el-icon-video-camera',
         permissions: ['view audit trail'],
+      },
+    },
+
+    {
+      path: 'backup',
+      component: () => import('@/app/reports/BackUp'),
+      name: 'BackUp',
+      meta: {
+        title: 'Back Up',
+        icon: 'el-icon-download',
+        permissions: ['backup database'],
       },
     },
 

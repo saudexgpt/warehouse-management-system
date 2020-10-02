@@ -22,7 +22,9 @@ class ItemStocksController extends Controller
         $warehouse_id = $request->warehouse_id;
         // $items_in_stock = ItemStock::with(['warehouse', 'item', 'subBatches.stocker', 'subBatches.confirmer'])->where('warehouse_id', $warehouse_id)->orderBy('id', 'DESC')->get();
 
-        $items_in_stock = ItemStockSubBatch::with(['warehouse', 'item', 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->orderBy('id', 'DESC')->get();
+        $items_in_stock = ItemStockSubBatch::with(['warehouse', 'item' => function ($q) {
+            $q->orderBy('name');
+        }, 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->where('balance', '>', '0')->orderBy('expiry_date')->get();
 
         // $items_in_stock = ItemStock::with(['warehouse', 'item'])->groupBy('item_id')->having('warehouse_id', $warehouse_id)
         // ->select('*',\DB::raw('SUM(quantity) as total_quantity'))->get();
@@ -33,9 +35,18 @@ class ItemStocksController extends Controller
         //
         $warehouse_id = $request->warehouse_id;
         $item_id = $request->item_id;
-        $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->select('*', \DB::raw('(balance - reserved_for_supply) as balance'))->orderBy('expiry_date')->get();
+        $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->get();
         return response()->json(compact('batches_of_items_in_stock'));
     }
+
+    /*public function productBatches(Request $request)
+    {
+        //
+        $warehouse_id = $request->warehouse_id;
+        $item_id = $request->item_id;
+        $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->select('*', \DB::raw('(balance - reserved_for_supply) as balance'))->orderBy('expiry_date')->get();
+        return response()->json(compact('batches_of_items_in_stock'));
+    }*/
 
 
 
@@ -48,8 +59,8 @@ class ItemStocksController extends Controller
     public function show(ItemStockSubBatch $item_in_stock)
     {
         //
-        return $item_in_stock->with(['warehouse', 'item', 'stocker', 'confirmer'])->find($item_in_stock->id);
-        // return response()->json(compact('item_in_stock'), 200);
+        return $item_in_stock = $item_in_stock->with(['warehouse', 'item', 'stocker', 'confirmer'])->find($item_in_stock->id);
+        return response()->json(compact('item_in_stock'), 200);
     }
 
     /**
@@ -114,7 +125,8 @@ class ItemStocksController extends Controller
 
         $title = "Bulk upload of products";
         $description = "Products were added in bulk to stock at " . $item_stock_sub_batch->warehouse->name . " by " . $user->name;
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+        $this->logUserActivity($title, $description, $roles);
         return response()->json(compact('unsaved_products', 'items_stocked'), 200);
         // } catch (\Throwable $th) {
         //     return $th; //'An error occured in the file. Check for duplicate entries in Batch No and GRN';
@@ -187,9 +199,10 @@ class ItemStocksController extends Controller
             $item_stock_sub_batches[] = $item_stock_sub_batch;
 
             // log this event
-            $title = $item_stock_sub_batch->item->name . " added to stock";
-            $description = "Product was added to stock at " . $item_stock_sub_batch->warehouse->name . " by " . $user->name;
-            $this->logUserActivity($title, $description);
+            $title = "Product added to stock";
+            $description = $item_stock_sub_batch->quantity . " " . $item_stock_sub_batch->item->name . " was added to stock at " . $item_stock_sub_batch->warehouse->name . " by " . $user->name;
+            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+            $this->logUserActivity($title, $description, $roles);
         }
         return $item_stock_sub_batches;
     }
@@ -204,16 +217,25 @@ class ItemStocksController extends Controller
     public function update(Request $request, ItemStockSubBatch $item_in_stock)
     {
         //
-        $sub_batches = $request->sub_batches;
+        $user = $this->getUser();
+        $item_in_stock->warehouse_id = $request->warehouse_id;
+        $item_in_stock->item_id = $request->item_id;
+        $item_in_stock->batch_no = $request->batch_no;
+        // $item_in_stock->sub_batch_no = $batch['batch_no'];
+        $item_in_stock->quantity = $request->quantity;
+        // $item_in_stock->reserved_for_supply = 0;
+        // $item_in_stock->in_transit = 0; // initial values set to zero
+        // $item_in_stock->supplied = 0;
+        // $item_in_stock->balance = $batch['quantity'];
+        // $item_in_stock->goods_received_note = $batch['goods_received_note'];
+        $item_in_stock->expiry_date = date('Y-m-d', strtotime($request->expiry_date));
+        $item_in_stock->save();
 
-        $this->createSubBatches($request, $sub_batches);
-        // $item_in_stock->currency_id = $request->currency_id;
-        // $item_in_stock->sale_price = $request->sale_price;
-        // $item_in_stock->purchase_price = $request->purchase_price;
-        // $item_in_stock->quantity = $request->quantity;
-        // $item_in_stock->batch_no = $request->batch_no;
-        // $item_in_stock->expiry_date = date('Y-m-d', strtotime($request->expiry_date));
-        // $item_in_stock->save();
+        // log this event
+        $title = 'Product in stock updated';
+        $description = $item_in_stock->item->name . " with batch number: ($item_in_stock->batch_no) was updated by " . $user->name;
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+        $this->logUserActivity($title, $description, $roles);
 
         return $this->show($item_in_stock);
     }

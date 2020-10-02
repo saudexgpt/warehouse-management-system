@@ -25,14 +25,14 @@
       <!-- Table row -->
       <div class="row">
         <div class="col-xs-8 table-responsive">
-          <!-- <label>Customer Details</label>
+          <label>Customer Details</label>
           <address>
             <label>{{ waybill.invoices[0].customer.user.name.toUpperCase() }}</label><br>
             {{ (waybill.invoices[0].customer.type) ? waybill.invoices[0].customer.type.name.toUpperCase() : '' }}<br>
             Phone: {{ waybill.invoices[0].customer.user.phone }}<br>
             Email: {{ waybill.invoices[0].customer.user.email }}<br>
             {{ waybill.invoices[0].customer.user.address }}
-          </address>-->
+          </address>
           <legend>Invoice Products</legend>
           <table class="table table-bordered">
             <thead>
@@ -54,7 +54,7 @@
                 <td>
                   <div :id="waybill_item.id">
                     <div
-                      v-if="waybill_item.is_confirmed == '0' && checkPermission(['audit confirm actions'])"
+                      v-if="waybill_item.is_confirmed === '0' && checkPermission(['audit confirm actions'])"
                     >
                       <input
                         v-model="confirmed_items"
@@ -67,7 +67,7 @@
                   </div>
                 </td>
                 <td>{{ waybill_item.invoice.invoice_number }}</td>
-                <td>{{ waybill_item.invoice.customer.user.name.toUpperCase() + ' (' + waybill_item.invoice.customer.user.phone+')' }}</td>
+                <td>{{ waybill_item.invoice.customer.user.name.toUpperCase() }}</td>
                 <td>{{ waybill_item.item.name }}</td>
                 <!-- <td>{{ waybill_item.item.description }}</td> -->
                 <td>{{ waybill_item.quantity+' '+formatPackageType(waybill_item.type) }}</td>
@@ -99,7 +99,8 @@
           </a>
         </div>
         <div class="col-xs-4 table-responsive">
-          <label>Waybill No.: {{ waybill.waybill_no }}</label>
+          <label>Waybill No.: {{ waybill.waybill_no }}</label><br>
+          <label>Dispatched By.: {{ waybill.dispatch_company }}</label>
           <br>
           <label>Date:</label>
           {{ moment(waybill.created_at).format('MMMM Do YYYY') }}
@@ -119,7 +120,7 @@
                 v-for="(vehicle_driver, index) in waybill.dispatcher.vehicle.vehicle_drivers"
                 :key="index"
               >
-                <td>
+                <td v-if="vehicle_driver.driver">
                   <label>{{ vehicle_driver.type }} Dispatcher</label>
                   <br>
                   <label>Name:</label>
@@ -135,43 +136,85 @@
         </div>
         <!-- /.col -->
       </div>
-      <div v-if="waybill.dispatcher" class="row">
-        <div class="col-md-6 col-xs-12">
-          <label align="center">CURRENT GOODS DELIVERY STATUS</label>
-          <div v-if="waybill.status === 'pending'" align="center">
-            <img src="images/pending.png" alt="Pending" width="150">
-            <br>
-            <label>Goods delivery is pending</label>
+      <div v-if="waybill.trips.length > 0">
+        <div v-if="waybill.dispatcher && waybill.trips[0].dispatch_company === 'GREEN LIFE LOGISTICS'" class="row">
+          <div class="col-md-6 col-xs-12">
+            <label align="center">CURRENT GOODS DELIVERY STATUS</label>
+            <div v-if="waybill.status === 'pending'" align="center">
+              <img src="images/pending.png" alt="Pending" width="150">
+              <br>
+              <label>Goods delivery is pending</label>
+            </div>
+            <div v-else-if="waybill.status === 'in transit'" align="center">
+              <img src="images/transit.png" alt="Transition" width="150">
+              <br>
+              <label>Goods are currently in transit for delivery</label>
+            </div>
+            <div v-else-if="waybill.status === 'delivered'" align="center">
+              <img src="images/delivered.png" alt="Delivered" width="150">
+              <br>
+              <label>Goods are delivered</label>
+            </div>
           </div>
-          <div v-else-if="waybill.status === 'in transit'" align="center">
-            <img src="images/transit.png" alt="Transition" width="150">
-            <br>
-            <label>Goods are currently in transit for delivery</label>
-          </div>
-          <div v-else-if="waybill.status === 'delivered'" align="center">
-            <img src="images/delivered.png" alt="Delivered" width="150">
-            <br>
-            <label>Goods are delivered</label>
+          <div class="col-md-6 col-xs-12">
+            <div v-if="waybill.status === 'pending'">
+              <a
+                class="btn btn-primary"
+                @click="form.status = 'in transit'; changeWaybillStatus()"
+              >Click to Mark Goods In Transit</a>
+              <span
+                class="label label-danger"
+              >This should be done only when goods have left the warehouse to meet the customer</span>
+            </div>
+            <div v-else-if="waybill.status === 'in transit'">
+              <a
+                class="btn btn-success"
+                @click="form.status = 'delivered'; changeWaybillStatus()"
+              >Click to Mark Goods as Delivered</a>
+              <span
+                class="label label-danger"
+              >This should be done only when goods have been delivered successfully to the customer</span>
+            </div>
           </div>
         </div>
-        <div class="col-md-6 col-xs-12">
-          <div v-if="waybill.status === 'pending'">
-            <a
-              class="btn btn-primary"
-              @click="form.status = 'in transit'; changeWaybillStatus()"
-            >Click to Mark Goods In Transit</a>
-            <span
-              class="label label-danger"
-            >This should be done only when goods have left the warehouse to meet the customer</span>
+        <div v-if="waybill.trips[0].dispatch_company !== 'GREEN LIFE LOGISTICS'" class="row">
+          <div class="col-md-6 col-xs-12">
+            <label align="center">CURRENT GOODS DELIVERY STATUS</label>
+            <div v-if="waybill.status === 'pending'" align="center">
+              <img src="images/pending.png" alt="Pending" width="150">
+              <br>
+              <label>Goods delivery is pending</label>
+            </div>
+            <div v-else-if="waybill.status === 'in transit'" align="center">
+              <img src="images/transit.png" alt="Transition" width="150">
+              <br>
+              <label>Goods are currently in transit for delivery</label>
+            </div>
+            <div v-else-if="waybill.status === 'delivered'" align="center">
+              <img src="images/delivered.png" alt="Delivered" width="150">
+              <br>
+              <label>Goods are delivered</label>
+            </div>
           </div>
-          <div v-else-if="waybill.status === 'in transit'">
-            <a
-              class="btn btn-success"
-              @click="form.status = 'delivered'; changeWaybillStatus()"
-            >Click to Mark Goods as Delivered</a>
-            <span
-              class="label label-danger"
-            >This should be done only when goods have been delivered successfully to the customer</span>
+          <div class="col-md-6 col-xs-12">
+            <div v-if="waybill.status === 'pending'">
+              <a
+                class="btn btn-primary"
+                @click="form.status = 'in transit'; changeWaybillStatus()"
+              >Click to Mark Goods In Transit</a>
+              <span
+                class="label label-danger"
+              >This should be done only when goods have left the warehouse to meet the customer</span>
+            </div>
+            <div v-else-if="waybill.status === 'in transit'">
+              <a
+                class="btn btn-success"
+                @click="form.status = 'delivered'; changeWaybillStatus()"
+              >Click to Mark Goods as Delivered</a>
+              <span
+                class="label label-danger"
+              >This should be done only when goods have been delivered successfully to the customer</span>
+            </div>
           </div>
         </div>
       </div>
@@ -192,6 +235,7 @@ import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 import Resource from '@/api/resource';
 const confirmWaybillDetailsResource = new Resource('audit/confirm/waybill');
+const changeWaybillStatusResource = new Resource('invoice/waybill/change-status');
 import PrintWaybill from './PrintWaybill';
 export default {
   components: { PrintWaybill },
@@ -237,6 +281,18 @@ export default {
     checkPermission,
     checkRole,
     moment,
+    changeWaybillStatus(){
+      const app = this;
+      var param = app.waybill;
+      const message = 'Do you really want to update goods delivery status to: ' + app.form.status.toUpperCase() + '?';
+      if (confirm(message)) {
+        param.status = app.form.status;
+        changeWaybillStatusResource.update(param.id, param)
+          .then(response => {
+            app.waybill.status = app.form.status;
+          });
+      }
+    },
     activateConfirmButton() {
       this.activate_confirm_button =
         this.waybill.waybill_items.length === this.confirmed_items.length;

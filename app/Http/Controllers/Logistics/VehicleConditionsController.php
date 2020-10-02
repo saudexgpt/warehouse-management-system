@@ -48,9 +48,10 @@ class VehicleConditionsController extends Controller
         $vehicle_condition->save();
 
         $title = "Updated vehicle condition";
-        $description = "$actor->name ($actor->email) updated vehicle with vehicle no. ". $vehicle_condition->vehicle->plate_no. " as $vehicle_condition->condition";
+        $description = "$actor->name ($actor->email) updated vehicle with vehicle no. " . $vehicle_condition->vehicle->plate_no . " as $vehicle_condition->condition";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($vehicle_condition);
     }
 

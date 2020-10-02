@@ -1,5 +1,5 @@
 <template>
-  <el-card class="box-card user-bio">
+  <el-card v-if="user" class="box-card user-bio">
     <div slot="header" class="clearfix">
       <span>Contact</span>
     </div>
@@ -35,14 +35,8 @@ export default {
   props: {
     user: {
       type: Object,
-      default: () => {
-        return {
-          name: '',
-          email: '',
-          avatar: '',
-          roles: [],
-        };
-      },
+      default: () => ({
+      }),
     },
   },
 };

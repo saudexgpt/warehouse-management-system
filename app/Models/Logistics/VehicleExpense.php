@@ -2,8 +2,10 @@
 
 namespace App\Models\Logistics;
 
+use App\Laravue\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+
 class VehicleExpense extends Model
 {
     use SoftDeletes;
@@ -18,5 +20,9 @@ class VehicleExpense extends Model
     public function expenseDetails()
     {
         return $this->hasMany(VehicleExpenseDetail::class);
+    }
+    public function confirmer()
+    {
+        return $this->belongsTo(User::class, 'confirmed_by', 'id');
     }
 }

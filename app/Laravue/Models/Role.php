@@ -1,4 +1,5 @@
 <?php
+
 /**
  * File Role.php
  *
@@ -6,11 +7,13 @@
  * @package Laravue
  * @version
  */
+
 namespace App\Laravue\Models;
 
 use App\Laravue\Acl;
 use Spatie\Permission\Models\Permission;
-// use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\Notifiable;
+
 /**
  * Class Role
  *
@@ -20,7 +23,7 @@ use Spatie\Permission\Models\Permission;
  */
 class Role extends \Spatie\Permission\Models\Role
 {
-    // use Notifiable;
+    use Notifiable;
     public $guard_name = 'api';
 
     /**
@@ -35,5 +38,4 @@ class Role extends \Spatie\Permission\Models\Role
     {
         return $this->name === Acl::ROLE_ASSISTANT_ADMIN;
     }
-
 }

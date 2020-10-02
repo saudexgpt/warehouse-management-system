@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Invoice;
 
+use App\Customer;
 use App\Driver;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice\DeliveryTrip;
@@ -12,18 +13,310 @@ use App\Models\Invoice\InvoicePayment;
 use App\Models\Invoice\InvoiceStatus;
 use App\Models\Invoice\Waybill;
 use App\Models\Invoice\DispatchedInvoice;
+use App\Models\Invoice\DispatchedProduct;
 use App\Models\Invoice\DispatchedWaybill;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Invoice\InvoiceItemBatch;
 use App\Models\Invoice\WaybillItem;
 use App\Models\Logistics\Vehicle;
+use App\Models\Stock\Item;
 use App\Models\Stock\ItemStock;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Warehouse\Warehouse;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class InvoicesController extends Controller
 {
+    public function checkInvoiceItemsWithoutWaybill()
+    {
+        $invoice_items = InvoiceItem::has('waybillItems', '<', 1)->with('batches')->where('quantity_supplied', '>', 0)->get();
+
+        foreach ($invoice_items as $invoice_item) {
+            $invoice_item->batches()->delete();
+            $invoice_item->quantity_supplied = 0;
+            $invoice_item->save();
+        }
+    }
+    public function correctDispatchProductDate()
+    {
+        set_time_limit(0);
+        $waybills = Waybill::where('status', '!=', 'pending')->get();
+        foreach ($waybills as $waybill) {
+            $dispatch_products = $waybill->dispatchProducts;
+            foreach ($dispatch_products as $dispatch_product) {
+                $dispatch_product->created_at = $waybill->created_at;
+                $dispatch_product->save();
+            }
+        }
+        return 'true';
+    }
+    public function stabilizeInvoiceItems()
+    {
+        set_time_limit(0);
+        $invoice_items = InvoiceItem::where('remitted', 0)->where('quantity_supplied', '>', 0)->get();
+        foreach ($invoice_items as $invoice_item) {
+            $this->createInvoiceItemBatches($invoice_item, [], $invoice_item->quantity_supplied);
+            $invoice_item->remitted = 1;
+            $invoice_item->save();
+        }
+        return 'true';
+    }
+
+    public function deliverProducts()
+    {
+        set_time_limit(0);
+        $waybills = Waybill::where('remitted', 0)->where('status', '!=', 'pending')->get();
+        foreach ($waybills as $waybill) {
+            $waybillItems = $waybill->waybillItems()->where('remitted', 0)->get();
+
+            $status = $waybill->status;
+            if ($status != 'delivered') {
+                $status = 'on transit';
+            }
+            $this->sendItemInStockForDelivery($waybillItems, $status);
+            $waybill->remitted = 1;
+            $waybill->save();
+        }
+        return 'true';
+    }
+
+    private function dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $quantity, $status)
+    {
+        $dispatched_product = new DispatchedProduct();
+        $dispatched_product->warehouse_id = $warehouse_id;
+        $dispatched_product->item_stock_sub_batch_id = $item_stock_batch->id;
+        $dispatched_product->waybill_id = $waybill_item->waybill_id;
+        $dispatched_product->waybill_item_id = $waybill_item->id;
+        $dispatched_product->quantity_supplied = $quantity;
+        $dispatched_product->remitted = 1;
+        $dispatched_product->instant_balance = $item_stock_batch->balance;
+        $dispatched_product->status = $status;
+        $dispatched_product->save();
+    }
+    public function sendItemInStockForDelivery($waybill_items, $status = 'on transit')
+    {
+        foreach ($waybill_items as $waybill_item) {
+
+            $warehouse_id = $waybill_item->warehouse_id;
+            $waybill_quantity = $waybill_item->quantity;
+            $invoice_item_id = $waybill_item->invoice_item_id;
+            $invoice_item_batches = InvoiceItemBatch::with('itemStockBatch')->where('invoice_item_id', $invoice_item_id)->where('quantity', '>', '0')->get();
+            // $items_in_stock= ItemStock::where(['warehouse_id' => $warehouse_id, 'item_id' => $waybill_item->item_id])
+            //     ->where('balance', '>', '0')->orderBy('id')->get();
+            // $item_stock_sub_batches = ItemStockSubBatch::with('itemStock')->where(['warehouse_id' => $warehouse_id, 'item_id' => $waybill_item->item_id])
+            //     ->where('balance', '>', '0')->orderBy('id')->get();
+            if ($invoice_item_batches->count() > 0) {
+                foreach ($invoice_item_batches as $invoice_item_batch) :
+
+                    $for_supply = $invoice_item_batch->quantity;
+                    $item_stock_batch = $invoice_item_batch->itemStockBatch;
+                    $item_id = $item_stock_batch->item_id;
+
+                    if ($waybill_quantity <= $for_supply) {
+                        $invoice_item_batch->quantity -= $waybill_quantity;
+                        $invoice_item_batch->save();
+
+                        if ($item_stock_batch->balance > 0) {
+                            if ($item_stock_batch->balance >= $waybill_quantity) {
+                                $item_stock_batch->reserved_for_supply -= $waybill_quantity;
+                                if ($status == 'on transit') {
+                                    $item_stock_batch->in_transit += $waybill_quantity;
+                                } else {
+                                    $item_stock_batch->supplied += $waybill_quantity;
+                                }
+
+                                $item_stock_batch->balance -=  $waybill_quantity;
+                                $item_stock_batch->save();
+
+                                $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $waybill_quantity, $status);
+
+                                $waybill_quantity = 0;
+                            } else {
+                                $waybill_quantity -= $item_stock_batch->balance;
+                                $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $item_stock_batch->balance, $status);
+                                $item_stock_batch->reserved_for_supply -=
+                                    $item_stock_batch->balance;
+                                if ($status == 'on transit') {
+                                    $item_stock_batch->in_transit += $item_stock_batch->balance;
+                                } else {
+                                    $item_stock_batch->supplied += $item_stock_batch->balance;
+                                }
+                                $item_stock_batch->balance =  0;
+                                $item_stock_batch->save();
+
+                                $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
+                                foreach ($next_item_stock_batches as $next_item_stock_batch) {
+                                    if ($waybill_quantity <= $next_item_stock_batch->balance) {
+
+                                        if ($status == 'on transit') {
+                                            $next_item_stock_batch->in_transit += $waybill_quantity;
+                                        } else {
+                                            $next_item_stock_batch->supplied += $waybill_quantity;
+                                        }
+                                        $next_item_stock_batch->balance -=  $waybill_quantity;
+                                        $next_item_stock_batch->save();
+
+                                        $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $waybill_quantity, $status);
+
+                                        $waybill_quantity = 0;
+                                        break;
+                                    } else {
+                                        if ($status == 'on transit') {
+                                            $next_item_stock_batch->in_transit +=
+                                                $next_item_stock_batch->balance;
+                                        } else {
+                                            $next_item_stock_batch->supplied +=
+                                                $next_item_stock_batch->balance;
+                                        }
+                                        $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance, $status);
+
+                                        $waybill_quantity -= $next_item_stock_batch->balance;
+                                        $next_item_stock_batch->balance =  0;
+                                        $next_item_stock_batch->save();
+                                    }
+                                }
+                            }
+                        } else {
+                            $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
+                            foreach ($next_item_stock_batches as $next_item_stock_batch) {
+                                if ($waybill_quantity <= $next_item_stock_batch->balance) {
+                                    if ($status == 'on transit') {
+                                        $next_item_stock_batch->in_transit += $waybill_quantity;
+                                    } else {
+                                        $next_item_stock_batch->supplied += $waybill_quantity;
+                                    }
+                                    $next_item_stock_batch->balance -=  $waybill_quantity;
+                                    $next_item_stock_batch->save();
+
+                                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $waybill_quantity, $status);
+
+                                    $waybill_quantity = 0;
+                                    break;
+                                } else {
+
+                                    if ($status == 'on transit') {
+                                        $next_item_stock_batch->in_transit += $next_item_stock_batch->balance;
+                                    } else {
+                                        $next_item_stock_batch->supplied += $next_item_stock_batch->balance;
+                                    }
+                                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance, $status);
+
+                                    $waybill_quantity -= $next_item_stock_batch->balance;
+                                    $next_item_stock_batch->balance =  0;
+                                    $next_item_stock_batch->save();
+                                }
+                            }
+                        }
+                        //// also update item_stocks table/////////
+                        // $invoice_item_batch->itemStockBatch->itemStock->in_transit +=  $waybill_quantity;
+                        // $invoice_item_batch->itemStockBatch->itemStock->balance -=  $waybill_quantity;
+                        // $invoice_item_batch->itemStockBatch->itemStock->save();
+
+
+
+                        $waybill_quantity = 0; //we have sent all items for delivery
+                        break;
+                    } else {
+                        $invoice_item_batch->quantity = 0;
+                        $invoice_item_batch->save();
+
+                        if ($item_stock_batch->balance > 0) {
+                            if ($item_stock_batch->balance >= $for_supply) {
+                                $item_stock_batch->reserved_for_supply -= $for_supply;
+                                if ($status == 'on transit') {
+                                    $item_stock_batch->in_transit += $for_supply;
+                                } else {
+                                    $item_stock_batch->supplied += $for_supply;
+                                }
+
+                                $item_stock_batch->balance -=  $for_supply;
+                                $item_stock_batch->save();
+
+                                $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $for_supply, $status);
+                            } else {
+                                $for_supply -= $item_stock_batch->balance;
+                                $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $item_stock_batch->balance, $status);
+                                $item_stock_batch->reserved_for_supply -=
+                                    $item_stock_batch->balance;
+                                if ($status == 'on transit') {
+                                    $item_stock_batch->in_transit += $item_stock_batch->balance;
+                                } else {
+                                    $item_stock_batch->supplied += $item_stock_batch->balance;
+                                }
+
+                                $item_stock_batch->balance =  0;
+                                $item_stock_batch->save();
+
+                                $next_item_stock_batches2 = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
+                                foreach ($next_item_stock_batches2 as $next_item_stock_batch2) {
+                                    if ($for_supply <= $next_item_stock_batch2->balance) {
+                                        if ($status == 'on transit') {
+                                            $next_item_stock_batch2->in_transit += $for_supply;
+                                        } else {
+                                            $next_item_stock_batch2->supplied += $for_supply;
+                                        }
+
+                                        $next_item_stock_batch2->balance -=  $for_supply;
+                                        $next_item_stock_batch2->save();
+                                        $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $for_supply, $status);
+                                        //$for_supply = 0;
+                                        break;
+                                    } else {
+                                        if ($status == 'on transit') {
+                                            $next_item_stock_batch2->in_transit += $next_item_stock_batch2->balance;
+                                        } else {
+                                            $next_item_stock_batch2->supplied += $next_item_stock_batch2->balance;
+                                        }
+
+                                        $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $next_item_stock_batch2->balance, $status);
+                                        $for_supply -= $next_item_stock_batch2->balance;
+
+                                        $next_item_stock_batch2->balance =  0;
+                                        $next_item_stock_batch2->save();
+                                    }
+                                }
+                            }
+                        } else {
+                            $next_item_stock_batches2 = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('id')->get();
+                            foreach ($next_item_stock_batches2 as $next_item_stock_batch2) {
+                                if ($for_supply <= $next_item_stock_batch2->balance) {
+                                    if ($status == 'on transit') {
+                                        $next_item_stock_batch2->in_transit += $for_supply;
+                                    } else {
+                                        $next_item_stock_batch2->supplied += $for_supply;
+                                    }
+                                    $next_item_stock_batch2->balance -=  $for_supply;
+                                    $next_item_stock_batch2->save();
+                                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $for_supply, $status);
+                                    //$for_supply = 0;
+                                    break;
+                                } else {
+
+                                    if ($status == 'on transit') {
+                                        $next_item_stock_batch2->in_transit += $next_item_stock_batch2->balance;
+                                    } else {
+                                        $next_item_stock_batch2->supplied += $next_item_stock_batch2->balance;
+                                    }
+                                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch2, $waybill_item, $next_item_stock_batch2->balance, $status);
+                                    $for_supply -= $next_item_stock_batch2->balance;
+
+                                    $next_item_stock_batch2->balance =  0;
+                                    $next_item_stock_batch2->save();
+                                }
+                            }
+                        }
+
+
+                        $waybill_quantity -= $for_supply;
+                    }
+                endforeach;
+            }
+            $waybill_item->remitted = 1;
+            $waybill_item->save();
+        }
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -38,18 +331,18 @@ class InvoicesController extends Controller
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;
-            $invoices = Invoice::with(['warehouse', 'customer.user', 'customer.type', 'invoiceItems.item', 'histories' => function ($q) {
+            $invoices = Invoice::with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'invoiceItems.item', 'histories' => function ($q) {
                 $q->orderBy('id', 'DESC');
-            }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->get();
+            }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
         }
         if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
             $status = $request->status;
             $panel = $request->panel;
-            $invoices = Invoice::with(['warehouse', 'customer.user', 'customer.type', 'invoiceItems.item', 'histories' => function ($q) {
+            $invoices = Invoice::with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'invoiceItems.item', 'histories' => function ($q) {
                 $q->orderBy('id', 'DESC');
-            }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->get();
+            }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
         }
         return response()->json(compact('invoices'));
     }
@@ -58,11 +351,21 @@ class InvoicesController extends Controller
         //
         $user = $this->getUser();
         $warehouse_id = $request->warehouse_id;
+        $waybill_no = $this->nextReceiptNo('waybill');
+        /*$invoices = Invoice::get();
+        foreach ($invoices as $invoice) {
+            $customer = Customer::find($invoice->customer_id)->first();
+            if (!$customer) {
+                $invoice->delete();
+            }
+        }*/
         // $invoices = Invoice::with(['invoiceItems', 'invoiceItems.item'])->where('warehouse_id', $warehouse_id)->where('status', '!=', 'delivered')->get();
-        $invoices = Invoice::with(['invoiceItems' => function ($q) {
+        $invoices = Invoice::with(['customer.user', 'invoiceItems' => function ($q) {
             $q->where('supply_status', '!=', 'Complete');
-        }, 'invoiceItems.item', 'invoiceItems.batches.itemStockBatch.itemStock'])->where('warehouse_id', $warehouse_id)->where('status', '!=', 'delivered')->get();
-        return response()->json(compact('invoices'));
+        }, 'invoiceItems.item.stocks' => function ($p) use ($warehouse_id) {
+            $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id);
+        }])->where('warehouse_id', $warehouse_id)->where('full_waybill_generated', '0')->orderBy('id', 'DESC')->get();
+        return response()->json(compact('invoices', 'waybill_no'), 200);
     }
 
     /**
@@ -80,7 +383,8 @@ class InvoicesController extends Controller
         //log this activity
         $title = "Invoice Assigned";
         $description = "Assigned invoice ($invoice->invoice_number) to " . $warehouse->name;
-        $this->logUserActivity($title, $description);
+        $roles = ['warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($invoice);
     }
 
@@ -96,6 +400,10 @@ class InvoicesController extends Controller
         //
         $user = $this->getUser();
         $invoice_items = json_decode(json_encode($request->invoice_items));
+        $dupicate_invoice = Invoice::where('invoice_number', $request->invoice_number)->first();
+        if ($dupicate_invoice) {
+            return response()->json(['message' => 'Duplicate Invoice'], 500);
+        }
         $invoice = new Invoice();
         $invoice->warehouse_id        = $request->warehouse_id;
         $invoice->customer_id         = $request->customer_id;
@@ -117,7 +425,8 @@ class InvoicesController extends Controller
         // $this->incrementInvoiceNo();
 
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($invoice);
     }
 
@@ -133,7 +442,7 @@ class InvoicesController extends Controller
     private function createInvoiceItems($invoice, $invoice_items)
     {
         foreach ($invoice_items as $item) {
-            $batches = $item->batches;
+            // $batches = $item->batches;
             $invoice_item = new InvoiceItem();
             $invoice_item->warehouse_id = $invoice->warehouse_id;
             $invoice_item->invoice_id = $invoice->id;
@@ -145,22 +454,24 @@ class InvoicesController extends Controller
             $invoice_item->rate = $item->rate;
             $invoice_item->amount = $item->amount;
             $invoice_item->save();
-
-            $this->createInvoiceItemBatches($invoice_item, $batches);
         }
     }
-    private function createInvoiceItemBatches($invoice_item, $batches)
+    private function createInvoiceItemBatches($invoice_item, $batches, $quantity)
     {
-        $quantity = $invoice_item->quantity;
+
+        //$quantity = $invoice_item->quantity;
+        // $quantity = $invoice_item->quantity_supplied;
         // If a specific batch was set when raising the invoice, we set it here
         if (!empty($batches)) {
             foreach ($batches as $batch) {
                 $item_sub_batch = ItemStockSubBatch::find($batch);
-                if ($quantity <= $item_sub_batch->balance) {
+                $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
+                if ($quantity <= $real_balance) {
                     $invoice_item_batch = new InvoiceItemBatch();
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
                     $invoice_item_batch->item_stock_sub_batch_id = $batch;
+                    $invoice_item_batch->to_supply = $quantity;
                     $invoice_item_batch->quantity = $quantity;
                     $invoice_item_batch->save();
                     $item_sub_batch->reserved_for_supply += $quantity;
@@ -172,23 +483,28 @@ class InvoicesController extends Controller
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
                     $invoice_item_batch->item_stock_sub_batch_id = $batch;
-                    $invoice_item_batch->quantity = $item_sub_batch->balance;
+                    $invoice_item_batch->to_supply = $real_balance;
+                    $invoice_item_batch->quantity = $real_balance;
                     $invoice_item_batch->save();
-                    $item_sub_batch->reserved_for_supply += $item_sub_batch->balance;
+                    $item_sub_batch->reserved_for_supply += $real_balance;
                     $item_sub_batch->save();
-                    $quantity -= $item_sub_batch->balance;
+                    $quantity -= $real_balance;
                 }
             }
-        } else {
+        }
+
+        if ($quantity > 0) {
             // If a specific batch was NOT set when raising the invoice, we make it automatic here using FIFO (First In First Out) principle
-            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $invoice_item->invoice->warehouse_id, 'item_id' => $invoice_item->item_id])->where('balance', '>', '0')->orderBy('expiry_date')->get();
+            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $invoice_item->invoice->warehouse_id, 'item_id' => $invoice_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->get();
 
             foreach ($batches_of_items_in_stock as $item_sub_batch) {
-                if ($quantity <= $item_sub_batch->balance) {
+                $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
+                if ($quantity <= $real_balance) {
                     $invoice_item_batch = new InvoiceItemBatch();
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
                     $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
+                    $invoice_item_batch->to_supply = $quantity;
                     $invoice_item_batch->quantity = $quantity;
                     $invoice_item_batch->save();
                     $item_sub_batch->reserved_for_supply += $quantity;
@@ -200,16 +516,16 @@ class InvoicesController extends Controller
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
                     $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
-                    $invoice_item_batch->quantity = $item_sub_batch->balance;
+                    $invoice_item_batch->to_supply = $real_balance;
+                    $invoice_item_batch->quantity = $real_balance;
                     $invoice_item_batch->save();
-                    $item_sub_batch->reserved_for_supply += $item_sub_batch->balance;
+                    $item_sub_batch->reserved_for_supply += $real_balance;
                     $item_sub_batch->save();
-                    $quantity -= $item_sub_batch->balance;
+                    $quantity -= $real_balance;
                 }
             }
         }
     }
-
     /**
      * Display the specified resource.
      *
@@ -245,7 +561,8 @@ class InvoicesController extends Controller
         $this->createInvoiceHistory($invoice, $title, $description);
 
         // log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($invoice);
     }
     // this fetches all generated waybills
@@ -257,15 +574,15 @@ class InvoicesController extends Controller
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;
-            $waybills = Waybill::with(['dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItems.invoice.customer.user', 'waybillItems.item'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->get();
+            $waybills = Waybill::with(['invoices.customer.user', 'dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItems.invoice.customer.user', 'waybillItems.item', 'trips'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
         }
-        if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
-            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
-            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
-            $status = $request->status;
-            $panel = $request->panel;
-            $invoices = Waybill::with(['dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItems.invoice.customer.user', 'waybillItems.item'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->get();
-        }
+        // if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
+        //     $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+        //     $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+        //     $status = $request->status;
+        //     $panel = $request->panel;
+        //     $invoices = Waybill::with(['dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItems.invoice.customer.user', 'waybillItems.item'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->get();
+        // }
         return response()->json(compact('waybills'));
     }
     // this fetches available drivers so that dispatching orders could be assigned to them
@@ -304,30 +621,58 @@ class InvoicesController extends Controller
         $warehouse_id = $request->warehouse_id;
         $message = '';
         $invoice_items = json_decode(json_encode($request->invoice_items));
-
+        // $waybill = Waybill::where('waybill_no', $request->waybill_no)->first();
+        // if ($waybill) {
+        //     return response()->json(['message' => 'Dupicate Waybill No. Refresh the page please!!!'], 500);
+        // }
         // check if there are items in stock for this waybil to be generated
+        $partial_waybill_generated = [];
         foreach ($invoice_items as $invoice_item) {
-            $item_in_stock_obj = new ItemStockSubBatch();
-            $item_balance = $item_in_stock_obj->fetchBalanceOfItemsInStock($warehouse_id, $invoice_item->item_id);
+            $batches = $invoice_item->batches;
 
-            $quantity_for_supply = $invoice_item->quantity_for_supply;
-            // check whether the balance is up to what was raised in the invoice
-            if ($quantity_for_supply > $item_balance) {
-                $message .= $invoice_item->item->name . ' remains only ' . $item_balance . ' ' . $invoice_item->item->package_type . ' in stock.<br>';
+            $invoice_item_update = InvoiceItem::find($invoice_item->id);
+            $original_quantity = $invoice_item_update->quantity;
+            $quantity_supplied = $invoice_item_update->quantity_supplied;
+            $for_supply = (int) $invoice_item->quantity_for_supply;
+            if ($for_supply > 0) {
+                if ($original_quantity > $quantity_supplied) {
+                    if ($original_quantity >= $for_supply) {
+                        $invoice_item_update->quantity_supplied += $for_supply;
+                        $invoice_item_update->save();
+                        $this->createInvoiceItemBatches($invoice_item_update, $batches, $for_supply);
+                    }
+                }
             }
+
+            if ($original_quantity > $invoice_item_update->quantity_supplied) {
+                $partial_waybill_generated[] = $invoice_item->invoice_id;
+            }
+
+            // $item_in_stock_obj = new ItemStockSubBatch();
+            // $item_balance = $item_in_stock_obj->fetchBalanceOfItemsInStock($warehouse_id, $invoice_item->item_id);
+
+            // $quantity_for_supply = $invoice_item->quantity_for_supply;
+            // // check whether the balance is up to what was raised in the invoice
+            // if ($quantity_for_supply > $item_balance) {
+            //     $message .= $invoice_item->item->name . ' remains only ' . $item_balance . ' ' . $invoice_item->item->package_type . ' in stock.<br>';
+            // }
         }
 
-        if ($message !== '') {
-            return response()->json(['status' => '<label>Insufficient Stock</label><br>', 'message' => $message], 200);
-        }
+        // if ($message !== '') {
+        //     return response()->json(['status' => 'Insufficient Stock', 'message' => $message], 200);
+        // }
         // $waybill = Waybill::where('invoice_id', $request->invoice_id)->first();
         // if (!$waybill) {
+        // $waybill_no = $request->waybill_no;
+        $waybill_no = $this->nextReceiptNo('waybill');
         $waybill = new Waybill();
         $waybill->warehouse_id = $warehouse_id;
         // $waybill->invoice_id = $request->invoice_id;
-        $waybill->waybill_no = $request->waybill_no;
+        $waybill->waybill_no = $waybill_no;
         $waybill->status = $request->status;
         $waybill->save();
+
+        $this->incrementReceiptNo('waybill');
 
         $waybill->invoices()->sync($invoice_ids);
         // create way bill items
@@ -340,13 +685,18 @@ class InvoicesController extends Controller
         $invoice_nos = [];
         foreach ($invoice_ids as $invoice_id) {
             $invoice = Invoice::find($invoice_id);
+            if (!in_array($invoice_id, $partial_waybill_generated)) {
+                $invoice->full_waybill_generated = '1';
+                $invoice->save();
+            }
             $title = "Waybill Generated";
             $description = "Waybill ($waybill->waybill_no) generated for invoice ($invoice->invoice_number) by $user->name ($user->email)";
             //log this action to invoice history
             $this->createInvoiceHistory($invoice, $title, $description);
 
             //log this activity
-            $this->logUserActivity($title, $description);
+            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+            $this->logUserActivity($title, $description, $roles);
         }
         // }
         // $this->createDispatchedWaybill($waybill, $request);
@@ -370,7 +720,7 @@ class InvoicesController extends Controller
         $warehouse_id = $request->warehouse_id;
         $trip_no = $this->nextReceiptNo('trip');
         $vehicles = Vehicle::with('vehicleDrivers.driver.user')->where('warehouse_id', $warehouse_id)->get();
-        $delivery_trips = DeliveryTrip::with('cost', 'waybills', 'vehicle.vehicleDrivers.driver.user')->orderBy('id', 'DESC')->where(['warehouse_id' => $warehouse_id])->get();
+        $delivery_trips = DeliveryTrip::with('cost.confirmer', 'waybills', 'vehicle.vehicleDrivers.driver.user')->orderBy('id', 'DESC')->where(['warehouse_id' => $warehouse_id])->get();
 
         $waybills_with_pending_wayfare = Waybill::where(['warehouse_id' => $warehouse_id, 'waybill_wayfare_status' => 'pending'])->where('confirmed_by', '!=', null)->get();
 
@@ -380,13 +730,30 @@ class InvoicesController extends Controller
     public function addWaybillExpenses(Request $request)
     {
         $trip_no = $request->trip_no;
+        $delivery_trip = DeliveryTrip::where('trip_no', $trip_no)->first();
+        if ($delivery_trip) {
+            // $this->incrementReceiptNo('waybill');
+            $trip_no = $this->nextReceiptNo('trip');
+        }
         $waybill_ids = $request->waybill_ids;
         $description = $request->description;
         $warehouse_id = $request->warehouse_id;
         $vehicle_id = $request->vehicle_id;
+        $vehicle_no = $request->vehicle_no;
+        $dispatchers = $request->dispatchers;
+        // if ($vehicle_id !== null) {
+        //     $vehicle = Vehicle::with('vehicleDrivers.driver.user')->find($vehicle_id);
+        // }
+        $dispatch_company = $request->dispatch_company;
+
+        # code...
+
         $delivery_trip = new DeliveryTrip();
         $delivery_trip->warehouse_id = $warehouse_id;
         $delivery_trip->vehicle_id = $vehicle_id;
+        $delivery_trip->dispatch_company = $dispatch_company;
+        $delivery_trip->vehicle_no = $vehicle_no;
+        $delivery_trip->dispatchers = $dispatchers;
         $delivery_trip->trip_no = $trip_no;
         $delivery_trip->description = $description;
         if ($delivery_trip->save()) {
@@ -395,7 +762,10 @@ class InvoicesController extends Controller
             $delivery_trip->waybills()->syncWithoutDetaching($waybill_ids); // add all waybills for this trip
             foreach ($delivery_trip->waybills as $waybill) {
                 // update waybill wayfare status
-                $this->createDispatchedWaybill($waybill->id, $vehicle_id);
+                if ($vehicle_id != null) {
+                    $this->createDispatchedWaybill($waybill->id, $vehicle_id);
+                }
+                $waybill->dispatch_company = $dispatch_company;
                 $waybill->waybill_wayfare_status = 'given';
                 $waybill->save();
             }
@@ -407,6 +777,7 @@ class InvoicesController extends Controller
                 $delivery_expense->warehouse_id = $warehouse_id;
                 $delivery_expense->delivery_trip_id = $delivery_trip_id;
                 $delivery_expense->amount = $request->amount;
+                $delivery_expense->details = $description;
                 $delivery_expense->save();
             }
         }
@@ -414,7 +785,9 @@ class InvoicesController extends Controller
         $title = "Created waybill delivery cost";
         $description = "New delivery cost for trip no.: " . $trip_no . " was created by $user->name ($user->email)";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+
+        $this->logUserActivity($title, $description, $roles);
         return $this->showDeliveryTrip($delivery_trip->id, $warehouse_id);
     }
 
@@ -449,6 +822,32 @@ class InvoicesController extends Controller
         $waybills_with_pending_wayfare = Waybill::where(['warehouse_id' => $warehouse_id, 'waybill_wayfare_status' => 'pending'])->get();
         return response()->json(compact('delivery_trip', 'waybills_with_pending_wayfare', 'trip_no'), 200);
     }
+    public function addWaybillToTrip(Request $request)
+    {
+        $waybill_id = $request->waybill_id;
+        $delivery_trip_id = $request->delivery_trip_id;
+        $delivery_trip = DeliveryTrip::find($delivery_trip_id);
+        // if($delivery_trip->waybills()->count() == 1 ){
+        //     // delete the delivery trip entry
+        // }
+        // $delivery_trip->waybills()->syncWithoutDetaching($waybill_id);
+        $delivery_trip->waybills()->syncWithoutDetaching($waybill_id);
+        if ($delivery_trip->vehicle_id !== NULL) {
+            $this->createDispatchedWaybill($waybill_id, $delivery_trip->vehicle_id);
+        }
+        // update waybill wayfare status to pending
+        $waybill = Waybill::find($waybill_id);
+        $waybill->waybill_wayfare_status = 'given';
+        $waybill->save();
+        $actor = $this->getUser();
+        $title = "Waybill added to trip";
+        $description = "Waybill $waybill->waybill_no was added to trip with trip no.: " . $delivery_trip->trip_no . " by $actor->name ($actor->phone)";
+        //log this activity
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+
+        $this->logUserActivity($title, $description, $roles);
+        return $this->showDeliveryTrip($delivery_trip->id, $delivery_trip->warehouse_id);
+    }
     public function detachWaybillFromTrip(Request $request)
     {
         $waybill_id = $request->waybill_id;
@@ -457,14 +856,21 @@ class InvoicesController extends Controller
         // if($delivery_trip->waybills()->count() == 1 ){
         //     // delete the delivery trip entry
         // }
+        $waybill = Waybill::find($waybill_id);
         $delivery_trip->waybills()->detach($waybill_id);
 
         // update waybill wayfare status to pending
-        $waybill = Waybill::find($waybill_id);
+
         $waybill->dispatcher()->delete();
         $waybill->waybill_wayfare_status = 'pending';
         $waybill->save();
+        $actor = $this->getUser();
+        $title = "Waybill removed from trip";
+        $description = "Waybill $waybill->waybill_no was removed from trip with trip no.: " . $delivery_trip->trip_no . " by $actor->name ($actor->phone)";
+        //log this activity
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
 
+        $this->logUserActivity($title, $description, $roles);
         return $this->showDeliveryTrip($delivery_trip->id, $delivery_trip->warehouse_id);
     }
     public function changeWaybillStatus(Request $request, Waybill $waybill)
@@ -489,9 +895,9 @@ class InvoicesController extends Controller
         $title = "Waybill status updated";
         $description = "Waybill ($waybill->waybill_no) status updated to " . strtoupper($waybill->status) . " by $user->name ($user->email)";
         if ($status === 'delivered') {
+            $item_in_stock_obj->confirmItemInStockAsSupplied($waybill->dispatchProducts);
             foreach ($invoices as  $invoice) {
 
-                $item_in_stock_obj->confirmItemInStockAsSupplied($waybill->dispatchProducts);
                 $invoice->status = $status;
                 // check for partial supplies
                 $incomplete_invoice_item = $invoice->invoiceItems()->where('supply_status', '=', 'Partial')->first();
@@ -506,7 +912,8 @@ class InvoicesController extends Controller
 
 
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
     }
     /**
      * Update the specified resource in storage.
@@ -521,22 +928,30 @@ class InvoicesController extends Controller
         $user = $this->getUser();
         $invoice_items = json_decode(json_encode($request->invoice_items));
         $invoice = Invoice::find($request->id);
+        $old_invoice_number = $invoice->invoice_number;
+        $invoice->invoice_number      = $request->invoice_number;
         $invoice->subtotal            = $request->subtotal;
         $invoice->discount            = $request->discount;
         $invoice->amount              = $request->amount;
         $invoice->notes              = $request->notes;
         $invoice->save();
+        $extra_info = "";
+        if ($old_invoice_number !== $invoice->invoice_number) {
+            $extra_info = $old_invoice_number . ' was changed to ' . $invoice->invoice_number;
+        }
+        $this->updateInvoiceItems($invoice_items);
         $title = "Invoice modified";
-        $description = "invoice ($invoice->invoice_number) was updated by $user->name ($user->email)";
+        $description = "invoice ($old_invoice_number) was updated by $user->name ($user->email) " . $extra_info;
         //log this action to invoice history
         $this->createInvoiceHistory($invoice, $title, $description);
         //create items invoiceed for
-        $this->updateInvoiceItems($invoice_items);
+
         //////update next invoice number/////
         // $this->incrementInvoiceNo();
 
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($invoice);
     }
 
@@ -546,7 +961,7 @@ class InvoicesController extends Controller
             // $batches = $item->batches;
             $invoice_item = InvoiceItem::find($item->id);
             // keep the old quantity
-            $old_quantity = $invoice_item->quantity;
+            // $old_quantity = $invoice_item->quantity;
 
             $invoice_item->quantity = $item->quantity;
             $invoice_item->no_of_cartons = $item->no_of_cartons;
@@ -555,29 +970,29 @@ class InvoicesController extends Controller
             $invoice_item->amount = $item->amount;
             $invoice_item->save();
 
-            $batches = $invoice_item->batches;
-            $this->removeOldInvoiceItemBatchesAndCreateNewOne($invoice_item, $batches, $old_quantity);
+            // $batches = $invoice_item->batches;
+            // $this->removeOldInvoiceItemBatchesAndCreateNewOne($invoice_item, $batches, $old_quantity);
         }
     }
-    private function removeOldInvoiceItemBatchesAndCreateNewOne($invoice_item, $batches, $old_quantity)
-    {
-        $batch_ids = [];
-        foreach ($batches as $invoice_item_batch) {
-            $item_sub_batch = ItemStockSubBatch::find($invoice_item_batch->item_stock_sub_batch_id);
-            // remove the old quantity reserved
-            if ($item_sub_batch->reserved_for_supply >= $old_quantity) {
-                $item_sub_batch->reserved_for_supply -= $old_quantity;
-            } else {
-                $item_sub_batch->reserved_for_supply = 0;
-            }
-            $item_sub_batch->save();
-            $batch_ids[] = $invoice_item_batch->item_stock_sub_batch_id;
-            // delete the old entry
-            $invoice_item_batch->delete();
-        }
-        // create new one
-        $this->createInvoiceItemBatches($invoice_item, $batch_ids);
-    }
+    // private function removeOldInvoiceItemBatchesAndCreateNewOne($invoice_item, $batches, $old_quantity)
+    // {
+    //     $batch_ids = [];
+    //     foreach ($batches as $invoice_item_batch) {
+    //         $item_sub_batch = ItemStockSubBatch::find($invoice_item_batch->item_stock_sub_batch_id);
+    //         // remove the old quantity reserved
+    //         if ($item_sub_batch->reserved_for_supply >= $old_quantity) {
+    //             $item_sub_batch->reserved_for_supply -= $old_quantity;
+    //         } else {
+    //             $item_sub_batch->reserved_for_supply = 0;
+    //         }
+    //         $item_sub_batch->save();
+    //         $batch_ids[] = $invoice_item_batch->item_stock_sub_batch_id;
+    //         // delete the old entry
+    //         $invoice_item_batch->delete();
+    //     }
+    //     // create new one
+    //     $this->createInvoiceItemBatches($invoice_item, $batch_ids);
+    // }
     /**
      * Remove the specified resource from storage.
      *
@@ -591,22 +1006,23 @@ class InvoicesController extends Controller
         $title = "Invoice deleted";
         $description = "Invoice ($invoice->invoice_number) was deleted by $actor->name ($actor->phone)";
         //log this activity
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
 
-        $invoice_items = $invoice->invoiceItems; //()->batches()->delete();
-        foreach ($invoice_items as $invoice_item) {
-            $invoice_item_batches = $invoice_item->batches;
-            // we want to unreserve any product for this invoice
-            foreach ($invoice_item_batches as $invoice_item_batch) {
-                $quantity = $invoice_item_batch->quantity;
-                $item_stock_sub_batch = ItemStockSubBatch::find($invoice_item_batch->item_stock_sub_batch_id);
-                $item_stock_sub_batch->reserved_for_supply -= $quantity;
-                $item_stock_sub_batch->save();
+        // $invoice_items = $invoice->invoiceItems; //()->batches()->delete();
+        // foreach ($invoice_items as $invoice_item) {
+        //     $invoice_item_batches = $invoice_item->batches;
+        //     // we want to unreserve any product for this invoice
+        //     foreach ($invoice_item_batches as $invoice_item_batch) {
+        //         $quantity = $invoice_item_batch->quantity;
+        //         $item_stock_sub_batch = ItemStockSubBatch::find($invoice_item_batch->item_stock_sub_batch_id);
+        //         $item_stock_sub_batch->reserved_for_supply -= $quantity;
+        //         $item_stock_sub_batch->save();
 
-                // we then delete the invoice item batch
-                $invoice_item_batch->delete();
-            }
-        }
+        //         // we then delete the invoice item batch
+        //         $invoice_item_batch->delete();
+        //     }
+        // }
         $invoice->invoiceItems()->delete();
         $invoice->delete();
         return response()->json(null, 204);

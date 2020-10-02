@@ -1,5 +1,5 @@
 <template>
-  <section>
+  <div class="clear-margin">
     <!-- title row -->
     <div class="row">
       <div class="col-xs-12 page-header" align="center">
@@ -25,11 +25,11 @@
       <div class="col-xs-8 table-responsive">
         <label>Customer Details</label>
         <address>
-          <label>{{ waybill.invoice.customer.user.name.toUpperCase() }}</label><br>
-          {{ (waybill.invoice.customer.type) ? waybill.invoice.customer.type.name.toUpperCase() : '' }}<br>
-          Phone: {{ waybill.invoice.customer.user.phone }}<br>
-          Email: {{ waybill.invoice.customer.user.email }}<br>
-          {{ waybill.invoice.customer.user.address }}
+          <label>{{ waybill.waybill_items[0].invoice.customer.user.name.toUpperCase() }}</label><br>
+          {{ (waybill.waybill_items[0].invoice.customer.type) ? waybill.waybill_items[0].invoice.customer.type.name.toUpperCase() : '' }}<br>
+          Phone: {{ waybill.waybill_items[0].invoice.customer.user.phone }}<br>
+          Email: {{ waybill.waybill_items[0].invoice.customer.user.email }}<br>
+          {{ waybill.waybill_items[0].invoice.customer.user.address }}
         </address>
         <legend>Invoice Products</legend>
         <table class="table table-bordered">
@@ -67,9 +67,11 @@
         </table>
       </div>
       <div class="col-xs-4 table-responsive">
-        <label>Waybill No.: {{ waybill.waybill_no }}</label><br>
+        <label>Waybill No.: {{ waybill.waybill_no }}</label>
+        <label>Dispatched By.: {{ waybill.dispatch_company }}</label>
+        <br>
         <label>Date:</label> {{ moment(waybill.created_at).format('MMMM Do YYYY') }}
-        <table class="table table-bordered">
+        <table v-if="waybill.dispatcher" class="table table-bordered">
           <tbody>
             <tr>
               <td><label>Vehicle No.:</label> {{ waybill.dispatcher.vehicle.plate_no }}<br></td>
@@ -78,7 +80,7 @@
               <td>Dispatched By:</td>
             </tr>
             <tr v-for="(vehicle_driver, index) in waybill.dispatcher.vehicle.vehicle_drivers" :key="index">
-              <td>
+              <td v-if="vehicle_driver.driver">
                 <label>{{ vehicle_driver.type }} Dispatcher</label><br>
                 <label>Name:</label> {{ vehicle_driver.driver.user.name }}<br>
                 <label>Phone:</label> {{ vehicle_driver.driver.user.phone }}<br>
@@ -103,13 +105,14 @@
         <label>Time: _______________________</label>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <script>
 import moment from 'moment';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
+// import Watermark from '@/watermark';
 export default {
   props: {
     waybill: {
@@ -141,6 +144,7 @@ export default {
     };
   },
   mounted() {
+    // Watermark.set('Green Life Pharmaceutical Ltd.');
     this.doPrint();
   },
   methods: {
@@ -153,3 +157,16 @@ export default {
   },
 };
 </script>
+<style>
+@media print {
+* {
+    -webkit-print-color-adjust: exact !important; /*Chrome, Safari */
+    color-adjust: exact !important;  /*Firefox*/
+
+  }
+  .clear-margin {
+    margin-top: -100px !important;
+    background: url("../../../../../public/svg/watermark.png");
+  }
+}
+</style>

@@ -11,27 +11,43 @@
 */
 
 $router->post('auth/login', 'AuthController@login');
+$router->get('dispatch-product/issue', 'DebugController@solveDispatchProductIssue');
+$router->get('total-product', 'DebugController@totalDispatchedProduct');
+$router->get('reserved-', 'DebugController@reservedProducts');
+$router->get('stock-balance', 'DebugController@balanceStockAccount');
+$router->get('stock-balance-product', 'DebugController@balanceStockAccountPerProduct');
+$router->get('balance-invoice-items', 'DebugController@balanceInvoiceItems');
+$router->get('stabilize-account', 'DeproductbugController@stabilizeAccount');
+$router->get('reset', 'DebugController@resetStock');
+$router->get('split', 'DebugController@splitExcessStock');
+$router->get('stabilize-invoice-items', 'Invoice\InvoicesController@stabilizeInvoiceItems');
+$router->get('deliver-items', 'Invoice\InvoicesController@deliverProducts');
+$router->get('correct-dispatch-product', 'Invoice\InvoicesController@correctDispatchProductDate');
+$router->get('invoice-items-without-waybill', 'Invoice\InvoicesController@checkInvoiceItemsWithoutWaybill');
 
 $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
     $router->get('auth/user', 'AuthController@user');
     $router->post('auth/logout', 'AuthController@logout');
     $router->get('users', 'UserController@index')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
-
+    $router->post('users', 'UserController@store')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
     $router->post('users/add-bulk-customers', 'UserController@addBulkCustomers')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
 
     $router->get('users/{user}', 'UserController@show')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
     $router->put('users/{user}', 'UserController@update');
+    $router->put('users/assign-role/{user}', 'UserController@assignRole');
+
     $router->put('users/update-password/{user}', 'UserController@updatePassword');
     $router->put('users/reset-password/{user}', 'UserController@adminResetUserPassword')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
 
     $router->delete('users/{user}', 'UserController@destroy')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+    $router->delete('customers/{user}', 'UserController@destroyCustomer')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
     $router->get('users/{user}/permissions', 'UserController@permissions')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
     $router->put('users/{user}/permissions', 'UserController@updatePermissions')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
     $router->apiResource('roles', 'RoleController')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
     $router->get('roles/{role}/permissions', 'RoleController@permissions')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
     $router->apiResource('permissions', 'PermissionController')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
-    $router->apiResource('users', 'UserController')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+    // $router->apiResource('users', 'UserController')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
 
 
     $router->get('fetch-necessary-params', 'Controller@fetchNecessayParams');
@@ -48,6 +64,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         $router->group(['prefix' => 'driver'], function () use ($router) {
         });
     });
+    //////////////////////////////REPORTS//////////////////////////////
     $router->group(['prefix' => 'reports'], function () use ($router) {
         //customer
         $router->group(['prefix' => 'graphical'], function () use ($router) {
@@ -61,7 +78,11 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->get('outbounds', 'ReportsController@outbounds')->middleware('permission:view reports');
         });
         $router->get('audit-trails', 'ReportsController@auditTrails')->middleware('permission:view reports');
+        $router->get('notification/mark-as-read', 'ReportsController@markAsRead');
+        $router->get('backups', 'ReportsController@backUps'); //->middleware('permission:backup database');
+        $router->get('bin-card', 'ReportsController@fetchBinCard');
     });
+    ////////////////////////////////////////////////////////////////////////////////////////
     $router->group(['prefix' => 'user'], function () use ($router) {
         //customer
         $router->group(['prefix' => 'customer'], function () use ($router) {
@@ -118,6 +139,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
             $router->post('detach-waybill-from-trip', 'InvoicesController@detachWaybillFromTrip')->middleware('permission:manage waybill cost');
 
+            $router->post('add-waybill-to-trip', 'InvoicesController@addWaybillToTrip')->middleware('permission:manage waybill cost');
+
 
             $router->group(['middleware' => 'permission:manage waybill|generate waybill'], function () use ($router) {
                 $router->get('undelivered-invoices', 'InvoicesController@unDeliveredInvoices');
@@ -127,17 +150,59 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             });
         });
     });
+    $router->group(['prefix' => 'transfers', 'namespace' => 'Transfers'], function () use ($router) {
+        $router->group(['prefix' => 'general'], function () use ($router) {
 
+            $router->get('/', 'GoodsTransferController@index')->middleware('permission:view invoice');
+            $router->get('show/{invoice}', 'GoodsTransferController@show')->middleware('permission:view invoice');
+
+            $router->post('store', 'GoodsTransferController@store')->middleware('permission:create invoice');
+
+            $router->put('update/{invoice}', 'GoodsTransferController@update')->middleware('permission:update invoice');
+
+            $router->delete('delete/{invoice}', 'GoodsTransferController@destroy')->middleware('permission:delete invoice');
+
+            $router->put('assign-invoice-to-warehouse/{invoice}', 'GoodsTransferController@assignInvoiceToWarehouse')->middleware('permission:assign invoice to warehouse');
+        });
+        $router->group(['prefix' => 'waybill'], function () use ($router) {
+            $router->get('/', 'GoodsTransferController@waybills')->middleware('permission:view waybill|manage waybill');
+            $router->get('undelivered-invoices', 'GoodsTransferController@unDeliveredInvoices')->middleware('permission:generate waybill|manage waybill');
+
+            $router->get('expenses', 'GoodsTransferController@waybillExpenses')->middleware('permission:manage waybill cost');
+
+            $router->get('delivery-trips-for-extra-cost', 'GoodsTransferController@deliveryTripsForExtraCost')->middleware('permission:manage waybill cost');
+
+            $router->post('add-extra-delivery-cost', 'GoodsTransferController@addExtraDeliveryCost')->middleware('permission:manage waybill cost');
+
+            $router->post('add-waybill-expenses', 'GoodsTransferController@addWaybillExpenses')->middleware('permission:manage waybill cost');
+
+            $router->post('detach-waybill-from-trip', 'GoodsTransferController@detachWaybillFromTrip')->middleware('permission:manage waybill cost');
+
+            $router->post('add-waybill-to-trip', 'GoodsTransferController@addWaybillToTrip')->middleware('permission:manage waybill cost');
+
+
+            $router->group(['middleware' => 'permission:manage waybill|generate waybill'], function () use ($router) {
+                $router->get('undelivered-invoices', 'GoodsTransferController@unDeliveredInvoices');
+                $router->get('fetch-available-vehicles', 'GoodsTransferController@fetchAvailableVehicles');
+                $router->post('store', 'GoodsTransferController@generateWaybill');
+                $router->put('change-status/{waybill}', 'GoodsTransferController@changeWaybillStatus');
+                $router->post('set-dispatcher', 'GoodsTransferController@setWaybillDispatcher');
+            });
+        });
+    });
     $router->group(['prefix' => 'audit'], function () use ($router) {
         $router->group(['prefix' => 'confirm'], function () use ($router) {
             $router->group(['middleware' => 'permission:audit confirm actions'], function () use ($router) {
                 $router->put('/waybill/{waybill}', 'AuditConfirmsController@confirmWaybill');
 
+                $router->put('/transfer-waybill/{waybill}', 'AuditConfirmsController@confirmTransferWaybill');
                 $router->put('/items-in-stock/{item_stock_sub_batch}', 'AuditConfirmsController@confirmStockedItems');
 
                 $router->put('/returned-products/{returned_product}', 'AuditConfirmsController@confirmReturnedItems');
 
                 $router->put('/delivery-cost/{delivery_cost_expense}', 'AuditConfirmsController@confirmDeliveryCost');
+
+                $router->put('/vehicle-expenses/{vehicle_expense}', 'AuditConfirmsController@confirmVehicleExpense');
             });
         });
     });

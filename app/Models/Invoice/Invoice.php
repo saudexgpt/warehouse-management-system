@@ -7,6 +7,7 @@ use App\Laravue\Models\User;
 use App\Models\Warehouse\Warehouse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+
 class Invoice extends Model
 {
     //
@@ -25,7 +26,7 @@ class Invoice extends Model
     }
     public function waybillItems()
     {
-        return $this->hasOne(WaybillItem::class);
+        return $this->hasMany(WaybillItem::class);
     }
     public function invoiceItems()
     {

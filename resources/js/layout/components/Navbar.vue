@@ -17,7 +17,7 @@
           </li>
         </ul> -->
       </template>
-      <el-tooltip :content="$t('navbar.size')" effect="dark" placement="bottom">
+      <el-tooltip content="Notification" effect="dark" placement="bottom">
         <notification class="right-menu-item hover-effect" />
       </el-tooltip>
       <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="click">

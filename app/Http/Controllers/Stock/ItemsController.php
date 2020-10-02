@@ -89,12 +89,12 @@ class ItemsController extends Controller
             $item_price->save();
             // log this action
             $title = "Product Added";
-            $description = $name." added to list of products by " . $user->name;;
-            $this->logUserActivity($title, $description);
+            $description = $name . " added to list of products by " . $user->name;;
+            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+            $this->logUserActivity($title, $description, $roles);
             return $this->show($item);
         }
         return response()->json(['message' => 'Duplicate SKU'], 500);
-
     }
 
 
@@ -145,13 +145,14 @@ class ItemsController extends Controller
         }
         $title = "Product details modified";
         $description = "Product information with ID $item->id  was modified by " . $user->name;;
-        $this->logUserActivity($title, $description);
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($item);
     }
     public function destroyItemTax(Request $request)
     {
         //
-        $tax = Item::find($request->item_id);// ->taxes()->where('tax_id', $request->tax_id)->first();
+        $tax = Item::find($request->item_id); // ->taxes()->where('tax_id', $request->tax_id)->first();
         $tax->taxes()->detach($request->tax_id);
 
         //$item_tax->delete();
@@ -168,8 +169,9 @@ class ItemsController extends Controller
         // first log this event
         $user = $this->getUser();
         $title = "Product deleted";
-        $description = $item->name ." was removed from list of products by " . $user->name;
-        $this->logUserActivity($title, $description);
+        $description = $item->name . " was removed from list of products by " . $user->name;
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
 
         $item->taxes()->detach(); //use detach for pivoted relationship (hasManyThrough)
         $item->price()->delete();

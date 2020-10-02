@@ -23,13 +23,21 @@ class UserResource extends JsonResource
         if ($currentUser->hasRole('admin') && $this->user_type == 'customer') {
             $can_edit = true;
         }
+        if ($currentUser->hasRole('admin')) {
+            $can_edit = true;
+        }
+        // $db_notifications = $this->unreadNotifications()->orderBy('created_at', 'DESC')->get();
+        // $notification
+        // foreach ($db_notifications as $db_notification) {
+        //     # code...
+        // }
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
             'address' => $this->address,
-            'activity_logs' => $this->notifications()->orderBy('created_at', 'DESC')->get(),
+            'notifications' => $this->unreadNotifications()->orderBy('created_at', 'DESC')->get(),
             'roles' => array_map(
                 function ($role) {
                     return $role['name'];

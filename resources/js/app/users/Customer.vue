@@ -19,7 +19,7 @@
       </el-button>
     </div>
     <div v-if="bulk_upload">
-
+      <a class="btn btn-danger" @click="bulk_upload = false"> Cancel</a>
       <upload-excel-component :on-success="handleSuccess" :before-upload="beforeUpload" />
       <legend v-if="tableData.length > 0">Preview what you just uploaded and then click on the submit button. <a class="btn btn-success" @click="addBulkCustomer">Submit</a> </legend>
       <div style="height: 600px; overflow:auto;">
@@ -39,9 +39,17 @@
               Edit
             </el-button>
           </router-link>
-          <el-button v-if="! scope.row.roles.includes('admin')" v-permission="['manage user']" type="danger" size="small" icon="el-icon-key" @click="resetUserPassword(scope.row.id, scope.row.name);">
+          <el-button v-if="! scope.row.roles.includes('admin')" v-permission="['manage user']" type="warning" size="small" icon="el-icon-key" @click="resetUserPassword(scope.row.id, scope.row.name);">
             Reset Password
           </el-button>
+          <el-button
+            v-if="!scope.row.roles.includes('admin')"
+            v-permission="['manage user']"
+            type="danger"
+            size="small"
+            icon="el-icon-delete"
+            @click="handleDelete(scope.index,scope.row.id, scope.row.name);"
+          >Delete</el-button>
         </template>
 
       </v-client-table>
@@ -64,7 +72,7 @@ const userResource = new UserResource();
 const resetUserPasswordResource = new Resource('users/reset-password');
 const necessaryParams = new Resource('fetch-necessary-params');
 const uploadBulkCustomer = new Resource('users/add-bulk-customers');
-
+const deleteCustomerResource = new Resource('customers');
 export default {
   // name: 'CustomerList',
   components: { AddNewCustomer, UploadExcelComponent },
@@ -292,6 +300,40 @@ export default {
           message: 'Password Reset canceled',
         });
       });
+    },
+    handleDelete(index, id, name) {
+      this.$confirm(
+        'This will delete the account of ' + name + '. Continue?',
+        'Warning',
+        {
+          confirmButtonText: 'OK',
+          cancelButtonText: 'Cancel',
+          type: 'warning',
+        }
+      )
+        .then(() => {
+          this.loading = true;
+          deleteCustomerResource
+            .destroy(id)
+            .then((response) => {
+              this.$message({
+                type: 'success',
+                message: 'Delete completed',
+              });
+              this.list.splice(index - 1, 1);
+              this.loading = false;
+            })
+            .catch((error) => {
+              console.log(error);
+              this.loading = false;
+            });
+        })
+        .catch(() => {
+          this.$message({
+            type: 'info',
+            message: 'Delete Action Canceled',
+          });
+        });
     },
     onCreateUpdate(created_row) {
       const app = this;

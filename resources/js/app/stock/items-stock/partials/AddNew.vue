@@ -209,7 +209,12 @@ export default {
       createProduct.store(form)
         .then(response => {
           app.form = app.empty_form;
-          app.sub_batches = [];
+          app.sub_batches = [{
+            quantity: '',
+            batch_no: '',
+            expiry_date: '',
+            goods_received_note: null,
+          }];
           app.$message({ message: 'New Product Added Successfully!!!', type: 'success' });
           app.itemsInStock.push(response.item_in_stock);
           app.$emit('update', response);

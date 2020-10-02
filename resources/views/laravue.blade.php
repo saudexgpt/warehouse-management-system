@@ -81,9 +81,10 @@
         //app.messages.push(JSON.stringify(data));
         console.log(JSON.stringify(data));
         });
- --}}
+
 
     </script>
+     --}}
 {{--
     <script src="{{ mix('js/vendor.js') }}"></script>
     <script src="{{ mix('js/manifest.js') }}"></script>

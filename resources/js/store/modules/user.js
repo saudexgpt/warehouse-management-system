@@ -12,6 +12,7 @@ const state = {
   roles: [],
   permissions: [],
   p_status: '',
+  notifications: [],
 };
 
 const mutations = {
@@ -38,6 +39,9 @@ const mutations = {
   },
   SET_PASSWORD_STATUS: (state, p_status) => {
     state.p_status = p_status;
+  },
+  SET_NOTIFICATIONS: (state, notifications) => {
+    state.notifications = notifications;
   },
 };
 
@@ -69,7 +73,7 @@ const actions = {
             reject('Verification failed, please Login again.');
           }
 
-          const { roles, name, avatar, introduction, permissions, id, p_status } = data;
+          const { roles, name, avatar, introduction, permissions, id, p_status, notifications } = data;
           // roles must be a non-empty array
           if (!roles || roles.length <= 0) {
             reject('getInfo: roles must be a non-null array!');
@@ -82,6 +86,7 @@ const actions = {
           commit('SET_AVATAR', avatar);
           commit('SET_INTRODUCTION', introduction);
           commit('SET_ID', id);
+          commit('SET_NOTIFICATIONS', notifications);
           resolve(data);
         })
         .catch(error => {

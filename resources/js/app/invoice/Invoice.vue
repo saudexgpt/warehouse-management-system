@@ -82,10 +82,28 @@
           >Export Excel</el-button>
         </div>
         <v-client-table v-model="invoices" :columns="columns" :options="options">
+
           <div
             slot="amount"
             slot-scope="props"
           >{{ currency + Number(props.row.amount).toLocaleString() }}</div>
+
+          <div
+            slot="waybill_generated"
+            slot-scope="props"
+          >
+            <div v-if="props.row.waybill_items.length > 0">
+              <div v-if="props.row.full_waybill_generated ==='1'" class="label label-success">
+                Fully Generated
+              </div>
+              <div v-else class="label label-warning">
+                Partially Generated
+              </div>
+            </div>
+            <div v-else class="alert alert-danger">
+              No
+            </div>
+          </div>
           <div
             slot="invoice_date"
             slot-scope="props"
@@ -94,6 +112,13 @@
             <a class="btn btn-default" @click="invoice=props.row; page.option='invoice_details'">
               <i class="el-icon-tickets" />
             </a>
+            <!-- <a
+              v-if="props.row.status === 'pending' && props.row.full_waybill_generated ==='0' && checkPermission(['update invoice'])"
+              class="btn btn-warning"
+              @click="invoice=props.row; page.option='edit_invoice'; selected_row_index=props.index"
+            >
+              <i class="el-icon-edit" />
+            </a> -->
             <a
               v-if="props.row.status === 'pending' && checkPermission(['update invoice'])"
               class="btn btn-warning"
@@ -102,7 +127,7 @@
               <i class="el-icon-edit" />
             </a>
             <a
-              v-if="props.row.status === 'pending' && checkPermission(['delete invoice'])"
+              v-if="props.row.waybill_items.length < 1 && checkPermission(['delete invoice'])"
               class="btn btn-danger"
               @click="deleteInvoice(props.index, props.row)"
             >
@@ -180,6 +205,7 @@ export default {
         'amount',
         'invoice_date',
         'status',
+        'waybill_generated',
       ],
 
       options: {
@@ -189,6 +215,7 @@ export default {
           amount: 'Amount',
           invoice_date: 'Date',
           status: 'Status',
+          waybill_generated: 'Waybill Generated',
 
           // id: 'S/N',
         },

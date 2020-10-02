@@ -28,6 +28,7 @@ import InBoundRoutes from './modules/in-bound';
 import OutBoundRoutes from './modules/out-bound';
 import LogisticsRoutes from './modules/logistics';
 import ReportsRoutes from './modules/reports';
+import TransfersRoutes from './modules/transfers';
 /**
  * Sub-menu only appear when children.length>=1
  * @see https://doc.laravue.dev/guide/essentials/router-and-nav.html
@@ -69,6 +70,24 @@ export const constantRoutes = [
     hidden: true,
   },
   {
+    path: '/notifications',
+    component: Layout,
+    hidden: true,
+    meta: {
+      title: 'Notifications',
+      icon: 'el-icon-bell',
+      // permissions: ['view audit trail'],
+    },
+    children: [
+      {
+        path: '',
+        component: () => import('@/app/reports/Notifications'),
+
+      },
+    ],
+
+  },
+  {
     path: '/auth-redirect',
     component: () => import('@/app/login/AuthRedirect'),
     hidden: true,
@@ -95,6 +114,7 @@ export const constantRoutes = [
         name: 'Dashboard',
         meta: { title: 'dashboard', icon: 'el-icon-s-home', noCache: false },
       },
+
     ],
   },
   // {
@@ -158,6 +178,7 @@ export const asyncRoutes = [
   // OrderRoutes,
   InBoundRoutes,
   OutBoundRoutes,
+  TransfersRoutes,
   WarehouseRoutes,
   LogisticsRoutes,
   // permissionRoutes,

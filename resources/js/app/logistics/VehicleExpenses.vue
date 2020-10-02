@@ -77,8 +77,23 @@
             <div slot="created_at" slot-scope="props">
               {{ moment(props.row.created_at).format('MMMM Do, YYYY') }}
             </div>
+            <div slot="confirmer.name" slot-scope="{row}">
+              <div :id="row.id">
+                <div v-if="row.confirmed_by == null">
+                  <a
+                    v-if="checkPermission(['audit confirm actions'])"
+                    title="Click to confirm"
+                    class="btn btn-warning"
+                    @click="confirmVehicleExpenses(row.id);"
+                  >
+                    <i class="fa fa-check" />
+                  </a>
+                </div>
+                <div v-else>{{ row.confirmer.name }}</div>
+              </div>
+            </div>
             <div slot="status" slot-scope="props">
-              <div v-if="checkPermission(['approve vehicle expenses'])">
+              <div v-if="checkPermission(['approve vehicle expenses']) && props.row.confirmed_by != null">
                 <el-select v-model="props.row.status" @input="confirmApproval(props, props.row)">
                   <el-option v-for="(status, index) in statuses" :key="index" :value="status" :label="status" />
                 </el-select>
@@ -108,6 +123,7 @@ import Resource from '@/api/resource';
 const necessaryParams = new Resource('fetch-necessary-params');
 const listVehicleExpenses = new Resource('logistics/vehicle-expenses');
 const approveVehicleExpense = new Resource('logistics/vehicle-expenses/approve');
+const confirmVehicleExpensesResource = new Resource('audit/confirm/vehicle-expenses');
 export default {
   components: { AddNew },
   props: {
@@ -119,10 +135,11 @@ export default {
   data() {
     return {
       vehicle_expenses: [],
-      columns: ['vehicle.plate_no', 'expense_type', 'amount', 'service_charge', 'grand_total', 'created_at', 'status'],
+      columns: ['vehicle.plate_no', 'expense_type', 'amount', 'service_charge', 'grand_total', 'created_at', 'confirmer.name', 'status'],
 
       options: {
         headings: {
+          'confirmer.name': 'Confirmed By',
           'vehicle.plate_no': 'Vehicle',
           expense_type: 'Expense Type',
           amount: 'Amount',
@@ -172,6 +189,21 @@ export default {
     checkRole,
     showCalendar(){
       this.show_calendar = !this.show_calendar;
+    },
+    confirmVehicleExpenses(vehicle_expense_id) {
+      // const app = this;
+      const form = { id: vehicle_expense_id };
+      const message = 'Click okay to confirm action';
+      if (confirm(message)) {
+        confirmVehicleExpensesResource
+          .update(vehicle_expense_id, form)
+          .then((response) => {
+            if (response.confirmed === 'success') {
+              document.getElementById(vehicle_expense_id).innerHTML =
+                response.confirmed_by;
+            }
+          });
+      }
     },
     fetchNecessaryParams() {
       const app = this;

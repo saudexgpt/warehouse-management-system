@@ -1,5 +1,5 @@
 <template>
-  <el-dialog :title="'Create new customer'" :visible.sync="dialogFormVisible">
+  <el-dialog :title="'Create new customer'" :visible.sync="dialogFormVisible" :before-close="closeModal">
     <div v-loading="userCreating" class="form-container">
       <el-form ref="newCustomer" :rules="rules" :model="newCustomer" label-position="left" label-width="150px" style="max-width: 500px;">
         <el-form-item :label="$t('user.name')" prop="name">

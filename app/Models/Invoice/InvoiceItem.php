@@ -44,12 +44,12 @@ class InvoiceItem extends Model
             $invoice_item = $waybill_item->invoiceItem;
             $status = $waybill_item->waybill->status;
             if ($status != 'delivered') {
-                $total_quantity_supplied = $invoice_item->quantity_supplied + $waybill_item->quantity;
+                $total_quantity_supplied = $invoice_item->quantity_supplied; // + $waybill_item->quantity;
                 $invoice_item->supply_status = 'Complete';
                 if ($total_quantity_supplied < $invoice_item->quantity) {
                     $invoice_item->supply_status = 'Partial';
                 }
-                $invoice_item->quantity_supplied = $total_quantity_supplied;
+                // $invoice_item->quantity_supplied = $total_quantity_supplied;
             }
             $invoice_item->delivery_status = $status;
             $invoice_item->save();

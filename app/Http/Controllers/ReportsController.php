@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\Waybill;
 use App\Models\Invoice\DeliveryTripExpense;
+use App\Models\Invoice\DispatchedProduct;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Logistics\Vehicle;
 use App\Models\Logistics\VehicleCondition;
@@ -17,6 +18,8 @@ use App\Notification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 
 class ReportsController extends Controller
 {
@@ -538,5 +541,109 @@ class ReportsController extends Controller
         }
         $activity_logs = Notification::where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('created_at', 'DESC')->paginate(20);
         return response()->json(compact('activity_logs'), 200);
+    }
+    public function markAsRead()
+    {
+        $user = $this->getUser();
+        $user->unreadNotifications->markAsRead();
+        return response()->json([], 204);
+    }
+    public function backUps()
+    {
+        $date = Date('Y-m-d', strtotime('now'));
+        $file_name = 'gpl_db_backup_' . $date . '.sql';
+        $url = 'storage/bkup/db/' . $file_name;
+        // $directories = Storage::allDirectories($directory);
+
+        return response()->json(compact('url', 'date'), 200);
+    }
+    public function fetchBinCard(Request $request)
+    {
+        $date_from = Carbon::now()->startOfMonth();
+        $date_to = Carbon::now()->endOfMonth();
+        $panel = 'month';
+        if (isset($request->from, $request->to)) {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $panel = $request->panel;
+        }
+        $warehouse_id = $request->warehouse_id;
+        $item_id = $request->item_id;
+        $total_stock_till_date = ItemStockSubBatch::groupBy('item_id')
+            ->having('warehouse_id', $warehouse_id)
+            ->where('item_id', $item_id)
+            ->where('created_at', '<', $date_from)
+            ->where('confirmed_by', '!=', null)
+            ->select('*', \DB::raw('SUM(quantity) as quantity'))
+            ->first();
+        $previous_outbound = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
+            ->where('item_stock_sub_batches.item_id', $item_id)
+            ->where('dispatched_products.created_at', '<', $date_from)
+            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
+            ->orderby('dispatched_products.created_at')->first();
+        // return [
+        //     'total' => $total_stock_till_date,
+        //     'previous_outbound' => $previous_outbound,
+        //     'today_stock' => $total_inbound_for_duration,
+        // ];
+        $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
+            ->where('created_at', '>=', $date_from)
+            ->where('created_at', '<=', $date_to)
+            ->orderby('created_at')
+            ->get();
+        $bincards = [];
+        $quantity_in_stock = ($total_stock_till_date) ? $total_stock_till_date->quantity : 0;
+        $quantity_supplied = ($previous_outbound) ? $previous_outbound->quantity_supplied : 0;
+        $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied;
+        foreach ($inbounds as $inbound) {
+            //$running_balance += $inbound->quantity;
+            $bincards[]  = [
+                'type' => 'in_bound',
+                'date' => $inbound->created_at,
+                'invoice_no' => '',
+                'waybill_grn' => $inbound->goods_received_note,
+                'quantity_transacted' => $inbound->quantity,
+                'in' => $inbound->quantity,
+                'out' => '',
+                'balance' => 0, // initially set to zero
+                'packaging' => $inbound->item->package_type,
+                'physical_quantity' => '',
+                'sign' => '',
+            ];
+        }
+        // $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
+        //     ->where('item_stock_sub_batches.item_id', $item_id)
+        //     ->where('dispatched_products.created_at', '>=', $date_from)
+        //     ->where('dispatched_products.created_at', '<=', $date_to)
+        //     ->select('dispatched_products.*')->orderby('dispatched_products.created_at')->get();
+        $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
+            ->groupBy('waybill_id')
+            ->having('warehouse_id', $warehouse_id)
+            ->where('item_stock_sub_batches.item_id', $item_id)
+            ->where('dispatched_products.created_at', '>=', $date_from)
+            ->where('dispatched_products.created_at', '<=', $date_to)
+            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('dispatched_products.created_at')->get();
+        foreach ($outbounds as $outbound) {
+            //$running_balance -= $outbound->quantity_supplied;
+            $bincards[] = [
+                'type' => 'out_bound',
+                'date' => $outbound->created_at,
+                'invoice_no' => $outbound->waybillItem->invoice->invoice_number,
+                'waybill_grn' => $outbound->waybill->waybill_no,
+                'quantity_transacted' => $outbound->quantity_supplied,
+                'in' => '',
+                'out' => $outbound->quantity_supplied,
+                'balance' => 0, // initially set to zero
+                'packaging' => $outbound->itemStock->item->package_type,
+                'physical_quantity' => '',
+                'sign' => '',
+            ];
+        }
+        usort($bincards, function ($a, $b) {
+            return strtotime($a['date']) - strtotime($b['date']);
+        });
+        $date_from_formatted = date('Y-m-d', strtotime($date_from));
+        $date_to_formatted = date('Y-m-d', strtotime($date_to));
+        return  response()->json(compact('bincards', 'brought_forward', 'date_from_formatted', 'date_to_formatted'), 200);
     }
 }

@@ -17,7 +17,7 @@ class VehiclesController extends Controller
     public function index(Request $request)
     {
         $warehouse_id = $request->warehouse_id;
-        $vehicles = Vehicle::with(['warehouse','vehicleType', 'vehicleDrivers.driver.user', 'expenses' => function ($q) {
+        $vehicles = Vehicle::with(['warehouse', 'vehicleType', 'vehicleDrivers.driver.user', 'expenses' => function ($q) {
             $q->orderBy('id', 'DESC');
         }, 'conditions' => function ($q) {
             $q->orderBy('id', 'DESC');
@@ -64,8 +64,9 @@ class VehiclesController extends Controller
             // log this action
             $title = "New Vehicle Added";
             $description = "Vehicle with plate number: " . $vehicle->plate_no .
-            " was added by " . $user->name . "($user->email)";;
-            $this->logUserActivity($title, $description);
+                " was added by " . $user->name . "($user->email)";;
+            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+            $this->logUserActivity($title, $description, $roles);
             return $this->show($vehicle);
         }
         return response()->json(['message', 'Duplicate Plate No.'], 500);
@@ -79,7 +80,7 @@ class VehiclesController extends Controller
      */
     public function show(Vehicle $vehicle)
     {
-        $vehicle = $vehicle->with(['warehouse', 'vehicleType', 'vehicleDrivers.driver.user','expenses' => function ($q) {
+        $vehicle = $vehicle->with(['warehouse', 'vehicleType', 'vehicleDrivers.driver.user', 'expenses' => function ($q) {
             $q->orderBy('id', 'DESC');
         }, 'conditions' => function ($q) {
             $q->orderBy('id', 'DESC');
@@ -122,15 +123,15 @@ class VehiclesController extends Controller
 
         // log this action
         $title = "Vehicle details updated";
-        $description = "Details of vehicle with plate number: " . $vehicle->plate_no . " was modified by ". $user->name. "($user->email)";
-        $this->logUserActivity($title, $description);
+        $description = "Details of vehicle with plate number: " . $vehicle->plate_no . " was modified by " . $user->name . "($user->email)";
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         return $this->show($vehicle);
     }
     public function vehicleDrivers()
     {
         $vehicle_drivers = VehicleDriver::with(['vehicle', 'driver'])->get();
         return response()->json(compact('vehicle_drivers'), 200);
-
     }
 
     public function assignDriver(Request $request)
@@ -148,7 +149,7 @@ class VehiclesController extends Controller
         $vehicle_driver->type = $type;
         $vehicle_driver->save();
 
-        $vehicles = Vehicle::with(['warehouse', 'vehicleType', 'vehicleDrivers.driver.user','expenses' => function ($q) {
+        $vehicles = Vehicle::with(['warehouse', 'vehicleType', 'vehicleDrivers.driver.user', 'expenses' => function ($q) {
             $q->orderBy('id', 'DESC');
         }, 'conditions' => function ($q) {
             $q->orderBy('id', 'DESC');
@@ -156,8 +157,9 @@ class VehiclesController extends Controller
 
         // log this action
         $title = "Vehicle assigned";
-        $description = "Vehicle with plate number: " . $vehicle_driver->vehicle->plate_no . " has been assigned to " . $vehicle_driver->driver->user->name . "(".$vehicle_driver->driver->user->phone.")";
-        $this->logUserActivity($title, $description);
+        $description = "Vehicle with plate number: " . $vehicle_driver->vehicle->plate_no . " has been assigned to " . $vehicle_driver->driver->user->name . "(" . $vehicle_driver->driver->user->phone . ")";
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         // $vehicle_drivers = VehicleDriver::with(['vehicle', 'driver.user'])->where('vehicle_id', $vehicle_id)->get();
         return response()->json(compact('vehicles'), 200);
     }

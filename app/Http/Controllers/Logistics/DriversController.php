@@ -87,8 +87,9 @@ class DriversController extends Controller
         $user = $this->getUser();
         //log this activity first
         $title = "Driver information deleted";
-        $description = $driver->user->name."'s profile deleted by " . $user->name;
-        $this->logUserActivity($title, $description);
+        $description = $driver->user->name . "'s profile deleted by " . $user->name;
+        $roles = ['assistant admin', 'warehouse manager'];
+        $this->logUserActivity($title, $description, $roles);
 
         // delete the driver's info
         $driver->delete();
