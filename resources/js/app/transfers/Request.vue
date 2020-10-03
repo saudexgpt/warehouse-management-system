@@ -1,9 +1,12 @@
 <template>
   <div class="app-container">
-    <div v-if="page.option==='list'">
+    <div v-if="page.option === 'list'">
       <router-link
-        v-if="checkPermission(['create transfer_request']) && canCreateNewTransferRequest"
-        :to="{name:'CreateTransferRequest'}"
+        v-if="
+          checkPermission(['manage transfer request']) &&
+            canCreateNewTransferRequest
+        "
+        :to="{ name: 'CreateTransferRequest' }"
         class="btn btn-default"
       >Make Transfer Request</router-link>
       <el-row :gutter="10">
@@ -60,7 +63,7 @@
       </el-row>
       <br>
     </div>
-    <div v-if="page.option==='list'" class="box">
+    <div v-if="page.option === 'list'" class="box">
       <div class="box-header">
         <h4 class="box-title">{{ table_title }}</h4>
         <span class="pull-right">
@@ -76,156 +79,147 @@
       <div class="box-body">
         <el-tabs v-model="activeActivity" type="border-card">
           <el-tab-pane label="Incoming Request" name="Incoming">
-            <v-client-table v-model="incoming_transfer_requests" :columns="columns" :options="options">
-              <div
-                slot="supply_warehouse"
-                slot-scope="props"
-              >{{ props.row.supply_warehouse.name }}</div>
-              <div
-                slot="request_warehouse"
-                slot-scope="props"
-              >{{ props.row.request_warehouse.name }}</div>
-              <div
-                slot="request_by"
-                slot-scope="props"
-              >{{ props.row.request_by.name }}</div>
+            <v-client-table
+              v-model="incoming_transfer_requests"
+              :columns="columns"
+              :options="options"
+            >
+              <div slot="supply_warehouse" slot-scope="props">
+                {{ props.row.supply_warehouse.name }}
+              </div>
+              <div slot="request_warehouse" slot-scope="props">
+                {{ props.row.request_warehouse.name }}
+              </div>
+              <div slot="request_by" slot-scope="props">
+                {{ props.row.request_by.name }}
+              </div>
 
               <div slot="waybill_generated" slot-scope="props">
                 <div v-if="props.row.transfer_waybill_items.length > 0">
                   <div
-                    v-if="props.row.full_waybill_generated ==='1'"
+                    v-if="props.row.full_waybill_generated === '1'"
                     class="label label-success"
-                  >Fully Generated</div>
-                  <div v-else class="label label-warning">Partially Generated</div>
+                  >
+                    Fully Generated
+                  </div>
+                  <div v-else class="label label-warning">
+                    Partially Generated
+                  </div>
                 </div>
                 <div v-else class="alert alert-danger">No</div>
               </div>
-              <div
-                slot="created_at"
-                slot-scope="props"
-              >{{ moment(props.row.created_at).format('MMMM Do YYYY, h:mm:ss a') }}</div>
+              <div slot="created_at" slot-scope="props">
+                {{
+                  moment(props.row.created_at).format('MMMM Do YYYY, h:mm:ss a')
+                }}
+              </div>
               <div slot="action" slot-scope="props">
-                <a class="btn btn-default" @click="transfer_request=props.row; page.option='request_details'">
+                <a
+                  class="btn btn-default"
+                  @click="
+                    transfer_request = props.row;
+                    page.option = 'request_details';
+                  "
+                >
                   <i class="el-icon-tickets" />
                 </a>
-                <!-- <a
-              v-if="props.row.status === 'pending' && props.row.full_waybill_generated ==='0' && checkPermission(['update transfer_request'])"
-              class="btn btn-warning"
-              @click="transfer_request=props.row; page.option='edit_transfer_request'; selected_row_index=props.index"
-            >
-              <i class="el-icon-edit" />
-            </a>-->
                 <a
-                  v-if="props.row.status === 'pending' && checkPermission(['update transfer_request'])"
+                  v-if="
+                    props.row.status === 'pending' &&
+                      checkPermission(['manage transfer request'])
+                  "
                   class="btn btn-warning"
-                  @click="transfer_request=props.row; page.option='edit_transfer_request'; selected_row_index=props.index"
+                  @click="
+                    transfer_request = props.row;
+                    page.option = 'edit_transfer_request';
+                    selected_row_index = props.index;
+                  "
                 >
                   <i class="el-icon-edit" />
                 </a>
-                <a
-                  v-if="props.row.transfer_waybill_items.length < 1 && checkPermission(['delete transfer_request'])"
-                  class="btn btn-danger"
-                  @click="deleteTransferRequest(props.index, props.row)"
-                >
-                  <i class="fa fa-trash" />
-                </a>
-                <!-- <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="click">
-              <div class="avatar-wrapper" style="color: brown">
-                <label style="cursor:pointer"><i class="el-icon-more-outline" /></label>
-              </div>
-              <el-dropdown-menu slot="dropdown" style="padding: 10px;">
-                <el-dropdown-item v-if="props.row.request_status === 'pending' && checkPermission(['approve transfer_request'])">
-                  <a @click="approveTransferRequest(props.index, props.row);">Approve</a>
-                </el-dropdown-item>
-                <el-dropdown-item v-if="props.row.request_status === 'approved' && checkPermission(['approve transfer_request', 'deliver transfer_request'])" divided>
-                  <a @click="deliverTransferRequest(props.index, props.row);">Delivered</a>
-                </el-dropdown-item>
-                <el-dropdown-item v-if="props.row.request_status === 'pending' && checkPermission(['cancel transfer_request'])" divided>
-                  <a @click="cancelTransferRequest(props.index, props.row);">Cancel</a>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </el-dropdown>-->
               </div>
             </v-client-table>
           </el-tab-pane>
           <el-tab-pane label="Sent Request" name="Sent">
-            <v-client-table v-model="sent_requests" :columns="columns" :options="options">
-              <div
-                slot="supply_warehouse"
-                slot-scope="props"
-              >{{ props.row.supply_warehouse.name }}</div>
-              <div
-                slot="request_warehouse"
-                slot-scope="props"
-              >{{ props.row.request_warehouse.name }}</div>
-              <div
-                slot="request_by"
-                slot-scope="props"
-              >{{ props.row.request_by.name }}</div>
+            <v-client-table
+              v-model="sent_requests"
+              :columns="columns"
+              :options="options"
+            >
+              <div slot="supply_warehouse" slot-scope="props">
+                {{ props.row.supply_warehouse.name }}
+              </div>
+              <div slot="request_warehouse" slot-scope="props">
+                {{ props.row.request_warehouse.name }}
+              </div>
+              <div slot="request_by" slot-scope="props">
+                {{ props.row.request_by.name }}
+              </div>
 
               <div slot="waybill_generated" slot-scope="props">
                 <div v-if="props.row.transfer_waybill_items.length > 0">
                   <div
-                    v-if="props.row.full_waybill_generated ==='1'"
+                    v-if="props.row.full_waybill_generated === '1'"
                     class="label label-success"
-                  >Fully Generated</div>
-                  <div v-else class="label label-warning">Partially Generated</div>
+                  >
+                    Fully Generated
+                  </div>
+                  <div v-else class="label label-warning">
+                    Partially Generated
+                  </div>
                 </div>
                 <div v-else class="alert alert-danger">No</div>
               </div>
-              <div
-                slot="created_at"
-                slot-scope="props"
-              >{{ moment(props.row.created_at).format('MMMM Do YYYY, h:mm:ss a') }}</div>
+              <div slot="created_at" slot-scope="props">
+                {{
+                  moment(props.row.created_at).format('MMMM Do YYYY, h:mm:ss a')
+                }}
+              </div>
               <span slot="action" slot-scope="props">
-                <a class="btn btn-default" @click="transfer_request=props.row; page.option='request_details'">
+                <a
+                  class="btn btn-default"
+                  @click="
+                    transfer_request = props.row;
+                    page.option = 'request_details';
+                  "
+                >
                   <i class="el-icon-tickets" />
                 </a>
-                <!-- <a
-              v-if="props.row.status === 'pending' && props.row.full_waybill_generated ==='0' && checkPermission(['update transfer_request'])"
-              class="btn btn-warning"
-              @click="transfer_request=props.row; page.option='edit_transfer_request'; selected_row_index=props.index"
-            >
-              <i class="el-icon-edit" />
-            </a>-->
                 <a
-                  v-if="props.row.status === 'pending' && checkPermission(['update invoice'])"
+                  v-if="
+                    props.row.status === 'pending' &&
+                      checkPermission(['manage transfer request'])
+                  "
                   class="btn btn-warning"
-                  @click="transfer_request=props.row; page.option='edit_transfer_request'; selected_row_index=props.index"
+                  @click="
+                    transfer_request = props.row;
+                    page.option = 'edit_transfer_request';
+                    selected_row_index = props.index;
+                  "
                 >
                   <i class="el-icon-edit" />
                 </a>
                 <a
-                  v-if="props.row.transfer_waybill_items.length < 1 && checkPermission(['delete transfer_request'])"
+                  v-if="
+                    props.row.transfer_waybill_items.length < 1 &&
+                      checkPermission(['manage transfer request'])
+                  "
                   class="btn btn-danger"
                   @click="deleteTransferRequest(props.index, props.row)"
                 >
                   <i class="fa fa-trash" />
                 </a>
-                <!-- <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="click">
-              <div class="avatar-wrapper" style="color: brown">
-                <label style="cursor:pointer"><i class="el-icon-more-outline" /></label>
-              </div>
-              <el-dropdown-menu slot="dropdown" style="padding: 10px;">
-                <el-dropdown-item v-if="props.row.request_status === 'pending' && checkPermission(['approve transfer_request'])">
-                  <a @click="approveTransferRequest(props.index, props.row);">Approve</a>
-                </el-dropdown-item>
-                <el-dropdown-item v-if="props.row.request_status === 'approved' && checkPermission(['approve transfer_request', 'deliver transfer_request'])" divided>
-                  <a @click="deliverTransferRequest(props.index, props.row);">Delivered</a>
-                </el-dropdown-item>
-                <el-dropdown-item v-if="props.row.request_status === 'pending' && checkPermission(['cancel transfer_request'])" divided>
-                  <a @click="cancelTransferRequest(props.index, props.row);">Cancel</a>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </el-dropdown>-->
               </span>
             </v-client-table>
           </el-tab-pane>
         </el-tabs>
       </div>
     </div>
-    <div v-if="page.option==='request_details'">
-      <a class="btn btn-danger no-print" @click="page.option='list'">Go Back</a>
+    <div v-if="page.option === 'request_details'">
+      <a
+        class="btn btn-danger no-print"
+        @click="page.option = 'list'"
+      >Go Back</a>
       <transfer-request-details
         :invoice="transfer_request"
         :page="page"
@@ -234,8 +228,11 @@
         :currency="currency"
       />
     </div>
-    <div v-if="page.option==='edit_transfer_request'">
-      <a class="btn btn-danger no-print" @click="page.option='list'">Go Back</a>
+    <div v-if="page.option === 'edit_transfer_request'">
+      <a
+        class="btn btn-danger no-print"
+        @click="page.option = 'list'"
+      >Go Back</a>
       <edit-transfer-request
         :invoice="transfer_request"
         :page="page"
@@ -290,7 +287,7 @@ export default {
 
       options: {
         headings: {
-          'request_by': 'Request By',
+          request_by: 'Request By',
           supply_warehouse: 'Supplying Warehouse',
           request_warehouse: 'Requesting Warehouse',
           request_number: 'TXN Number',
@@ -302,18 +299,8 @@ export default {
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: [
-          'request_number',
-          'request_by',
-          'request_date',
-          'status',
-        ],
-        filterable: [
-          'request_number',
-          'request_by',
-          'request_date',
-          'status',
-        ],
+        sortable: ['request_number', 'request_by', 'request_date', 'status'],
+        filterable: ['request_number', 'request_by', 'request_date', 'status'],
       },
       page: {
         option: 'list',

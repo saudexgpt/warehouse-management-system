@@ -106,7 +106,7 @@
         </div>
         <!-- /.col -->
       </div>
-      <div v-if="waybill.confirmed_by !== null && waybill.dispatch_by !== null" class="row">
+      <div v-if="waybill.confirmed_by !== null && waybill.dispatched_by !== null" class="row">
         <div class="col-md-6 col-xs-12">
           <label align="center">CURRENT GOODS DELIVERY STATUS</label>
           <div v-if="waybill.status === 'pending'" align="center">
@@ -254,7 +254,7 @@ export default {
             app.waybill.status = app.form.status;
 
             if (response.confirmed === 'success') {
-              app.waybill.confirm_by = response.confirmed_by;
+              app.waybill.confirmed_by = response.confirmed_by;
               app.activate_confirm_button = false;
             }
           });

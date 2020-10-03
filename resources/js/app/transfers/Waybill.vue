@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <div v-if="page.option==='list'">
-      <router-link v-if="checkPermission(['generate waybill']) && canGenerateNewWaybill" :to="{name:'GenerateTransferWaybill'}" class="btn btn-default"> Generate New Waybill</router-link>
+      <router-link v-if="checkPermission(['manage transfer request']) && canGenerateNewWaybill" :to="{name:'GenerateTransferWaybill'}" class="btn btn-default"> Generate New Waybill</router-link>
 
       <el-row :gutter="10">
         <el-col :xs="24" :sm="8" :md="8">

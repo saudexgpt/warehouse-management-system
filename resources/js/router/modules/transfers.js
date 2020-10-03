@@ -8,7 +8,7 @@ const permissionRoutes = {
   meta: {
     title: 'Transfers',
     icon: 'el-icon-s-promotion',
-    permissions: ['view invoice', 'view waybill', 'manage waybill'],
+    permissions: ['manage transfer request'],
     // roles: ['admin', 'stock officer'],
   },
   children: [
@@ -19,23 +19,16 @@ const permissionRoutes = {
       name: 'TransferRequest',
       meta: {
         title: 'Transfer Request',
-        permissions: ['create invoice', 'view invoice'],
+        permissions: ['manage transfer request'],
       },
     },
-    // {
-    //   path: 'details/:id',
-    //   component: () => import('@/app/transfers/Details'),
-    //   name: 'InvoiceDetails',
-    //   meta: { title: 'Invoice Details', noCache: true, permissions: ['view invoice'] },
-    //   hidden: true,
-    // },
     {
       path: 'create-new',
       component: () => import('@/app/transfers/partials/CreateTransferRequest'),
       name: 'CreateTransferRequest',
       meta: {
         title: 'Create New',
-        permissions: ['create invoice'],
+        permissions: ['manage transfer request'],
       },
       hidden: true,
     },
@@ -45,34 +38,17 @@ const permissionRoutes = {
       name: 'TransferWaybills',
       meta: {
         title: 'Waybills',
-        permissions: ['view waybill', 'manage waybill'],
+        permissions: ['manage transfer request'],
       },
     },
-    // {
-    //   path: 'waybill-delivery-cost',
-    //   component: () => import('@/app/transfers/WaybillDeliveryCost'),
-    //   name: 'WaybillDeliveryCost',
-    //   meta: {
-    //     title: 'Delivery Cost',
-    //     permissions: ['manage waybill cost'],
-    //   },
-    // },
-    // {
-    //   path: 'extra-delivery-cost',
-    //   component: () => import('@/app/transfers/ExtraDeliveryCost'),
-    //   name: 'ExtraDeliveryCost',
-    //   meta: {
-    //     title: 'Extra Delivery Cost',
-    //     permissions: ['manage waybill cost'],
-    //   },
-    // },
+
     {
       path: 'generate-transfer-waybill',
       component: () => import('@/app/transfers/partials/GenerateWaybill'),
       name: 'GenerateTransferWaybill',
       meta: {
         title: 'Generate Waybill',
-        permissions: ['generate waybill', 'manage waybill'],
+        permissions: ['manage transfer request'],
       },
       hidden: true,
     },

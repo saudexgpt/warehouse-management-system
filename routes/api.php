@@ -151,37 +151,37 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         });
     });
     $router->group(['prefix' => 'transfers', 'namespace' => 'Transfers'], function () use ($router) {
-        $router->group(['prefix' => 'general'], function () use ($router) {
+        $router->group(['middleware' => 'permission:manage transfer request'], function () use ($router) {
+            $router->group(['prefix' => 'general'], function () use ($router) {
+                $router->get('/', 'GoodsTransferController@index');
+                $router->get('show/{invoice}', 'GoodsTransferController@show');
 
-            $router->get('/', 'GoodsTransferController@index')->middleware('permission:view invoice');
-            $router->get('show/{invoice}', 'GoodsTransferController@show')->middleware('permission:view invoice');
+                $router->post('store', 'GoodsTransferController@store');
 
-            $router->post('store', 'GoodsTransferController@store')->middleware('permission:create invoice');
+                $router->put('update/{invoice}', 'GoodsTransferController@update');
 
-            $router->put('update/{invoice}', 'GoodsTransferController@update')->middleware('permission:update invoice');
+                $router->delete('delete/{invoice}', 'GoodsTransferController@destroy');
 
-            $router->delete('delete/{invoice}', 'GoodsTransferController@destroy')->middleware('permission:delete invoice');
+                $router->put('assign-invoice-to-warehouse/{invoice}', 'GoodsTransferController@assignInvoiceToWarehouse');
+            });
+            $router->group(['prefix' => 'waybill'], function () use ($router) {
+                $router->get('/', 'GoodsTransferController@waybills');
+                $router->get('undelivered-invoices', 'GoodsTransferController@unDeliveredInvoices');
 
-            $router->put('assign-invoice-to-warehouse/{invoice}', 'GoodsTransferController@assignInvoiceToWarehouse')->middleware('permission:assign invoice to warehouse');
-        });
-        $router->group(['prefix' => 'waybill'], function () use ($router) {
-            $router->get('/', 'GoodsTransferController@waybills')->middleware('permission:view waybill|manage waybill');
-            $router->get('undelivered-invoices', 'GoodsTransferController@unDeliveredInvoices')->middleware('permission:generate waybill|manage waybill');
+                $router->get('expenses', 'GoodsTransferController@waybillExpenses');
 
-            $router->get('expenses', 'GoodsTransferController@waybillExpenses')->middleware('permission:manage waybill cost');
+                $router->get('delivery-trips-for-extra-cost', 'GoodsTransferController@deliveryTripsForExtraCost');
 
-            $router->get('delivery-trips-for-extra-cost', 'GoodsTransferController@deliveryTripsForExtraCost')->middleware('permission:manage waybill cost');
+                $router->post('add-extra-delivery-cost', 'GoodsTransferController@addExtraDeliveryCost');
 
-            $router->post('add-extra-delivery-cost', 'GoodsTransferController@addExtraDeliveryCost')->middleware('permission:manage waybill cost');
+                $router->post('add-waybill-expenses', 'GoodsTransferController@addWaybillExpenses');
 
-            $router->post('add-waybill-expenses', 'GoodsTransferController@addWaybillExpenses')->middleware('permission:manage waybill cost');
+                $router->post('detach-waybill-from-trip', 'GoodsTransferController@detachWaybillFromTrip');
 
-            $router->post('detach-waybill-from-trip', 'GoodsTransferController@detachWaybillFromTrip')->middleware('permission:manage waybill cost');
-
-            $router->post('add-waybill-to-trip', 'GoodsTransferController@addWaybillToTrip')->middleware('permission:manage waybill cost');
+                $router->post('add-waybill-to-trip', 'GoodsTransferController@addWaybillToTrip');
 
 
-            $router->group(['middleware' => 'permission:manage waybill|generate waybill'], function () use ($router) {
+
                 $router->get('undelivered-invoices', 'GoodsTransferController@unDeliveredInvoices');
                 $router->get('fetch-available-vehicles', 'GoodsTransferController@fetchAvailableVehicles');
                 $router->post('store', 'GoodsTransferController@generateWaybill');
