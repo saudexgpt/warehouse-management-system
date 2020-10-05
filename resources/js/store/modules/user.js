@@ -116,6 +116,10 @@ const actions = {
     const { p_status } = status;
     commit('SET_PASSWORD_STATUS', p_status);
   },
+
+  setNotifications({ commit }, notifications) {
+    commit('SET_NOTIFICATIONS', notifications);
+  },
   // remove token
   resetToken({ commit }) {
     return new Promise(resolve => {

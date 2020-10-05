@@ -1,114 +1,157 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
-      <!-- <el-input v-model="query.keyword" :placeholder="$t('table.keyword')" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" /> -->
-      <el-select
-        v-model="query.role"
-        :placeholder="$t('table.role')"
-        clearable
-        style="width: 90px"
-        class="filter-item"
-        @change="handleFilter"
-      >
-        <el-option
-          v-for="role in roles"
-          :key="role.name"
-          :label="role.name | uppercaseFirst"
-          :value="role.name"
-        />
-      </el-select>
-      <!-- <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-row :gutter="20">
+        <el-col :xs="24" :sm="12" :md="12">
+          <el-input
+            v-model="query.keyword"
+            placeholder="Search"
+            style="width: 200px"
+            class="filter-item"
+            @input="handleFilter"
+          />
+        </el-col>
+        <el-col :xs="24" :sm="12" :md="12">
+          <span class="pull-right">
+            <el-select
+              v-model="query.role"
+              :placeholder="$t('table.role')"
+              clearable
+              style="width: 90px"
+              class="filter-item"
+              @change="handleFilter"
+            >
+              <el-option
+                v-for="role in roles"
+                :key="role.name"
+                :label="role.name | uppercaseFirst"
+                :value="role.name"
+              />
+            </el-select>
+            <!-- <el-button round v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         {{ $t('table.search') }}
       </el-button>-->
-      <el-button
-        v-if="canAddNew"
-        class="filter-item"
-        style="margin-left: 10px;"
-        type="primary"
-        icon="el-icon-plus"
-        @click="handleCreate"
-      >{{ $t('table.add') }}</el-button>
-      <el-button
-        v-waves
-        :loading="downloading"
-        class="filter-item"
-        type="primary"
-        icon="el-icon-download"
-        @click="handleDownload"
-      >{{ $t('table.export') }}</el-button>
+            <el-button
+              v-if="canAddNew"
+              round
+              class="filter-item"
+              style="margin-left: 10px"
+              type="primary"
+              icon="el-icon-plus"
+              @click="handleCreate"
+            >{{ $t('table.add') }}
+            </el-button>
+            <el-button
+              v-waves
+              round
+              :loading="downloading"
+              class="filter-item"
+              type="primary"
+              icon="el-icon-download"
+              @click="handleDownload"
+            >{{ $t('table.export') }}</el-button>
+          </span>
+        </el-col>
+      </el-row>
     </div>
-    <v-client-table
-      v-if="list.length > 0"
-      v-model="list"
-      v-loading="loading"
-      :columns="columns"
-      :options="options"
-    >
-      <template slot="role" slot-scope="scope">
-        <span :id="scope.row.id">{{ scope.row.roles.join(', ') }}</span>
-      </template>
-      <template slot="assign_role" slot-scope="{row}">
-        <el-select
-          v-if="!row.roles.includes('admin')"
-          v-model="row.new_role"
-          class="filter-item"
-          placeholder="Please select role"
-          @change="assignUserRole(row, $event)"
-        >
-          <el-option
-            v-for="role in defaultRoles"
-            :key="role.name"
-            :label="role.name | uppercaseFirst"
-            :value="role.name"
-          />
-        </el-select>
-      </template>
-      <template slot="action" slot-scope="scope">
-        <el-tooltip class="item" effect="dark" content="Edit User" placement="top-start">
-          <router-link
-            v-if="!scope.row.roles.includes('admin')"
-            :to="'/administrator/users/edit/'+scope.row.id"
+    <div v-loading="load_table">
+      <v-client-table
+        v-if="list.length > 0"
+        v-model="list"
+        :columns="columns"
+        :options="options"
+      >
+        <template slot="role" slot-scope="scope">
+          <span :id="scope.row.id">{{ scope.row.roles.join(', ') }}</span>
+        </template>
+        <template slot="assign_role" slot-scope="{ row }">
+          <el-select
+            v-if="!row.roles.includes('admin')"
+            v-model="row.new_role"
+            class="filter-item"
+            placeholder="Please select role"
+            @change="assignUserRole(row, $event)"
+          >
+            <el-option
+              v-for="role in defaultRoles"
+              :key="role.name"
+              :label="role.name | uppercaseFirst"
+              :value="role.name"
+            />
+          </el-select>
+        </template>
+        <template slot="action" slot-scope="scope">
+          <el-tooltip
+            class="item"
+            effect="dark"
+            content="Edit User"
+            placement="top-start"
+          >
+            <router-link
+              v-if="!scope.row.roles.includes('admin')"
+              :to="'/administrator/users/edit/' + scope.row.id"
+            >
+              <el-button
+                v-permission="['manage user']"
+                round
+                type="primary"
+                size="small"
+                icon="el-icon-edit"
+              />
+            </router-link>
+          </el-tooltip>
+          <el-tooltip
+            class="item"
+            effect="dark"
+            content="Manage Permission"
+            placement="top-start"
           >
             <el-button
-              v-permission="['manage user']"
-              type="primary"
+              v-if="!scope.row.roles.includes('admin')"
+              v-permission="['manage permission']"
+              round
+              type="success"
               size="small"
-              icon="el-icon-edit"
+              icon="el-icon-user"
+              @click="handleEditPermissions(scope.row.id)"
             />
-          </router-link>
-        </el-tooltip>
-        <el-tooltip class="item" effect="dark" content="Manage Permission" placement="top-start">
-          <el-button
-            v-if="!scope.row.roles.includes('admin')"
-            v-permission="['manage permission']"
-            type="success"
-            size="small"
-            icon="el-icon-user"
-            @click="handleEditPermissions(scope.row.id);"
-          />
-        </el-tooltip>
-        <el-tooltip class="item" effect="dark" content="Reset Password" placement="top-start">
-          <el-button
-            v-if="!scope.row.roles.includes('admin')"
-            v-permission="['manage user']"
-            type="warning"
-            size="small"
-            icon="el-icon-key"
-            @click="resetUserPassword(scope.row.id, scope.row.name);"
-          />
-        </el-tooltip>
-        <el-tooltip class="item" effect="dark" content="Delete User" placement="top-start">
-          <el-button
-            v-if="!scope.row.roles.includes('admin')"
-            v-permission="['manage user']"
-            type="danger"
-            size="small"
-            icon="el-icon-delete"
-            @click="handleDelete(scope.index,scope.row.id, scope.row.name);"
-          />
-        </el-tooltip>
-      </template>
-    </v-client-table>
+          </el-tooltip>
+          <el-tooltip
+            class="item"
+            effect="dark"
+            content="Reset Password"
+            placement="top-start"
+          >
+            <el-button
+              v-if="!scope.row.roles.includes('admin')"
+              v-permission="['manage user']"
+              round
+              type="warning"
+              size="small"
+              icon="el-icon-key"
+              @click="resetUserPassword(scope.row.id, scope.row.name)"
+            />
+          </el-tooltip>
+          <el-tooltip
+            class="item"
+            effect="dark"
+            content="Delete User"
+            placement="top-start"
+          >
+            <el-button
+              v-if="!scope.row.roles.includes('admin')"
+              v-permission="['manage user']"
+              round
+              type="danger"
+              size="small"
+              icon="el-icon-delete"
+              @click="handleDelete(scope.index, scope.row.id, scope.row.name)"
+            />
+          </el-tooltip>
+        </template>
+      </v-client-table>
+    </div>
+
     <!-- <el-table v-loading="loading" :data="list" border fit highlight-current-row style="width: 100%">
       <el-table-column align="center" label="ID" width="80">
         <template slot-scope="scope">
@@ -146,30 +189,44 @@
       <el-table-column v-if="canAddNew" align="center" label="Actions" width="250">
         <template slot-scope="scope">
           <router-link v-if="!scope.row.roles.includes('admin')" :to="'/administrator/users/edit/'+scope.row.id">
-            <el-button v-permission="['manage user']" type="primary" size="small" icon="el-icon-edit">
+            <el-button round v-permission="['manage user']" type="primary" size="small" icon="el-icon-edit">
               Edit
             </el-button>
           </router-link>
-          <el-button v-if="!scope.row.roles.includes('admin')" v-permission="['manage permission']" type="warning" size="small" icon="el-icon-edit" @click="handleEditPermissions(scope.row.id);">
+          <el-button round v-if="!scope.row.roles.includes('admin')" v-permission="['manage permission']" type="warning" size="small" icon="el-icon-edit" @click="handleEditPermissions(scope.row.id);">
             Permissions
           </el-button>
-          <el-button v-if="scope.row.roles.includes('visitor')" v-permission="['manage user']" type="danger" size="small" icon="el-icon-delete" @click="handleDelete(scope.row.id, scope.row.name);">
+          <el-button round v-if="scope.row.roles.includes('visitor')" v-permission="['manage user']" type="danger" size="small" icon="el-icon-delete" @click="handleDelete(scope.row.id, scope.row.name);">
             Delete
           </el-button>
         </template>
       </el-table-column>
-    </el-table>
+    </el-table>-->
 
-    <pagination v-show="total>0" :total="total" :page.sync="query.page" :limit.sync="query.limit" @pagination="getList" />-->
+    <pagination
+      v-show="total > 0"
+      :total="total"
+      :page.sync="query.page"
+      :limit.sync="query.limit"
+      @pagination="getList"
+    />
 
     <el-dialog
       :visible.sync="dialogPermissionVisible"
       :title="'Edit Permissions - ' + currentUser.name"
     >
-      <div v-if="currentUser.name" v-loading="dialogPermissionLoading" class="form-container">
+      <div
+        v-if="currentUser.name"
+        v-loading="dialogPermissionLoading"
+        class="form-container"
+      >
         <div class="permissions-container">
           <div class="block">
-            <el-form :model="currentUser" label-width="80px" label-position="top">
+            <el-form
+              :model="currentUser"
+              label-width="80px"
+              label-position="top"
+            >
               <el-form-item label="Menus">
                 <el-tree
                   ref="menuPermissions"
@@ -184,7 +241,11 @@
             </el-form>
           </div>
           <div class="block">
-            <el-form :model="currentUser" label-width="80px" label-position="top">
+            <el-form
+              :model="currentUser"
+              label-width="80px"
+              label-position="top"
+            >
               <el-form-item label="Permissions">
                 <el-tree
                   ref="otherPermissions"
@@ -200,12 +261,13 @@
           </div>
           <div class="clear-left" />
         </div>
-        <div style="text-align:right;">
-          <el-button
-            type="danger"
-            @click="dialogPermissionVisible=false"
-          >{{ $t('permission.cancel') }}</el-button>
-          <el-button type="primary" @click="confirmPermission">{{ $t('permission.confirm') }}</el-button>
+        <div style="text-align: right">
+          <el-button round type="danger" @click="dialogPermissionVisible = false">{{
+            $t('permission.cancel')
+          }}</el-button>
+          <el-button round type="primary" @click="confirmPermission">{{
+            $t('permission.confirm')
+          }}</el-button>
         </div>
       </div>
     </el-dialog>
@@ -218,10 +280,14 @@
           :model="newUser"
           label-position="left"
           label-width="150px"
-          style="max-width: 500px;"
+          style="max-width: 500px"
         >
           <el-form-item :label="$t('user.role')" prop="role">
-            <el-select v-model="newUser.role" class="filter-item" placeholder="Please select role">
+            <el-select
+              v-model="newUser.role"
+              class="filter-item"
+              placeholder="Please select role"
+            >
               <el-option
                 v-for="role in defaultRoles"
                 :key="role.name"
@@ -246,13 +312,20 @@
           <el-form-item :label="$t('user.password')" prop="password">
             <el-input v-model="newUser.password" show-password />
           </el-form-item>
-          <el-form-item :label="$t('user.confirmPassword')" prop="confirmPassword">
+          <el-form-item
+            :label="$t('user.confirmPassword')"
+            prop="confirmPassword"
+          >
             <el-input v-model="newUser.confirmPassword" show-password />
           </el-form-item>
         </el-form>
         <div slot="footer" class="dialog-footer">
-          <el-button @click="dialogFormVisible = false">{{ $t('table.cancel') }}</el-button>
-          <el-button type="primary" @click="createUser()">{{ $t('table.confirm') }}</el-button>
+          <el-button round @click="dialogFormVisible = false">{{
+            $t('table.cancel')
+          }}</el-button>
+          <el-button round type="primary" @click="createUser()">{{
+            $t('table.confirm')
+          }}</el-button>
         </div>
       </div>
     </el-dialog>
@@ -260,7 +333,7 @@
 </template>
 
 <script>
-// import Pagination from '@/components/Pagination'; // Secondary package based on el-pagination
+import Pagination from '@/components/Pagination'; // Secondary package based on el-pagination
 import UserResource from '@/api/user';
 import Resource from '@/api/resource';
 import waves from '@/directive/waves'; // Waves directive
@@ -274,8 +347,8 @@ const deleteUserResource = new Resource('users');
 const assignRoleResource = new Resource('users/assign-role');
 const necessaryParams = new Resource('fetch-necessary-params');
 export default {
-  // name: 'UserList',
-  // components: { Pagination },
+  name: 'UserList',
+  components: { Pagination },
   directives: { waves, permission },
   props: {
     canAddNew: {
@@ -309,21 +382,23 @@ export default {
           dropdown: true,
           chunk: 10,
         },
-        filterByColumn: true,
-        texts: {
-          filter: 'Search:',
-        },
+        perPage: 10,
+        // filterByColumn: true,
+        // texts: {
+        //   filter: 'Search:',
+        // },
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: ['name', 'email', 'phone'],
-        filterable: ['name', 'email', 'phone', 'address'],
+        filterable: false, // ['name', 'email', 'phone', 'address'],
       },
       total: 0,
-      loading: true,
+      loading: false,
+      load_table: false,
       downloading: false,
       userCreating: false,
       query: {
         page: 1,
-        limit: 15,
+        limit: 10,
         keyword: '',
         role: '',
       },
@@ -469,7 +544,8 @@ export default {
     fetchNecessaryParams() {
       const app = this;
       necessaryParams.list().then((response) => {
-        app.roles = response.params.all_roles;
+        // app.roles = response.params.all_roles;
+        app.roles = response.params.default_roles;
         app.defaultRoles = response.params.default_roles;
         // if (app.warehouses.length > 0) {
         //   app.form.warehouse_id = app.warehouses[0];
@@ -480,7 +556,8 @@ export default {
     },
     getList() {
       const { limit, page } = this.query;
-      this.loading = true;
+      this.options.perPage = limit;
+      this.load_table = true;
       userResource
         .list(this.query)
         .then((response) => {
@@ -489,11 +566,11 @@ export default {
             element['index'] = (page - 1) * limit + index + 1;
           });
           this.total = response.meta.total;
-          this.loading = false;
+          this.load_table = false;
         })
         .catch((error) => {
           console.log(error);
-          this.loading = false;
+          this.load_table = false;
         });
     },
     handleFilter() {
@@ -681,12 +758,20 @@ export default {
         role: '',
       };
     },
-    handleDownload() {
+    handleDownload(){
+      // fetch all data for export
+      this.query.limit = this.total;
       this.downloading = true;
+      userResource.list(this.query)
+        .then(response => {
+          this.export(response.data);
+
+          this.downloading = false;
+        });
+    },
+    export(export_data) {
       import('@/vendor/Export2Excel').then((excel) => {
         const tHeader = [
-          'id',
-          'user_id',
           'name',
           'email',
           'phone',
@@ -694,15 +779,13 @@ export default {
           'role',
         ];
         const filterVal = [
-          'index',
-          'id',
           'name',
           'email',
           'phone',
           'address',
           'role',
         ];
-        const data = this.formatJson(filterVal, this.list);
+        const data = this.formatJson(filterVal, export_data);
         excel.export_json_to_excel({
           header: tHeader,
           data,

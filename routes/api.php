@@ -30,6 +30,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
     $router->get('auth/user', 'AuthController@user');
     $router->post('auth/logout', 'AuthController@logout');
     $router->get('users', 'UserController@index')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+    $router->get('user-notifications', 'UserController@userNotifications');
+
     $router->post('users', 'UserController@store')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
     $router->post('users/add-bulk-customers', 'UserController@addBulkCustomers')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
 

@@ -1,8 +1,6 @@
 <template>
   <div>
     <div>
-      <label class="radio-label" style="padding-left:0;">Filename: </label>
-      <el-input v-model="filename" :placeholder="$t('excel.placeholder')" style="width:340px;" prefix-icon="el-icon-document" />
       <el-button :loading="downloadLoading" style="margin:0 0 20px 20px;" type="primary" icon="document" @click="handleDownload">
         Export Excel
       </el-button>
@@ -24,16 +22,15 @@
         {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
 
       </div>
-      <div slot="updated_at" slot-scope="{row}">
+      <!-- <div slot="updated_at" slot-scope="{row}">
         {{ moment(row.created_at).fromNow() }}
 
-      </div>
+      </div> -->
     </v-client-table>
   </div>
 </template>
 <script>
 import moment from 'moment';
-import { parseTime } from '@/utils';
 export default {
   props: {
     itemsInStock: {
@@ -47,7 +44,7 @@ export default {
   },
   data() {
     return {
-      columns: ['item.name', 'quantity', 'in_transit', 'supplied', 'balance', 'updated_at'],
+      columns: ['item.name', 'quantity', 'in_transit', 'supplied', 'balance'],
 
       options: {
         headings: {
@@ -56,13 +53,12 @@ export default {
           in_transit: 'In Transit',
           supplied: 'Supplied',
           balance: 'Balance',
-          updated_at: 'Last Modified',
 
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['item.name', 'quantity', 'in_transit', 'supplied', 'balance', 'updated_at'],
-        filterable: ['item.name', 'updated_at'],
+        sortable: ['item.name', 'quantity', 'in_transit', 'supplied', 'balance'],
+        filterable: ['item.name'],
       },
       page: {
         option: 'list',
@@ -90,7 +86,7 @@ export default {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['PRODUCT', 'QUANTITY STOCKED', 'IN TRANSIT', 'SUPPLIED', 'BALANCE', 'LAST MODIFIED'];
+        const tHeader = ['PRODUCT', 'QUANTITY STOCKED', 'IN TRANSIT', 'SUPPLIED', 'BALANCE'];
         const filterVal = this.columns;
         const list = this.itemsInStock;
         const data = this.formatJson(filterVal, list);
@@ -107,14 +103,10 @@ export default {
     },
     formatJson(filterVal, jsonData) {
       return jsonData.map(v => filterVal.map(j => {
-        if (j === 'updated_at') {
-          return parseTime(v[j]);
-        } else {
-          if (j === 'item.name') {
-            return v['item']['name'];
-          }
-          return v[j];
+        if (j === 'item.name') {
+          return v['item']['name'];
         }
+        return v[j];
       }));
     },
   },

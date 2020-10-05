@@ -1,22 +1,31 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
-      <!-- <el-input v-model="query.keyword" :placeholder="$t('table.keyword')" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" /> -->
-      <!-- <el-select v-model="query.role" :placeholder="$t('table.role')" clearable style="width: 90px" class="filter-item" @change="handleFilter">
-        <el-option v-for="role in roles" :key="role.name" :label="role.name | uppercaseFirst" :value="role.name" />
-      </el-select> -->
-      <!-- <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
-        {{ $t('table.search') }}
-      </el-button> -->
-      <el-button v-if="canAddNew" class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-plus" @click="dialogFormVisible = true">
-        {{ $t('table.add') }}
-      </el-button>
-      <el-button v-if="canAddNew" class="filter-item" style="margin-left: 10px;" type="warning" icon="el-icon-plus" @click="bulk_upload = true">
-        Upload Multiple Customers
-      </el-button>
-      <el-button v-waves :loading="downloading" class="filter-item" type="danger" icon="el-icon-download" @click="handleDownload">
-        {{ $t('table.export') }}
-      </el-button>
+      <el-row :gutter="20">
+        <el-col :xs="24" :sm="12" :md="12">
+          <el-input
+            v-model="query.keyword"
+            placeholder="Search"
+            style="width: 200px"
+            class="filter-item"
+            @input="handleFilter"
+          />
+        </el-col>
+        <el-col :xs="24" :sm="12" :md="12">
+          <span class="pull-right">
+            <el-button v-if="canAddNew" round class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-plus" @click="dialogFormVisible = true">
+              {{ $t('table.add') }}
+            </el-button>
+            <el-button v-if="canAddNew" round class="filter-item" style="margin-left: 10px;" type="warning" icon="el-icon-plus" @click="bulk_upload = true">
+              Upload Multiple Customers
+            </el-button>
+            <el-button v-waves round :loading="downloading" class="filter-item" type="danger" icon="el-icon-download" @click="handleDownload">
+              {{ $t('table.export') }}
+            </el-button>
+          </span>
+        </el-col>
+      </el-row>
+
     </div>
     <div v-if="bulk_upload">
       <a class="btn btn-danger" @click="bulk_upload = false"> Cancel</a>
@@ -35,16 +44,17 @@
         </template>
         <template slot="action" slot-scope="scope">
           <router-link v-if="!scope.row.roles.includes('admin')" :to="'/administrator/users/edit/'+scope.row.id">
-            <el-button v-permission="['manage user']" type="primary" size="small" icon="el-icon-edit">
+            <el-button v-permission="['manage user']" round type="primary" size="small" icon="el-icon-edit">
               Edit
             </el-button>
           </router-link>
-          <el-button v-if="! scope.row.roles.includes('admin')" v-permission="['manage user']" type="warning" size="small" icon="el-icon-key" @click="resetUserPassword(scope.row.id, scope.row.name);">
+          <el-button v-if="! scope.row.roles.includes('admin')" v-permission="['manage user']" round type="warning" size="small" icon="el-icon-key" @click="resetUserPassword(scope.row.id, scope.row.name);">
             Reset Password
           </el-button>
           <el-button
             v-if="!scope.row.roles.includes('admin')"
             v-permission="['manage user']"
+            round
             type="danger"
             size="small"
             icon="el-icon-delete"
@@ -53,13 +63,21 @@
         </template>
 
       </v-client-table>
+
     </div>
+    <pagination
+      v-show="total > 0"
+      :total="total"
+      :page.sync="query.page"
+      :limit.sync="query.limit"
+      @pagination="getList"
+    />
     <add-new-customer :dialog-form-visible="dialogFormVisible" :params="params" @created="onCreateUpdate" @close="dialogFormVisible=false" />
   </div>
 </template>
 
 <script>
-// import Pagination from '@/components/Pagination'; // Secondary package based on el-pagination
+import Pagination from '@/components/Pagination'; // Secondary package based on el-pagination
 import UploadExcelComponent from '@/components/UploadExcel/index.vue';
 import UserResource from '@/api/user';
 import Resource from '@/api/resource';
@@ -75,7 +93,7 @@ const uploadBulkCustomer = new Resource('users/add-bulk-customers');
 const deleteCustomerResource = new Resource('customers');
 export default {
   // name: 'CustomerList',
-  components: { AddNewCustomer, UploadExcelComponent },
+  components: { AddNewCustomer, UploadExcelComponent, Pagination },
   directives: { waves, permission },
   props: {
     canAddNew: {
@@ -97,13 +115,14 @@ export default {
           dropdown: true,
           chunk: 10,
         },
-        filterByColumn: true,
+        perPage: 10,
+        filterByColumn: false,
         texts: {
           filter: 'Search:',
         },
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: ['name', 'email', 'phone'],
-        filterable: ['name', 'email', 'phone', 'address'],
+        filterable: false, // ['name', 'email', 'phone', 'address'],
       },
       total: 0,
       loading: true,
@@ -111,7 +130,7 @@ export default {
       userCreating: false,
       query: {
         page: 1,
-        limit: 15,
+        limit: 10,
         keyword: '',
         role: 'customer',
       },
@@ -254,6 +273,8 @@ export default {
     },
     async getList() {
       const { limit, page } = this.query;
+      this.options.perPage = limit;
+      this.options.pagination.chunk = limit;
       this.loading = true;
       const { data, meta } = await userResource.list(this.query);
       this.list = data;
@@ -339,18 +360,27 @@ export default {
       const app = this;
       app.list.push(created_row);
     },
-    handleDownload() {
+    handleDownload(){
+      // fetch all data for export
+      this.query.limit = this.total;
       this.downloading = true;
+      userResource.list(this.query)
+        .then(response => {
+          this.export(response.data);
+
+          this.downloading = false;
+        });
+    },
+    export(export_data) {
       import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['id', 'user_id', 'name', 'email', 'phone', 'address', 'role'];
-        const filterVal = ['index', 'id', 'name', 'email', 'phone', 'address', 'role'];
-        const data = this.formatJson(filterVal, this.list);
+        const tHeader = ['name', 'email', 'phone', 'address'];
+        const filterVal = ['name', 'email', 'phone', 'address'];
+        const data = this.formatJson(filterVal, export_data);
         excel.export_json_to_excel({
           header: tHeader,
           data,
-          filename: 'user-list',
+          filename: 'customer-list',
         });
-        this.downloading = false;
       });
     },
     formatJson(filterVal, jsonData) {

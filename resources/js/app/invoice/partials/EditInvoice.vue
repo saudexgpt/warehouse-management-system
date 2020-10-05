@@ -42,6 +42,14 @@
                           <td>{{ index + 1 }}</td>
                           <td>
                             <span v-if="invoice_item.item">{{ invoice_item.item.name }}</span>
+                            <el-select v-model="invoice_item.item_index" filterable placeholder="Change" @input="fetchItemDetails(index)">
+                              <el-option
+                                v-for="(item, item_index) in params.items"
+                                :key="item_index"
+                                :value="item_index"
+                                :label="item.name"
+                              />
+                            </el-select>
                           </td>
                           <td>
                             <el-input
@@ -422,6 +430,7 @@ export default {
       const item = app.params.items[item_index];
       app.invoice_items[index].rate = item.price.sale_price;
       app.invoice_items[index].item_id = item.id;
+      app.invoice_items[index].item = item;
       app.invoice_items[index].type = item.package_type;
       // let tax = 0;
       // for (let a = 0; a < item.taxes.length; a++) {
@@ -430,6 +439,7 @@ export default {
       // app.invoice_items[index].tax = tax;
       app.setProductBatches(index, app.form.warehouse_id, item.id);
       app.calculateTotal(index);
+      app.calculateNoOfCartons(index);
     },
     setProductBatches(index, warehouse_id, item_id) {
       const app = this;
@@ -452,9 +462,11 @@ export default {
     calculateNoOfCartons(index) {
       const app = this;
       if (index !== null) {
+        const item_index = app.invoice_items[index].item_index;
+        const item = app.params.items[item_index];
         const quantity = app.invoice_items[index].quantity;
         const quantity_per_carton =
-          app.invoice_items[index].quantity_per_carton;
+          item.quantity_per_carton;
         if (quantity_per_carton > 0) {
           const no_of_cartons = quantity / quantity_per_carton;
           app.invoice_items[index].no_of_cartons = no_of_cartons; // + parseFloat(tax);

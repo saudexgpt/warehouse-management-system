@@ -32,7 +32,7 @@ use Validator;
  */
 class UserController extends Controller
 {
-    const ITEM_PER_PAGE = 20;
+    const ITEM_PER_PAGE = 10;
 
     /**
      * Display a listing of the user resource.
@@ -40,29 +40,38 @@ class UserController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response|ResourceCollection
      */
+    public function userNotifications()
+    {
+        $user = $this->getUser();
+        $notifications = $user->unreadNotifications()->orderBy('created_at', 'DESC')->get();
+        return response()->json(compact('notifications'), 200);
+    }
     public function index(Request $request)
     {
         $searchParams = $request->all();
         $userQuery = User::query();
-        $limit = 20; // Arr::get($searchParams, 'limit', static::ITEM_PER_PAGE);
+        $limit = Arr::get($searchParams, 'limit', static::ITEM_PER_PAGE);
         $role = Arr::get($searchParams, 'role', '');
         $keyword = Arr::get($searchParams, 'keyword', '');
-        $userQuery->where('user_type', '!=', 'developer');
+        if (!empty($keyword)) {
+            $userQuery->where(function ($q) use ($keyword) {
+                $q->where('name', 'LIKE', '%' . $keyword . '%');
+                $q->orWhere('email', 'LIKE', '%' . $keyword . '%');
+                $q->orWhere('phone', 'LIKE', '%' . $keyword . '%');
+                $q->orWhere('address', 'LIKE', '%' . $keyword . '%');
+            });
+        }
         if (!empty($role)) {
             $userQuery->whereHas('roles', function ($q) use ($role) {
                 $q->where('name', $role);
             });
         } else {
-            $userQuery->whereHas('roles', function ($q) use ($role) {
+            $userQuery->whereHas('roles', function ($q) {
                 $q->where('name', '!=', 'customer');
                 $q->where('name', '!=', 'driver');
             });
         }
-
-        if (!empty($keyword)) {
-            $userQuery->where('name', 'LIKE', '%' . $keyword . '%');
-            $userQuery->where('email', 'LIKE', '%' . $keyword . '%');
-        }
+        $userQuery->where('user_type', '!=', 'developer');
 
         return UserResource::collection($userQuery->paginate($limit));
     }

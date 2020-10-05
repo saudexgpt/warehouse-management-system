@@ -25,11 +25,11 @@
 
       </div>
       <div slot="created_at" slot-scope="{row}">
-        {{ moment(row.created_at).fromNow() }}
+        {{ moment(row.created_at).calendar() }}
 
       </div>
       <div slot="updated_at" slot-scope="{row}">
-        {{ moment(row.updated_at).fromNow() }}
+        {{ moment(row.updated_at).calendar() }}
 
       </div>
     </v-client-table>

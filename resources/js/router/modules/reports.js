@@ -51,17 +51,6 @@ const permissionRoutes = {
       },
     },
 
-    {
-      path: 'backup',
-      component: () => import('@/app/reports/BackUp'),
-      name: 'BackUp',
-      meta: {
-        title: 'Back Up',
-        icon: 'el-icon-download',
-        permissions: ['backup database'],
-      },
-    },
-
   ],
 };
 

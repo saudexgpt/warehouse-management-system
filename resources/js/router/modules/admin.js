@@ -40,6 +40,16 @@ const adminRoutes = {
       name: 'RoleList',
       meta: { title: 'rolePermission', icon: 'el-icon-s-check', permissions: ['manage permission'] },
     },
+    {
+      path: 'backup',
+      component: () => import('@/app/reports/BackUp'),
+      name: 'BackUp',
+      meta: {
+        title: 'Back Up',
+        icon: 'el-icon-download',
+        permissions: ['backup database'],
+      },
+    },
   ],
 };
 

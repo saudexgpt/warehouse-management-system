@@ -31,6 +31,8 @@ import ResizeMixin from './mixin/resize-handler.js';
 import { mapState } from 'vuex';
 import Pusher from 'pusher-js';
 import Echo from 'laravel-echo';
+import Resource from '@/api/resource';
+const userNotifications = new Resource('user-notifications');
 export default {
   name: 'Layout',
   components: {
@@ -93,9 +95,16 @@ export default {
 
   },
   created(){
+    this.fetchUserNotifications();
     this.listenForChanges;
   },
   methods: {
+    fetchUserNotifications() {
+      const app = this;
+      userNotifications.list().then((response) => {
+        app.$store.dispatch('user/setNotifications', response.notifications);
+      });
+    },
     pushNotification(notification) {
       const data = {
         title: notification.title,

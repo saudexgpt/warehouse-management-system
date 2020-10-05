@@ -37,7 +37,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'address' => $this->address,
-            'notifications' => $this->unreadNotifications()->orderBy('created_at', 'DESC')->get(),
+            'notifications' => [],
             'roles' => array_map(
                 function ($role) {
                     return $role['name'];
