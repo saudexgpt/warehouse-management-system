@@ -277,7 +277,10 @@ export default {
           return parseTime(v[j]);
         }
         if (j === 'trip_no') {
-          return v['trips'][0].trip_no;
+          if (v['trips'].length > 0) {
+            return v['trips'][0].trip_no;
+          }
+          return '-';
         }
         if (j === 'dispatchers') {
           if (v['dispatcher']) {
