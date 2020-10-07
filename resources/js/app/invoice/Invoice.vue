@@ -107,7 +107,11 @@
           <div
             slot="invoice_date"
             slot-scope="props"
-          >{{ moment(props.row.invoice_date).format('MMMM Do YYYY, h:mm:ss a') }}</div>
+          >{{ moment(props.row.invoice_date).format('MMMM Do YYYY') }}</div>
+          <div
+            slot="created_at"
+            slot-scope="props"
+          >{{ moment(props.row.created_at).format('MMMM Do YYYY, h:mm:ss a') }}</div>
           <div slot="action" slot-scope="props">
             <a class="btn btn-default" @click="invoice=props.row; page.option='invoice_details'">
               <i class="el-icon-tickets" />
@@ -204,6 +208,7 @@ export default {
         'customer.user.name',
         'amount',
         'invoice_date',
+        'created_at',
         'status',
         'waybill_generated',
       ],
@@ -213,7 +218,8 @@ export default {
           'customer.user.name': 'Customer',
           invoice_number: 'Invoice Number',
           amount: 'Amount',
-          invoice_date: 'Date',
+          invoice_date: 'Invoice Date',
+          created_at: 'Date Saved',
           status: 'Status',
           waybill_generated: 'Waybill Generated',
 
@@ -354,12 +360,13 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '']];
+        const multiHeader = [[this.table_title, '', '', '', '', '']];
         const tHeader = [
           'INVOICE NUMBER',
           'CUSTOMER',
           'AMOUNT',
-          'DATE',
+          'INVOICE DATE',
+          'DATE SAVED',
           'STATUS',
         ];
         const filterVal = [
@@ -387,12 +394,14 @@ export default {
         filterVal.map(j => {
           if (j === 'invoice_date') {
             return parseTime(v[j]);
-          } else {
-            if (j === 'customer.user.name') {
-              return v['customer']['user']['name'];
-            }
-            return v[j];
           }
+          if (j === 'customer.user.name') {
+            return v['customer']['user']['name'];
+          }
+          if (j === 'created_at') {
+            return parseTime(v[j]);
+          }
+          return v[j];
         })
       );
     },

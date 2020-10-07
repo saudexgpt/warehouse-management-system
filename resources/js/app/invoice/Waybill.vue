@@ -55,7 +55,6 @@
               <span v-for="(invoice, invoice_index) in props.row.invoices" :key="invoice_index">
                 {{ invoice.invoice_number }},
               </span>
-              {{ }}
             </div>
           </div>
           <div slot="dispatchers" slot-scope="{row}">
@@ -253,9 +252,9 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.tableTitle, '', '', '', '', '', '']];
-        const tHeader = ['WAYBILL NUMBER', 'DISPATCHERS', 'DATE GENERATED', 'WAYBILL STATUS', 'STATUS DATE'];
-        const filterVal = ['waybill_no', 'dispatchers', 'created_at', 'status', 'updated_at'];
+        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '']];
+        const tHeader = ['WAYBILL NUMBER', 'INVOICES', 'DISPATCH COMPANY', 'DISPATCHERS', 'TRIP NO.', 'DATE GENERATED', 'WAYBILL STATUS', 'STATUS DATE'];
+        const filterVal = ['waybill_no', 'invoices', 'dispatch_company', 'dispatchers', 'trip_no', 'created_at', 'status', 'updated_at'];
         const list = this.waybills;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({
@@ -277,14 +276,35 @@ export default {
         if (j === 'updated_at') {
           return parseTime(v[j]);
         }
+        if (j === 'trip_no') {
+          return v['trips'][0].trip_no;
+        }
         if (j === 'dispatchers') {
-          var vehicle_drivers = v['dispatcher']['vehicle']['vehicle_drivers'];
-          var drivers = '';
-          vehicle_drivers.forEach(element => {
-            var name = element.driver.user.name;
-            drivers += name + ', ';
+          if (v['dispatcher']) {
+            var drivers = '';
+            var vehicle_drivers = v['dispatcher']['vehicle']['vehicle_drivers'];
+
+            vehicle_drivers.forEach(element => {
+              if (element.driver) {
+                var name = element.driver.user.name;
+                drivers += name + ', ';
+              } else {
+                return '-';
+              }
+            });
+            return drivers;
+          } else {
+            return '-';
+          }
+        }
+        if (j === 'invoices') {
+          var invoices = v['invoices'];
+          var numbers = '';
+          invoices.forEach(element => {
+            var invoice_number = element.invoice_number;
+            numbers += invoice_number + ', ';
           });
-          return drivers;
+          return numbers;
         }
         return v[j];
       }));

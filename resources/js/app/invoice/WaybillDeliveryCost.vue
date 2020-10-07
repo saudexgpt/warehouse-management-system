@@ -189,6 +189,14 @@
                   </v-client-table>
                 </aside>
               </div>
+              <div slot="waybills" slot-scope="props">
+                <div v-if="props.row.waybills.length > 0">
+                  <div v-for="(waybill, index) in props.row.waybills" :key="index">
+                    {{ waybill.waybill_no }},
+                  </div>
+                </div>
+
+              </div>
               <div slot="dispatchers" slot-scope="props">
                 <div v-if="props.row.dispatchers == null">
                   <div v-for="(vehicle_driver, index) in props.row.vehicle.vehicle_drivers" :key="index">
@@ -276,6 +284,7 @@ export default {
         'confirmer.name',
         'dispatch_company',
         'trip_no',
+        'waybills',
         'amount',
         'description',
         'vehicle_no',

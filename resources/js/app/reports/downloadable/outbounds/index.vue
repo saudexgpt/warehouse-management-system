@@ -93,6 +93,9 @@
           <div slot="invoice.invoice_date" slot-scope="props">
             {{ moment(props.row.invoice.invoice_date).format('MMMM Do YYYY') }}
           </div>
+          <div slot="invoice.created_at" slot-scope="props">
+            {{ moment(props.row.invoice.created_at).format('MMMM Do YYYY') }}
+          </div>
 
         </v-client-table>
 
@@ -121,7 +124,7 @@ export default {
       invoice_items: [],
       invoice_statuses: [],
       currency: '',
-      columns: ['invoice.invoice_number', 'invoice.customer.user.name', 'item.name', 'batches', 'amount', 'quantity', 'quantity_supplied', 'balance', 'invoice.invoice_date', 'invoice.status'],
+      columns: ['invoice.invoice_number', 'invoice.customer.user.name', 'item.name', 'batches', 'amount', 'quantity', 'quantity_supplied', 'balance', 'invoice.invoice_date', 'invoice.created_at', 'invoice.status'],
 
       options: {
         headings: {
@@ -131,13 +134,14 @@ export default {
           'item.name': 'Product',
           'quantity_supplied': 'Supplied',
           'invoice.invoice_date': 'Invoice Date',
+          'invoice.created_at': 'Date Saved',
           'invoice.status': 'Status',
 
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['invoice.invoice_number', 'invoice.customer.user.name', 'invoice.invoice_date', 'invoice.status'],
-        filterable: ['invoice.invoice_number', 'invoice.customer.user.name', 'invoice.invoice_date', 'invoice.status'],
+        sortable: ['invoice.invoice_number', 'invoice.customer.user.name', 'invoice.invoice_date', 'invoice.created_at', 'invoice.status'],
+        filterable: ['invoice.invoice_number', 'invoice.customer.user.name', 'invoice.invoice_date', 'invoice.created_at', 'invoice.status'],
       },
       page: {
         option: 'list',
@@ -222,8 +226,8 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Invoice', 'Customer', 'Product', 'Batches', 'Amount', 'Quantity', 'Supplied', 'Balance', 'Invoice Date', 'Status'];
+        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Invoice', 'Customer', 'Product', 'Batches', 'Amount', 'Quantity', 'Supplied', 'Balance', 'Invoice Date', 'Date Saved', 'Status'];
         const filterVal = this.columns;
         const list = this.invoice_items;
         const data = this.formatJson(filterVal, list);
@@ -242,6 +246,9 @@ export default {
       return jsonData.map(v => filterVal.map(j => {
         if (j === 'invoice.invoice_date') {
           return parseTime(v['invoice']['invoice_date']);
+        }
+        if (j === 'invoice.created_at') {
+          return parseTime(v['invoice']['created_at']);
         }
         if (j === 'invoice.customer.user.name') {
           return v['invoice']['customer']['user']['name'];
