@@ -182,6 +182,7 @@ export default {
     fetchNecessaryParams() {
       const app = this;
       app.warehouses = app.params.warehouses;
+      app.form.warehouse_index = 0;
       app.form.warehouse_id = app.warehouses[0].id;
       app.invoice_statuses = app.params.invoice_statuses;
       app.currency = app.params.currency;

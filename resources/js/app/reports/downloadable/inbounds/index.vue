@@ -91,6 +91,7 @@ export default {
 
   mounted() {
     this.warehouses = this.params.warehouses;
+    this.warehouse_index = 0;
     this.form.warehouse_id = this.warehouses[0].id;
   },
   beforeDestroy() {
