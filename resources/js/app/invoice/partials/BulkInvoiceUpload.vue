@@ -20,7 +20,7 @@
         <upload-excel-component :on-success="handleSuccess" :before-upload="beforeUpload" />
       </el-col>
       <el-col :xs="24" :sm="12" :md="16">
-        <strong>Note:</strong> To upload bulk invoices from excel file, kindly make sure your file follow the header names as stated in the sample below<br>
+        <strong>Note:</strong> To upload bulk invoices from excel file, kindly make sure your file follows the header names as stated in the sample below<br>
         <label>Sample</label>
         <table class="table table-bordered">
           <thead>
