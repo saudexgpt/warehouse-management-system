@@ -7,19 +7,39 @@
         class="btn btn-default"
       >View Invoices</router-link>
     </span>
+
     <div>
       <div v-if="params" class="box">
         <div class="box-header">
           <h4 class="box-title">Create New Invoice</h4>
           <span class="pull-right">
+            <a
+              v-if="checkPermission(['create invoice']) && upload_type ==='normal'"
+              class="btn btn-success"
+              @click="upload_type ='bulk'"
+            >Bulk Upload</a>
+            <a
+              v-if="checkPermission(['create invoice']) && upload_type ==='bulk'"
+              class="btn btn-primary"
+              @click="upload_type ='normal'"
+            >Normal Upload</a>
             <router-link
               v-if="checkPermission(['view invoice'])"
               :to="{name:'Invoices'}"
               class="btn btn-danger"
             >Cancel</router-link>
+
           </span>
         </div>
-        <div class="box-body">
+
+        <div v-if="upload_type ==='bulk'" class="box-body">
+          <bulk-invoice-upload
+            :params="params"
+            :customers="customers"
+            @created="onCreateUpdate"
+          />
+        </div>
+        <div v-else class="box-body">
           <el-form ref="form" :model="form" label-width="120px">
             <el-row :gutter="5" class="padded">
               <el-col :xs="24" :sm="12" :md="12">
@@ -74,6 +94,7 @@
                   style="width: 100%;"
                   format="yyyy/MM/dd"
                   value-format="yyyy-MM-dd"
+                  :picker-options="pickerOptions"
                 />
               </el-col>
             </el-row>
@@ -250,9 +271,11 @@
             @created="onCreateUpdate"
             @close="dialogFormVisible=false"
           />
+
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -261,6 +284,7 @@ import moment from 'moment';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 import AddNewCustomer from '@/app/users/AddNewCustomer';
+import BulkInvoiceUpload from './BulkInvoiceUpload';
 import Resource from '@/api/resource';
 const createInvoice = new Resource('invoice/general/store');
 const necessaryParams = new Resource('fetch-necessary-params');
@@ -269,10 +293,18 @@ const customerResource = new Resource('user/customer/store');
 const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
   name: 'AddNewInvoice',
-  components: { AddNewCustomer },
+  components: { AddNewCustomer, BulkInvoiceUpload },
 
   data() {
     return {
+      pickerOptions: {
+        disabledDate(date) {
+          var d = new Date(); // today
+          d.setDate(d.getDate()); // one year from now
+          return date > d;
+        },
+      },
+      upload_type: 'normal',
       params: {},
       customers: [],
       customer_types: [],

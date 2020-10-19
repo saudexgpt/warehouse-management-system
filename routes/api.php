@@ -24,6 +24,7 @@ $router->get('stabilize-invoice-items', 'Invoice\InvoicesController@stabilizeInv
 $router->get('deliver-items', 'Invoice\InvoicesController@deliverProducts');
 $router->get('correct-dispatch-product', 'Invoice\InvoicesController@correctDispatchProductDate');
 $router->get('invoice-items-without-waybill', 'Invoice\InvoicesController@checkInvoiceItemsWithoutWaybill');
+$router->get('clear-partial-invoices', 'Invoice\InvoicesController@clearPartialInvoices');
 
 $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
@@ -116,11 +117,13 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
     $router->group(['prefix' => 'invoice', 'namespace' => 'Invoice'], function () use ($router) {
         $router->group(['prefix' => 'general'], function () use ($router) {
 
+
             $router->get('/', 'InvoicesController@index')->middleware('permission:view invoice');
             $router->get('show/{invoice}', 'InvoicesController@show')->middleware('permission:view invoice');
 
             $router->post('store', 'InvoicesController@store')->middleware('permission:create invoice');
 
+            $router->post('bulk-upload', 'InvoicesController@bulkUpload')->middleware('permission:create invoice');
             $router->put('update/{invoice}', 'InvoicesController@update')->middleware('permission:update invoice');
 
             $router->delete('delete/{invoice}', 'InvoicesController@destroy')->middleware('permission:delete invoice');
@@ -289,6 +292,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
                 $router->put('update/{returned_product}', 'ReturnsController@update');
                 $router->delete('delete/{returned_product}', 'ReturnsController@destroy');
             });
+            $router->post('approve-products', 'ReturnsController@approveReturnedProducts');/*->middleware('permission:approve returned products');*/
         });
     });
     ////////////////////////////////////STOCK ENDS/////////////////////////////////////////////

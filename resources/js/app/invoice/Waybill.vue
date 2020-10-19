@@ -137,7 +137,7 @@ export default {
         { code: 'delivered', name: 'Delivered' },
       ],
       currency: '',
-      columns: ['action', 'waybill_no', 'invoices', 'dispatch_company', 'dispatchers', 'trip_no', 'created_at', 'status', 'updated_at'],
+      columns: ['action', 'waybill_no', 'invoices', 'dispatchers', 'trip_no', 'created_at', 'status', 'updated_at'],
 
       options: {
         headings: {
@@ -253,8 +253,8 @@ export default {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '']];
-        const tHeader = ['WAYBILL NUMBER', 'INVOICES', 'DISPATCH COMPANY', 'DISPATCHERS', 'TRIP NO.', 'DATE GENERATED', 'WAYBILL STATUS', 'STATUS DATE'];
-        const filterVal = ['waybill_no', 'invoices', 'dispatch_company', 'dispatchers', 'trip_no', 'created_at', 'status', 'updated_at'];
+        const tHeader = ['WAYBILL NUMBER', 'INVOICES', 'DISPATCHERS', 'TRIP NO.', 'DATE GENERATED', 'WAYBILL STATUS', 'STATUS DATE'];
+        const filterVal = ['waybill_no', 'invoices', 'dispatchers', 'trip_no', 'created_at', 'status', 'updated_at'];
         const list = this.waybills;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({

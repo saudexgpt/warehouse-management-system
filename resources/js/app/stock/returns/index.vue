@@ -24,25 +24,23 @@
         </el-col>
         <br><br><br><br>
         <v-client-table v-model="returned_products" :columns="columns" :options="options">
-          <div slot="quantity" slot-scope="{row}" class="alert alert-info">
-            {{ row.quantity }}
-            <!-- {{ row.quantity }} {{ formatPackageType(row.item.package_type) }} -->
+          <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
+            <!-- {{ row.quantity }} -->
+            {{ row.quantity }} {{ row.item.package_type }}
 
           </div>
-          <div slot="in_transit" slot-scope="{row}" class="alert alert-warning">
-            {{ row.in_transit }} {{ formatPackageType(row.item.package_type) }}
+          <div slot="quantity_approved" slot-scope="{row}" class="alert alert-info">
+            <!-- {{ row.quantity_approved }} -->
+            {{ row.quantity_approved }} {{ row.item.package_type }}
 
           </div>
-          <div slot="supplied" slot-scope="{row}" class="alert alert-danger">
-            {{ row.supplied }} {{ formatPackageType(row.item.package_type) }}
-
-          </div>
-          <div slot="balance" slot-scope="{row}" class="alert alert-success">
-            {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
-
+          <div slot="expiry_date" slot-scope="{row}" :class="'alert alert-'+ expiryFlag(moment(row.expiry_date).format('x'))">
+            <span>
+              {{ moment(row.expiry_date).calendar() }}
+            </span>
           </div>
           <div slot="created_at" slot-scope="{row}">
-            {{ moment(row.created_at).fromNow() }}
+            {{ moment(row.created_at).calendar() }}
 
           </div>
           <div slot="confirmer.name" slot-scope="{row}">
@@ -56,18 +54,27 @@
             </div>
           </div>
           <div slot="action" slot-scope="props">
-            <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
-            <!-- <a v-if="checkPermission(['manage item stocks', 'delete item stocks'])" class="btn btn-danger" @click="confirmDelete(props)"><i class="fa fa-trash" /> </a>
-            <a v-else class="btn btn-grey"><i class="fa fa-trash" /></a> -->
+            <span>
+              <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
 
-            <!-- <a class="btn btn-default" @click="returnedProduct=props.row; page.option = 'view_details'"><i class="fa fa-eye" /> </a> -->
-            <!-- <a class="btn btn-warning" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_item'"><i class="fa fa-edit" /> </a>
-            <a class="btn btn-danger" @click="confirmDelete(props)"><i class="fa fa-trash" /> </a> -->
+              <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)"><i class="fa fa-check" /> </a>
+            </span>
           </div>
 
         </v-client-table>
 
       </div>
+      <el-dialog
+        title="Confirm Quantity for Approval"
+        :visible.sync="dialogVisible"
+        width="20%"
+      >
+        <el-input v-model="approvalForm.approved_quantity" type="number" placeholder="Enter quantity for approval" />
+        <span slot="footer" class="dialog-footer">
+          <el-button round @click="dialogVisible = false; approvalForm.approved_quantity = null">Cancel</el-button>
+          <el-button round type="primary" @click="approveProduct(); ">Approve</el-button>
+        </span>
+      </el-dialog>
 
     </div>
 
@@ -86,14 +93,16 @@ import Resource from '@/api/resource';
 const necessaryParams = new Resource('fetch-necessary-params');
 // const fetchWarehouse = new Resource('warehouse/fetch-warehouse');
 const returnedProducts = new Resource('stock/returns');
+const approveReturnedProducts = new Resource('stock/returns/approve-products');
 const confirmItemReturned = new Resource('audit/confirm/returned-products');
 export default {
   components: { AddNewReturns, EditReturns },
   data() {
     return {
+      dialogVisible: false,
       warehouses: [],
       returned_products: [],
-      columns: ['action', 'confirmer.name', 'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'expiry_date', 'reason', 'date_returned'],
+      columns: ['action', 'confirmer.name', 'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'expiry_date', 'reason', 'date_returned'],
 
       options: {
         headings: {
@@ -102,7 +111,8 @@ export default {
           'item.name': 'Product',
           batch_no: 'Batch No.',
           expiry_date: 'Expiry Date',
-          quantity: 'Quantity',
+          quantity: 'QTY',
+          quantity_approved: 'QTY Approved',
           date_returned: 'Date Returned',
 
           // id: 'S/N',
@@ -130,6 +140,11 @@ export default {
       in_warehouse: '',
       returnedProduct: {},
       selected_row_index: '',
+      approvalForm: {
+        approved_quantity: null,
+        product_details: '',
+      },
+      product_expiry_date_alert_in_months: 9, // defaults to 9 months
 
     };
   },
@@ -198,6 +213,16 @@ export default {
       // app.returned_products.splice(app.returnedProduct.index-1, 1);
       app.returned_products[app.selected_row_index - 1] = updated_row;
     },
+    expiryFlag(date){
+      const product_expiry_date_alert = this.product_expiry_date_alert_in_months;
+      const min_expiration = parseInt(product_expiry_date_alert * 30 * 24 * 60 * 60 * 1000); // we use 30 days for one month to calculate
+      const today = parseInt(this.moment().valueOf()); // Unix Timestamp (miliseconds) 1.6.0+
+      if (parseInt(date) - today <= min_expiration) {
+        // console.log(parseInt(date) - today);
+        return 'danger'; // flag expiry date as red
+      }
+      return 'success'; // flag expiry date as green
+    },
     // confirmDelete(props) {
     //   // this.loader();
 
@@ -218,6 +243,39 @@ export default {
     //       });
     //   }
     // },
+    openDialog(product, selected_row_index){
+      const app = this;
+      app.approvalForm.product_details = product;
+      app.selected_row_index = selected_row_index;
+      app.dialogVisible = true;
+    },
+    approveProduct(){
+      const app = this;
+
+      const param = app.approvalForm;
+      const balance = parseInt(app.approvalForm.product_details.quantity) - parseInt(app.approvalForm.product_details.quantity_approved);
+      if (parseInt(param.approved_quantity) <= balance) {
+        if (parseInt(param.approved_quantity) > 0) {
+          app.dialogVisible = false;
+          const loader = approveReturnedProducts.loaderShow();
+          approveReturnedProducts.store(param)
+            .then(response => {
+              app.returned_products[app.selected_row_index - 1] = response.returned_product;
+              loader.hide();
+            })
+            .catch(error => {
+              loader.hide();
+              console.log(error.message);
+            });
+        } else {
+          app.$alert('Please enter a value greater than zero');
+          return;
+        }
+      } else {
+        app.$alert('Approved Quantity MUST NOT be greater than ' + balance);
+        return;
+      }
+    },
     formatPackageType(type){
       var formated_type = type + 's';
       if (type === 'Box') {

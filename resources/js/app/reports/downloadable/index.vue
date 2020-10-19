@@ -38,7 +38,7 @@ import Inbounds from './inbounds';
 import Outbounds from './outbounds';
 import Products from '@/app/stock/item/ManageItem';
 import Fleets from './fleets';
-import Users from '@/app/users/List';
+import Users from './users/List';
 const necessaryParams = new Resource('fetch-necessary-params');
 export default {
   name: 'DownloadReports',

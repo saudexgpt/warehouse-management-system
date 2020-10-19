@@ -16,8 +16,29 @@
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>Customer</label>
-                <p v-if="form.customer">{{ form.customer.user.name }}</p>
+                <el-select
+                  v-model="form.customer_id"
+                  placeholder="Select Customer"
+                  filterable
+                  class="span"
+                >
+                  <el-option
+                    v-for="(customer, customer_index) in customers"
+                    :key="customer_index"
+                    :value="customer.id"
+                    :label="(customer.user) ? customer.user.name : ''"
+                  />
+                </el-select>
                 <label for>Invoice Date</label>
+                <el-date-picker
+                  v-model="form.invoice_date"
+                  type="date"
+                  placeholder="Invoice Date"
+                  style="width: 100%;"
+                  format="yyyy/MM/dd"
+                  value-format="yyyy-MM-dd"
+                  :picker-options="pickerOptions"
+                />
                 <p>{{ form.invoice_date }}</p>
               </el-col>
             </el-row>
@@ -242,6 +263,13 @@ export default {
   },
   data() {
     return {
+      pickerOptions: {
+        disabledDate(date) {
+          var d = new Date(); // today
+          d.setDate(d.getDate()); // one year from now
+          return date > d;
+        },
+      },
       customers: [],
       customer_types: [],
       items_in_stock_dialog: false,
@@ -333,7 +361,7 @@ export default {
   mounted() {
     this.form = this.invoice;
     this.invoice_items = this.invoice.invoice_items;
-    // this.fetchCustomers();
+    this.fetchCustomers();
     // this.addLine();
   },
   methods: {

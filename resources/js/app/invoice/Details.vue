@@ -49,7 +49,7 @@
               <label>Invoice No.: {{ invoice.invoice_number }}</label>
               <br>
               <label>Date:</label>
-              {{ moment(invoice.created_at).format('MMMM Do YYYY, h:mm:ss a') }}
+              {{ moment(invoice.invoice_date).format('MMMM Do YYYY, h:mm:ss a') }}
               <br>
             </div>
             <!-- /.col -->
@@ -66,6 +66,7 @@
                     <th>Product</th>
                     <!-- <th>Description</th> -->
                     <th>Quantity</th>
+                    <th>Supplied</th>
                     <th>Rate</th>
                     <th>Per</th>
                     <th>Amount</th>
@@ -79,24 +80,27 @@
                       {{ invoice_item.quantity }} {{ invoice_item.type }}
                       <small>({{ invoice_item.no_of_cartons }} CTN)</small>
                     </td>
+                    <td>
+                      {{ invoice_item.quantity_supplied }} {{ invoice_item.type }}
+                    </td>
                     <td align="right">{{ currency + Number(invoice_item.rate).toLocaleString() }}</td>
                     <td>{{ invoice_item.type }}</td>
                     <td align="right">{{ currency + Number(invoice_item.amount).toLocaleString() }}</td>
                   </tr>
                   <tr>
-                    <td colspan="4" align="right">
+                    <td colspan="5" align="right">
                       <label>Subtotal</label>
                     </td>
                     <td align="right">{{ currency + Number(invoice.subtotal).toLocaleString() }}</td>
                   </tr>
                   <tr>
-                    <td colspan="4" align="right">
+                    <td colspan="5" align="right">
                       <label>Discount</label>
                     </td>
                     <td align="right">{{ currency + Number(invoice.discount).toLocaleString() }}</td>
                   </tr>
                   <tr>
-                    <td colspan="4" align="right">
+                    <td colspan="5" align="right">
                       <label>Grand Total</label>
                     </td>
                     <td align="right">

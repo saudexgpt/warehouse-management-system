@@ -35,7 +35,7 @@
               <el-date-picker v-model="form.expiry_date" type="date" outline format="yyyy/MM/dd" value-format="yyyy-MM-dd" style="width: 100%" />
 
               <label for="">Date of Return</label>
-              <el-date-picker v-model="form.date_returned" type="date" outline format="yyyy/MM/dd" value-format="yyyy-MM-dd" style="width: 100%" />
+              <el-date-picker v-model="form.date_returned" type="date" outline format="yyyy/MM/dd" value-format="yyyy-MM-dd" style="width: 100%" :picker-options="pickerOptions" />
               <label for="">Reason for return</label>
               <el-select v-model="form.reason" placeholder="Select Product" filterable class="span">
                 <el-option v-for="(reason, index) in params.product_return_reasons" :key="index" :value="reason" :label="reason" />
@@ -87,6 +87,13 @@ export default {
   },
   data() {
     return {
+      pickerOptions: {
+        disabledDate(date) {
+          var d = new Date(); // today
+          d.setDate(d.getDate()); // one year from now
+          return date > d;
+        },
+      },
       fill_fields_error: false,
       form: {
         warehouse_id: '',

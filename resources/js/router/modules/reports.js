@@ -40,16 +40,6 @@ const permissionRoutes = {
         permissions: ['view reports'],
       },
     },
-    {
-      path: 'audit-trails',
-      component: () => import('@/app/reports/AuditTrail'),
-      name: 'AuditTrail',
-      meta: {
-        title: 'Audit Trail',
-        icon: 'el-icon-video-camera',
-        permissions: ['view audit trail'],
-      },
-    },
 
   ],
 };

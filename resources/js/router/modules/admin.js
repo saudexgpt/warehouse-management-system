@@ -41,6 +41,16 @@ const adminRoutes = {
       meta: { title: 'rolePermission', icon: 'el-icon-s-check', permissions: ['manage permission'] },
     },
     {
+      path: 'audit-trails',
+      component: () => import('@/app/reports/AuditTrail'),
+      name: 'AuditTrail',
+      meta: {
+        title: 'Audit Trail',
+        icon: 'el-icon-video-camera',
+        permissions: ['view audit trail'],
+      },
+    },
+    {
       path: 'backup',
       component: () => import('@/app/reports/BackUp'),
       name: 'BackUp',

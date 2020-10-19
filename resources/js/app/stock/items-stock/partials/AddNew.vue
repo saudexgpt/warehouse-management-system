@@ -57,8 +57,8 @@
                   <tr v-for="(sub_batch, index) in sub_batches" :key="index">
                     <td>
                       <span>
-                        <a class="btn btn-danger btn-flat fa fa-trash" @click="removeLine(index)" />
-                        <a v-if="index + 1 === sub_batches.length" class="btn btn-info btn-flat fa fa-plus" @click="addLine(index)" />
+                        <a v-if="sub_batches.length > 1" class="btn btn-danger btn-flat fa fa-trash" @click="removeLine(index)" />
+                        <a class="btn btn-info btn-flat fa fa-plus" @click="addLine(index)" />
                       </span>
                     </td>
                     <td>
