@@ -1,12 +1,6 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 
-/**
- * Layzloading will create many files and slow on compiling, so best not to use lazyloading on devlopment.
- * The syntax is lazyloading, but we convert to proper require() with babel-plugin-syntax-dynamic-import
- * @see https://doc.laravue.dev/guide/advanced/lazy-loading.html
- */
-
 Vue.use(Router);
 
 /* Layout */
@@ -52,112 +46,111 @@ import TransfersRoutes from './modules/transfers';
   }
 **/
 
-export const constantRoutes = [
-  {
-    path: '/redirect',
-    component: Layout,
-    hidden: true,
-    children: [
-      {
-        path: '/redirect/:path*',
-        component: () => import('@/views/redirect/index'),
-      },
-    ],
+export const constantRoutes = [{
+  path: '/redirect',
+  component: Layout,
+  hidden: true,
+  children: [{
+    path: '/redirect/:path*',
+    component: () =>
+        import ('@/views/redirect/index'),
+  }],
+},
+{
+  path: '/login',
+  component: () =>
+      import ('@/app/login/index'),
+  hidden: true,
+},
+{
+  path: '/notifications',
+  component: Layout,
+  hidden: true,
+  meta: {
+    title: 'Notifications',
+    icon: 'el-icon-bell',
+    // permissions: ['view audit trail'],
   },
-  {
-    path: '/login',
-    component: () => import('@/app/login/index'),
-    hidden: true,
-  },
-  {
-    path: '/notifications',
-    component: Layout,
-    hidden: true,
-    meta: {
-      title: 'Notifications',
-      icon: 'el-icon-bell',
-      // permissions: ['view audit trail'],
-    },
-    children: [
-      {
-        path: '',
-        component: () => import('@/app/reports/Notifications'),
-
-      },
-    ],
-
-  },
-  {
-    path: '/auth-redirect',
-    component: () => import('@/app/login/AuthRedirect'),
-    hidden: true,
-  },
-  {
-    path: '/404',
-    redirect: { name: 'Page404' },
-    component: () => import('@/views/error-page/404'),
-    hidden: true,
-  },
-  {
-    path: '/401',
-    component: () => import('@/views/error-page/401'),
-    hidden: true,
-  },
-  {
+  children: [{
     path: '',
-    component: Layout,
-    redirect: 'dashboard',
-    children: [
-      {
-        path: 'dashboard',
-        component: () => import('@/app/dashboard/index'),
-        name: 'Dashboard',
-        meta: { title: 'dashboard', icon: 'el-icon-s-home', noCache: false },
-      },
+    component: () =>
+        import ('@/app/reports/Notifications'),
 
-    ],
+  }],
+
+},
+{
+  path: '/auth-redirect',
+  component: () =>
+      import ('@/app/login/AuthRedirect'),
+  hidden: true,
+},
+{
+  path: '/404',
+  redirect: { name: 'Page404' },
+  component: () =>
+      import ('@/views/error-page/404'),
+  hidden: true,
+},
+{
+  path: '/401',
+  component: () =>
+      import ('@/views/error-page/401'),
+  hidden: true,
+},
+{
+  path: '',
+  component: Layout,
+  redirect: 'dashboard',
+  children: [{
+    path: 'dashboard',
+    component: () =>
+          import ('@/app/dashboard/index'),
+    name: 'Dashboard',
+    meta: { title: 'dashboard', icon: 'el-icon-s-home', noCache: false },
   },
-  // {
-  //   path: '/documentation',
-  //   component: Layout,
-  //   redirect: '/documentation/index',
-  //   children: [
-  //     {
-  //       path: 'index',
-  //       component: () => import('@/views/documentation/index'),
-  //       name: 'Documentation',
-  //       meta: { title: 'documentation', icon: 'documentation', noCache: true },
-  //     },
-  //   ],
-  // },
-  {
-    path: '/profile',
-    component: Layout,
-    redirect: '/profile/edit',
+
+  ],
+},
+// {
+//   path: '/documentation',
+//   component: Layout,
+//   redirect: '/documentation/index',
+//   children: [
+//     {
+//       path: 'index',
+//       component: () => import('@/views/documentation/index'),
+//       name: 'Documentation',
+//       meta: { title: 'documentation', icon: 'documentation', noCache: true },
+//     },
+//   ],
+// },
+{
+  path: '/profile',
+  component: Layout,
+  redirect: '/profile/edit',
+  hidden: true,
+  children: [{
+    path: 'edit',
+    component: () =>
+        import ('@/app/users/SelfProfile'),
+    name: 'SelfProfile',
+    meta: { title: 'userProfile', icon: 'user', noCache: true },
+  }],
+},
+{
+  path: '/default-password',
+  component: Layout,
+  redirect: '/default-password/change',
+  hidden: true,
+  children: [{
+    path: 'change',
+    // redirect: 'dashboard',
+    component: () =>
+        import ('@/app/users/ChangeDefaultPassword'),
     hidden: true,
-    children: [
-      {
-        path: 'edit',
-        component: () => import('@/app/users/SelfProfile'),
-        name: 'SelfProfile',
-        meta: { title: 'userProfile', icon: 'user', noCache: true },
-      },
-    ],
-  },
-  {
-    path: '/default-password',
-    component: Layout,
-    redirect: '/default-password/change',
-    hidden: true,
-    children: [
-      {
-        path: 'change',
-        // redirect: 'dashboard',
-        component: () => import('@/app/users/ChangeDefaultPassword'),
-        hidden: true,
-      },
-    ],
-  },
+  }],
+},
   // {
   //   path: '/guide',
   //   component: Layout,
@@ -293,3 +286,4 @@ export function resetRouter() {
 }
 
 export default router;
+

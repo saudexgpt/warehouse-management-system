@@ -130,7 +130,7 @@ class GoodsTransferController extends Controller
         //create items invoiceed for
         $this->createTransferRequestItems($transfer_request, $transfer_request_items);
         //////update next invoice number/////
-        // $this->incrementTransferRequestNo();
+        $this->incrementReceiptNo('transfer_request');
 
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];

@@ -15,7 +15,8 @@ const permissionRoutes = {
 
     {
       path: 'transfer-request',
-      component: () => import('@/app/transfers/Request'),
+      component: () =>
+        import ('@/app/transfers/Request'),
       name: 'TransferRequest',
       meta: {
         title: 'Transfer Request',
@@ -24,7 +25,8 @@ const permissionRoutes = {
     },
     {
       path: 'create-new',
-      component: () => import('@/app/transfers/partials/CreateTransferRequest'),
+      component: () =>
+        import ('@/app/transfers/partials/CreateTransferRequest'),
       name: 'CreateTransferRequest',
       meta: {
         title: 'Create New',
@@ -34,17 +36,19 @@ const permissionRoutes = {
     },
     {
       path: 'waybill',
-      component: () => import('@/app/transfers/Waybill'),
+      component: () =>
+        import ('@/app/transfers/Waybill'),
       name: 'TransferWaybills',
       meta: {
-        title: 'Waybills',
+        title: 'Transfer Waybills',
         permissions: ['manage transfer request'],
       },
     },
 
     {
       path: 'generate-transfer-waybill',
-      component: () => import('@/app/transfers/partials/GenerateWaybill'),
+      component: () =>
+        import ('@/app/transfers/partials/GenerateWaybill'),
       name: 'GenerateTransferWaybill',
       meta: {
         title: 'Generate Waybill',

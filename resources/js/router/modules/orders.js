@@ -15,7 +15,8 @@ const permissionRoutes = {
 
     {
       path: 'view-orders',
-      component: () => import('@/app/order/index'),
+      component: () =>
+        import ('@/app/order/index'),
       name: 'View',
       meta: {
         title: 'View Orders',
@@ -31,7 +32,8 @@ const permissionRoutes = {
     // },
     {
       path: 'create-new',
-      component: () => import('@/app/order/Create'),
+      component: () =>
+        import ('@/app/order/Create'),
       name: 'Create',
       meta: {
         title: 'Create Orders',
