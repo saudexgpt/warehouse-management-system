@@ -13,7 +13,7 @@
             <el-col :xs="24" :sm="12" :md="12">
               <label for="">Select Warehouse</label>
               <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable class="span">
-                <el-option v-for="(warehouse, index) in params.warehouses" :key="index" :value="warehouse.id" :label="warehouse.name" />
+                <el-option v-for="(warehouse, index) in params.warehouses" :key="index" :value="warehouse.id" :label="warehouse.name" :disabled="warehouse.id === 7" />
 
               </el-select>
 
