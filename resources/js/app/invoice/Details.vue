@@ -10,7 +10,7 @@
               <span>
                 <label>{{ companyName }}</label>
                 <div class="pull-right no-print">
-                  <a @click="doPrint();">
+                  <a @click="doPrint()">
                     <i class="el-icon-printer" /> Print Invoice
                   </a>
                 </div>
@@ -25,7 +25,11 @@
               <address>
                 <label>{{ invoice.customer.user.name.toUpperCase() }}</label>
                 <br>
-                {{ (invoice.customer.type) ? invoice.customer.type.name.toUpperCase() : '' }}
+                {{
+                  invoice.customer.type
+                    ? invoice.customer.type.name.toUpperCase()
+                    : ''
+                }}
                 <br>
                 Phone: {{ invoice.customer.user.phone }}
                 <!-- <br />
@@ -49,7 +53,9 @@
               <label>Invoice No.: {{ invoice.invoice_number }}</label>
               <br>
               <label>Date:</label>
-              {{ moment(invoice.invoice_date).format('MMMM Do YYYY, h:mm:ss a') }}
+              {{
+                moment(invoice.invoice_date).format('MMMM Do YYYY, h:mm:ss a')
+              }}
               <br>
             </div>
             <!-- /.col -->
@@ -73,46 +79,75 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(invoice_item, index) in invoice.invoice_items" :key="index">
-                    <td>{{ (invoice_item.item) ? invoice_item.item.name : '' }}</td>
+                  <tr
+                    v-for="(invoice_item, index) in invoice.invoice_items"
+                    :key="index"
+                  >
+                    <td>
+                      {{ invoice_item.item ? invoice_item.item.name : '' }}
+                    </td>
                     <!-- <td>{{ invoice_item.item.description }}</td> -->
                     <td>
                       {{ invoice_item.quantity }} {{ invoice_item.type }}
                       <small>({{ invoice_item.no_of_cartons }} CTN)</small>
                     </td>
                     <td>
-                      {{ invoice_item.quantity_supplied }} {{ invoice_item.type }}
+                      {{ invoice_item.quantity_supplied }}
+                      {{ invoice_item.type }}
                     </td>
-                    <td align="right">{{ currency + Number(invoice_item.rate).toLocaleString() }}</td>
+                    <td align="right">
+                      {{
+                        currency + Number(invoice_item.rate).toLocaleString()
+                      }}
+                    </td>
                     <td>{{ invoice_item.type }}</td>
-                    <td align="right">{{ currency + Number(invoice_item.amount).toLocaleString() }}</td>
+                    <td align="right">
+                      {{
+                        currency + Number(invoice_item.amount).toLocaleString()
+                      }}
+                    </td>
                   </tr>
                   <tr>
                     <td colspan="5" align="right">
                       <label>Subtotal</label>
                     </td>
-                    <td align="right">{{ currency + Number(invoice.subtotal).toLocaleString() }}</td>
+                    <td align="right">
+                      {{ currency + Number(invoice.subtotal).toLocaleString() }}
+                    </td>
                   </tr>
                   <tr>
                     <td colspan="5" align="right">
                       <label>Discount</label>
                     </td>
-                    <td align="right">{{ currency + Number(invoice.discount).toLocaleString() }}</td>
+                    <td align="right">
+                      {{ currency + Number(invoice.discount).toLocaleString() }}
+                    </td>
                   </tr>
                   <tr>
                     <td colspan="5" align="right">
                       <label>Grand Total</label>
                     </td>
                     <td align="right">
-                      <label
-                        style="color: green"
-                      >{{ currency + Number(invoice.amount).toLocaleString() }}</label>
+                      <label style="color: green">{{
+                        currency + Number(invoice.amount).toLocaleString()
+                      }}</label>
                     </td>
                   </tr>
                 </tbody>
               </table>
-              <p>{{ invoice.notes }}</p>
+              <p>
+                <small>{{ invoice.notes }}</small>
+              </p>
             </div>
+            <table class="table">
+              <tbody>
+                <tr>
+                  <td>Prepared By: ______________________________</td>
+                  <td>Authorized By: ______________________________</td>
+                  <td>Approved By: ______________________________</td>
+                </tr>
+              </tbody>
+            </table>
             <!-- /.col -->
           </div>
         </section>
@@ -120,12 +155,18 @@
       <el-tab-pane label="Invoice History" name="second">
         <div class="row">
           <div class="col-xs-12">
-            <h4>Invoice History for Invoice No.: {{ invoice.invoice_number }}</h4>
+            <h4>
+              Invoice History for Invoice No.: {{ invoice.invoice_number }}
+            </h4>
             <div class="pull-right no-print">
-              <a class="btn btn-default" @click="doPrint();">
+              <a class="btn btn-default" @click="doPrint()">
                 <i class="el-icon-printer" /> Print History
               </a>
-              <a :loading="downloadLoading" class="btn btn-info" @click="handleDownload">
+              <a
+                :loading="downloadLoading"
+                class="btn btn-info"
+                @click="handleDownload"
+              >
                 <i class="el-icon-download" /> Export Excel
               </a>
             </div>
@@ -136,7 +177,9 @@
             <el-timeline-item
               v-for="(history, index) in invoice.histories"
               :key="index"
-              :timestamp="moment(history.created_at).format('MMMM Do YYYY, h:mm:ss a')"
+              :timestamp="
+                moment(history.created_at).format('MMMM Do YYYY, h:mm:ss a')
+              "
               placement="top"
             >
               <el-card>
@@ -311,6 +354,13 @@ export default {
 
   .el-carousel__item:nth-child(2n + 1) {
     background-color: #d3dce6;
+  }
+}
+</style>
+<style>
+@media print {
+  .el-tabs__header {
+    display: none !important;
   }
 }
 </style>

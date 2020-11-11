@@ -87,7 +87,7 @@ class Controller extends BaseController
         $expense_types = ['Insurance', 'Maintenance / Repairs', 'Fuel'];
         $package_types = ['Bottles', 'Rolls', 'Boxes', 'Packets', 'Tins'];
         $product_return_reasons = ['Product short-dated', 'Mass return - expired', 'Mass return - unexpired', 'Rep. resignation/sack - expired', 'Rep. resignation/sack - unexpired', 'Spillage', 'Others'];
-        $teams = ['Bull', 'Eagle', 'Funbact', 'Lion', 'REP', 'Stallion'];
+        $teams = ['Bull', 'Eagle', 'Funbact', 'Jaguar', 'Lion', 'REP', 'Stallion'];
         $dispatch_companies = ['GREENLIFE LOGISTICS', 'COURIER SERVICE', 'FOB (Free On Board)'];
         $all_roles = Role::orderBy('name')->select('name')->get();
         $default_roles = Role::where('role_type', 'default')->orderBy('name')->select('name')->get();

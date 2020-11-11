@@ -1,23 +1,54 @@
 <template>
   <div class="login-container">
-    <el-form ref="loginForm" v-loading="loading" :model="loginForm" :rules="loginRules" class="login-form" auto-complete="on" label-position="left">
+    <el-form
+      ref="loginForm"
+      v-loading="loading"
+      :model="loginForm"
+      :rules="loginRules"
+      class="login-form"
+      auto-complete="on"
+      label-position="left"
+    >
       <div align="center">
         <img :src="img" alt="Company Logo" width="100">
-        <h4 class="title"> Greenlife Warehouse & Logistics</h4>
+        <h4 class="title">Greenlife Warehouse & Logistics</h4>
       </div>
-      <!--<lang-select class="set-language" />-->
-      <mdb-input v-model="loginForm.email" outline far icon="user" name="email" type="email" auto-complete="off" label="Email" required="required" />
+      <mdb-input
+        v-model="loginForm.email"
+        outline
+        far
+        icon="user"
+        name="email"
+        type="email"
+        auto-complete="off"
+        label="Email"
+        required="required"
+      />
       <!-- <md-input  v-model="loginForm.email" icon="user" name="email" type="text" auto-complete="off"   required="required">Email or User ID</md-input> -->
 
       <!-- <md-input  v-model="loginForm.password" icon="lock" name="password" :type="pwdType" auto-complete="off"  required="required" @keyup.enter.native="handleLogin">Password</md-input> -->
 
-      <mdb-input v-model="loginForm.password" outline icon="lock" :type="pwdType" auto-complete="off" label="Password" name="password" @keyup.enter.native="handleLogin" />
+      <mdb-input
+        v-model="loginForm.password"
+        outline
+        icon="lock"
+        :type="pwdType"
+        auto-complete="off"
+        label="Password"
+        name="password"
+        @keyup.enter.native="handleLogin"
+      />
       <!-- <p class="font-small blue-text d-flex justify-content-end pb-3" align="right"><router-link :to="{name: 'passwordRecovery'}">Forgot Password?</router-link></p> -->
 
       <!-- <span class="show-pwd pull-right" @click="showPwd">
         <svg-icon icon-class="eye-open" />
       </span> -->
-      <mdb-btn :loading="loading" color="success" style="width:100%;" @click.native.prevent="handleLogin">Login</mdb-btn>
+      <mdb-btn
+        :loading="loading"
+        color="success"
+        style="width: 100%"
+        @click.native.prevent="handleLogin"
+      >Login</mdb-btn>
       <!-- <div class="tips">
         <div align="right">Yet to register?
           <router-link :to="{name: 'Register'}">Click Here</router-link>
@@ -65,8 +96,12 @@ export default {
         password: '',
       },
       loginRules: {
-        email: [{ required: true, trigger: 'blur', validator: validateUsername }],
-        password: [{ required: true, trigger: 'blur', validator: validatePass }],
+        email: [
+          { required: true, trigger: 'blur', validator: validateUsername },
+        ],
+        password: [
+          { required: true, trigger: 'blur', validator: validatePass },
+        ],
       },
       loading: false,
       pwdType: 'password',
@@ -90,10 +125,11 @@ export default {
       }
     },
     handleLogin() {
-      this.$refs.loginForm.validate(valid => {
+      this.$refs.loginForm.validate((valid) => {
         if (valid) {
           this.loading = true;
-          this.$store.dispatch('user/login', this.loginForm)
+          this.$store
+            .dispatch('user/login', this.loginForm)
             .then(() => {
               // this.$router.push({ path: this.redirect || '/' });
               window.location = '/';
@@ -115,14 +151,14 @@ export default {
 
 <style rel="stylesheet/scss" lang="scss">
 $primary: #116809;
-$secondary:#666;
-$dark_gray:#889aa4;
-$light_gray:#eee;
+$secondary: #666;
+$dark_gray: #889aa4;
+$light_gray: #eee;
 .login-container {
   position: fixed;
   height: 100%;
   width: 100%;
-  background: $primary;
+  background-image: url('../../assets/bg/warehouse-management-system.jpg');
   .login-form {
     position: absolute;
     left: 50;
@@ -175,26 +211,21 @@ $light_gray:#eee;
     right: 35px;
   }
   .md-form label.active {
-      font-size: 1.3rem;
-
+    font-size: 1.3rem;
   }
   .md-form .prefix {
-      top: .25rem;
-      font-size: 1.5rem;
+    top: 0.25rem;
+    font-size: 1.5rem;
   }
   .md-form.md-outline .prefix {
-
     position: absolute;
-    top: .9rem;
+    top: 0.9rem;
     font-size: 1.9rem;
-    -webkit-transition: color .2s;
-    transition: color .2s;
-
+    -webkit-transition: color 0.2s;
+    transition: color 0.2s;
   }
   .md-form.md-outline .form-control {
-
     padding: 1rem;
-
   }
 }
 </style>
