@@ -351,7 +351,7 @@ class InvoicesController extends Controller
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;
-            $invoices = Invoice::with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'invoiceItems.item', 'histories' => function ($q) {
+            $invoices = Invoice::with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer', 'invoiceItems.item', 'histories' => function ($q) {
                 $q->orderBy('id', 'DESC');
             }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
         }
@@ -360,7 +360,7 @@ class InvoicesController extends Controller
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
             $status = $request->status;
             $panel = $request->panel;
-            $invoices = Invoice::with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'invoiceItems.item', 'histories' => function ($q) {
+            $invoices = Invoice::with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer',  'invoiceItems.item', 'histories' => function ($q) {
                 $q->orderBy('id', 'DESC');
             }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
         }
@@ -380,11 +380,11 @@ class InvoicesController extends Controller
             }
         }*/
         // $invoices = Invoice::with(['invoiceItems', 'invoiceItems.item'])->where('warehouse_id', $warehouse_id)->where('status', '!=', 'delivered')->get();
-        $invoices = Invoice::with(['customer.user', 'invoiceItems' => function ($q) {
+        $invoices = Invoice::with(['customer.user', 'confirmer', 'invoiceItems' => function ($q) {
             $q->where('supply_status', '!=', 'Complete');
         }, 'invoiceItems.item.stocks' => function ($p) use ($warehouse_id) {
             $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id);
-        }])->where('warehouse_id', $warehouse_id)->where('full_waybill_generated', '0')->orderBy('id', 'DESC')->get();
+        }])->where('warehouse_id', $warehouse_id)->where('full_waybill_generated', '0')->where('confirmed_by', '!=', null)->orderBy('id', 'DESC')->get();
         return response()->json(compact('invoices', 'waybill_no'), 200);
     }
 
@@ -650,7 +650,7 @@ class InvoicesController extends Controller
     public function show(Invoice $invoice)
     {
         //
-        $invoice =  $invoice->with(['warehouse', 'customer.user', 'customer.type', 'invoiceItems.item', 'histories' => function ($q) {
+        $invoice =  $invoice->with(['warehouse', 'customer.user', 'customer.type', 'confirmer', 'invoiceItems.item', 'histories' => function ($q) {
             $q->orderBy('id', 'DESC');
         }])->find($invoice->id);
         return response()->json(compact('invoice'), 200);

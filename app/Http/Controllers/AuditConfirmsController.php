@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice\DeliveryTripExpense;
+use App\Models\Invoice\Invoice;
 use App\Models\Invoice\Waybill;
 use App\Models\Logistics\VehicleExpense;
 use App\Models\Stock\ItemStockSubBatch;
@@ -58,6 +59,27 @@ class AuditConfirmsController extends Controller
         }
         $title = "Outbound/Waybill goods confirmation by auditor";
         $description = "Waybill goods with waybill number: $waybill->waybill_no was confirmed by $user->name ($user->phone)";
+        //log this activity
+        $roles = ['assistant admin', 'warehouse manager', 'stock officer'];
+        $this->logUserActivity($title, $description, $roles);
+        return response()->json(['confirmed' => $confirmed, 'confirmed_by' => $user->name], 200);
+    }
+    public function confirmInvoice(Request $request, Invoice $invoice)
+    {
+        $user = $this->getUser();
+        $invoice_items = $invoice->invoiceItems;
+        foreach ($invoice_items as $invoice_item) {
+            $invoice_item->confirmed_by = $user->id;
+            $invoice_item->is_confirmed = 1;
+            $invoice_item->save();
+        }
+        $invoice->confirmed_by = $user->id;
+        $confirmed = 'failed';
+        if ($invoice->save()) {
+            $confirmed = 'success';
+        }
+        $title = "Invoice confirmation by auditor";
+        $description = "Invoice with invoice number: $invoice->invoice_number was confirmed by $user->name ($user->phone)";
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'stock officer'];
         $this->logUserActivity($title, $description, $roles);

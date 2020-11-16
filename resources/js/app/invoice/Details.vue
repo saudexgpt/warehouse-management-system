@@ -32,7 +32,7 @@
                 }}
                 <br>
                 Phone: {{ invoice.customer.user.phone }}
-                <!-- <br />
+                <!-- <br>
                 Email: {{ invoice.customer.user.email }}-->
                 <br>
                 {{ invoice.customer.user.address }}
@@ -65,10 +65,16 @@
           <!-- Table row -->
           <div class="row">
             <div class="col-xs-12 table-responsive">
-              <legend>Invoice Products</legend>
+              <legend>Invoice Products <small class="no-print"> Confirmed By: {{ (invoice.confirmer) ? invoice.confirmer.name : 'Not Confirmed' }}</small></legend>
               <table class="table table-bordered">
                 <thead>
                   <tr>
+                    <th>
+                      <div v-if="invoice.confirmed_by === null && checkPermission(['audit confirm actions'])">
+                        Confirm Items
+                      </div>
+                      <div v-else>S/N</div>
+                    </th>
                     <th>Product</th>
                     <!-- <th>Description</th> -->
                     <th>Quantity</th>
@@ -83,6 +89,24 @@
                     v-for="(invoice_item, index) in invoice.invoice_items"
                     :key="index"
                   >
+                    <td>
+                      <div :id="invoice_item.id">
+                        <div
+                          v-if="
+                            invoice_item.is_confirmed === 0 &&
+                              checkPermission(['audit confirm actions'])
+                          "
+                        >
+                          <input
+                            v-model="confirmed_items"
+                            :value="invoice_item.id"
+                            type="checkbox"
+                            @change="activateConfirmButton()"
+                          >
+                        </div>
+                        <div v-else>{{ index + 1 }}</div>
+                      </div>
+                    </td>
                     <td>
                       {{ invoice_item.item ? invoice_item.item.name : '' }}
                     </td>
@@ -107,8 +131,20 @@
                       }}
                     </td>
                   </tr>
+                  <tr v-if="checkPermission(['audit confirm actions']) && activate_confirm_button">
+                    <td colspan="6">
+                      <a
+                        v-if="checkPermission(['audit confirm actions']) && activate_confirm_button"
+                        class="btn btn-success"
+                        title="Click to confirm"
+                        @click="confirmInvoiceDetails()"
+                      >
+                        <i class="fa fa-check" /> Click to save confirmation
+                      </a>
+                    </td>
+                  </tr>
                   <tr>
-                    <td colspan="5" align="right">
+                    <td colspan="6" align="right">
                       <label>Subtotal</label>
                     </td>
                     <td align="right">
@@ -116,7 +152,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="5" align="right">
+                    <td colspan="6" align="right">
                       <label>Discount</label>
                     </td>
                     <td align="right">
@@ -124,7 +160,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="5" align="right">
+                    <td colspan="6" align="right">
                       <label>Grand Total</label>
                     </td>
                     <td align="right">
@@ -148,6 +184,7 @@
                 </tr>
               </tbody>
             </table>
+
             <!-- /.col -->
           </div>
         </section>
@@ -200,7 +237,8 @@ import { parseTime } from '@/utils';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 // import NewWaybill from './partials/NewWaybill';
-
+import Resource from '@/api/resource';
+const confirmInvoiceDetailsResource = new Resource('audit/confirm/invoice');
 export default {
   // components: { NewWaybill },
   props: {
@@ -235,6 +273,8 @@ export default {
         option: '',
       },
       downloadLoading: false,
+      confirmed_items: [],
+      activate_confirm_button: false,
     };
   },
   methods: {
@@ -244,9 +284,28 @@ export default {
     doPrint() {
       window.print();
     },
+    activateConfirmButton() {
+      this.activate_confirm_button =
+      this.invoice.invoice_items.length === this.confirmed_items.length;
+    },
+    confirmInvoiceDetails() {
+      const app = this;
+      var param = { invoice_item_ids: app.confirmed_items };
+      const message = 'Are you sure everything is intact? Click OK to confirm.';
+      if (confirm(message)) {
+        confirmInvoiceDetailsResource
+          .update(app.invoice.id, param)
+          .then(response => {
+            if (response.confirmed === 'success') {
+              app.activate_confirm_button = false;
+              app.$message('Invoice Items Confirmed Successfully');
+            }
+          });
+      }
+    },
     handleDownload() {
       this.downloadLoading = true;
-      import('@/vendor/Export2Excel').then((excel) => {
+      import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [
           [
             'Invoice History for Invoice No.: ' + this.invoice.invoice_number,
@@ -270,8 +329,8 @@ export default {
       });
     },
     formatJson(filterVal, jsonData) {
-      return jsonData.map((v) =>
-        filterVal.map((j) => {
+      return jsonData.map(v =>
+        filterVal.map(j => {
           if (j === 'created_at') {
             return parseTime(v[j]);
           }
@@ -301,8 +360,6 @@ export default {
       clear: both;
     }
     .img-circle {
-      binvoice-radius: 50%;
-      binvoice: 2px solid #d2d6de;
       padding: 2px;
     }
     span {
@@ -312,7 +369,6 @@ export default {
   }
   .post {
     font-size: 14px;
-    binvoice-bottom: 1px solid #d2d6de;
     margin-bottom: 15px;
     padding-bottom: 15px;
     color: #666;

@@ -208,6 +208,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
                 $router->put('/delivery-cost/{delivery_cost_expense}', 'AuditConfirmsController@confirmDeliveryCost');
 
                 $router->put('/vehicle-expenses/{vehicle_expense}', 'AuditConfirmsController@confirmVehicleExpense');
+
+                $router->put('/invoice/{invoice}', 'AuditConfirmsController@confirmInvoice');
             });
         });
     });

@@ -160,12 +160,7 @@
                               type="number"
                               :max="invoice_item.supply_bal"
                               min="0"
-                              @input="
-                                checkForOverflow(
-                                  invoice_item.supply_bal,
-                                  $event
-                                )
-                              "
+                              @change="checkForOverflow(invoice_item.supply_bal, index)"
                             >
                             <!-- <el-select
                               v-model="invoice_item.quantity_for_supply"
@@ -340,7 +335,7 @@ export default {
         });
 
         invoice_item.supply_bal = supply_bal;
-        invoice_item.quantity_for_supply = 0;
+        invoice_item.quantity_for_supply = supply_bal;
         if (supply_bal > total_batch_balance) {
           invoice_item.supply_bal = total_batch_balance;
         }
@@ -350,10 +345,14 @@ export default {
       app.form.invoice_ids = invoice_ids;
       // app.loading = false;
     },
-    checkForOverflow(limit, value) {
+    checkForOverflow(limit, index) {
+      const app = this;
+      const value = app.invoice_items[index].quantity_for_supply;
+      const product = app.invoice_items[index].item.name;
+      const package_type = app.invoice_items[index].item.package_type;
       if (value > limit) {
-        alert(limit + '/' + value);
-        // this.$message('Make sure you DO NOT exceed ' + limit);
+        app.$alert('Make sure you DO NOT exceed ' + limit + ' ' + package_type + ' for ' + product);
+        app.invoice_items[index].quantity_for_supply = limit;
       }
     },
     // fetchAvailableDrivers(){

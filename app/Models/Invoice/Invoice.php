@@ -36,4 +36,8 @@ class Invoice extends Model
     {
         return $this->belongsToMany(Waybill::class);
     }
+    public function confirmer()
+    {
+        return $this->belongsTo(User::class, 'confirmed_by', 'id');
+    }
 }

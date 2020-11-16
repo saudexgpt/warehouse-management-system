@@ -295,7 +295,7 @@ export default {
     },
     activateConfirmButton() {
       this.activate_confirm_button =
-        this.waybill.waybill_items.length === this.confirmed_items.length;
+      this.waybill.waybill_items.length === this.confirmed_items.length;
     },
     confirmWaybillDetails() {
       const app = this;
@@ -310,6 +310,7 @@ export default {
 
             if (response.confirmed === 'success') {
               app.activate_confirm_button = false;
+              app.$message('Waybill Items Confirmed Successfully');
             }
           });
       }
