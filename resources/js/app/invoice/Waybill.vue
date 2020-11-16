@@ -80,7 +80,7 @@
           <div slot="action" slot-scope="props">
             <a class="btn btn-default" @click="waybill=props.row; page.option='waybill_details'"><i class="el-icon-tickets" /></a>
 
-            <a v-if="props.row.dispatch_products.length < 1 && checkPermission(['manage waybill'])" class="btn btn-danger" @click="deleteWaybill(props.index, props.row)"><i class="el-icon-delete" /></a>
+            <a v-if="props.row.dispatch_products.length < 1 && checkPermission(['delete pending waybill'])" class="btn btn-danger" @click="deleteWaybill(props.index, props.row)"><i class="el-icon-delete" /></a>
 
             <a v-if="props.row.status === 'waybill_generated'" class="btn btn-default" @click="waybill=props.row; waybill.index= props.index - 1; page.option='waybill_details'"><i class="el-icon-success" /></a>
             <!-- <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="click">
