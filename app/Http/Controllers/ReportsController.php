@@ -233,7 +233,7 @@ class ReportsController extends Controller
             return response()->json(compact('items_in_stock'));
         }
         if ($view_by === 'product') {
-            $items_in_stock = ItemStockSubBatch::with(['item'])->groupBy('item_id')->having('warehouse_id', $warehouse_id)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->select('*', \DB::raw('SUM(quantity) as quantity'), \DB::raw('SUM(in_transit) as in_transit'), \DB::raw('SUM(supplied) as supplied'), \DB::raw('SUM(balance) as balance'))->get();
+            $items_in_stock = ItemStockSubBatch::with(['item'])->groupBy('item_id')->having('warehouse_id', $warehouse_id)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->select('*', \DB::raw('SUM(quantity) as quantity'), \DB::raw('SUM(in_transit) as in_transit'), \DB::raw('SUM(supplied) as supplied'), \DB::raw('SUM(balance) as balance'), \DB::raw('SUM(reserved_for_supply) as reserved_for_supply'))->get();
             return response()->json(compact('items_in_stock'));
         }
     }
