@@ -80,6 +80,8 @@
           <div slot="action" slot-scope="props">
             <a class="btn btn-default" @click="waybill=props.row; page.option='waybill_details'"><i class="el-icon-tickets" /></a>
 
+            <a v-if="props.row.dispatch_products.length < 1 && checkPermission(['manage waybill'])" class="btn btn-danger" @click="deleteWaybill(props.index, props.row)"><i class="el-icon-delete" /></a>
+
             <a v-if="props.row.status === 'waybill_generated'" class="btn btn-default" @click="waybill=props.row; waybill.index= props.index - 1; page.option='waybill_details'"><i class="el-icon-success" /></a>
             <!-- <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="click">
               <div class="avatar-wrapper" style="color: brown">
@@ -118,7 +120,7 @@ import Resource from '@/api/resource';
 import WaybillDetails from './partials/WaybillDetails';
 const necessaryParams = new Resource('fetch-necessary-params');
 const fetchWaybills = new Resource('invoice/waybill');
-// const deleteItemInStock = new Resource('stock/items-in-stock/delete');
+const deleteWaybill = new Resource('invoice/waybill/delete');
 export default {
   components: { WaybillDetails },
   props: {
@@ -247,6 +249,42 @@ export default {
         .catch(error => {
           loader.hide();
           console.log(error.message);
+        });
+    },
+    deleteWaybill(index, waybill) {
+      const app = this;
+      this.$confirm(
+        'You are about to delete waybill no. ' + waybill.waybill_no + '. This cannot be undone. Click YES to confirm.',
+        'Warning',
+        {
+          confirmButtonText: 'YES',
+          cancelButtonText: 'Cancel',
+          type: 'warning',
+        }
+      )
+        .then(() => {
+          const loader = deleteWaybill.loaderShow();
+          deleteWaybill
+            .destroy(waybill.id)
+            .then((response) => {
+              this.$message({
+                message: 'Waybill deleted successfully.',
+                type: 'success',
+                duration: 5 * 1000,
+              });
+              app.waybills.splice(index - 1, 1);
+              loader.hide();
+            })
+            .catch((error) => {
+              loader.hide();
+              console.log(error.message);
+              this.disabled = false;
+            })
+            .finally(() => {
+              loader.hide();
+              this.creatingWaybill = false;
+              this.disabled = false;
+            });
         });
     },
     handleDownload() {

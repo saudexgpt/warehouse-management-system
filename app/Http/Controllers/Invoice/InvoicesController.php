@@ -689,7 +689,7 @@ class InvoicesController extends Controller
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;
-            $waybills = Waybill::with(['invoices.customer.user', 'dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItems.invoice.customer.user', 'waybillItems.item', 'trips'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
+            $waybills = Waybill::with(['invoices.customer.user', 'dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItems.invoice.customer.user', 'waybillItems.item', 'trips', 'dispatchProducts'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
         }
         // if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
         //     $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
@@ -1143,6 +1143,33 @@ class InvoicesController extends Controller
         // }
         $invoice->invoiceItems()->delete();
         $invoice->delete();
+        return response()->json(null, 204);
+    }
+    public function deleteWaybill(Waybill $waybill)
+    {
+        // delete all relationships with waybill and the waybill itself
+        $waybill_items = $waybill->waybillItems;
+        foreach ($waybill_items as $waybill_item) {
+            $invoice_item = $waybill_item->invoiceItem;
+            $batches = $invoice_item->batches;
+            foreach ($batches as $batch) {
+                // we want to unreserve all reserved products made as a result of waybill generation
+                $item_stock_sub_batch = $batch->itemStockBatch;
+                $item_stock_sub_batch->reserved_for_supply -= $batch->to_supply;
+                $item_stock_sub_batch->save();
+            }
+            $invoice_item->batches()->delete();
+        }
+        $waybill->waybillItems()->delete();
+        $invoices = $waybill->invoices;
+        foreach ($invoices as $invoice) {
+            $invoice->full_waybill_generated = '0';
+            $invoice->save();
+        }
+        $waybill->trips()->delete();
+        $waybill->dispatcher()->delete();
+        $waybill->delete();
+
         return response()->json(null, 204);
     }
 }
