@@ -1148,6 +1148,11 @@ class InvoicesController extends Controller
     public function deleteWaybill(Waybill $waybill)
     {
         // delete all relationships with waybill and the waybill itself
+        $actor = $this->getUser();
+        $title = "Waybill deleted";
+        $description = "Waybill ($waybill->waybill_no) was deleted by $actor->name ($actor->phone)";
+        //log this activity
+
         $waybill_items = $waybill->waybillItems;
         foreach ($waybill_items as $waybill_item) {
             $invoice_item = $waybill_item->invoiceItem;
@@ -1169,7 +1174,8 @@ class InvoicesController extends Controller
         $waybill->trips()->delete();
         $waybill->dispatcher()->delete();
         $waybill->delete();
-
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         return response()->json(null, 204);
     }
 }
