@@ -35,7 +35,7 @@
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for="">Search Invoice</label>
-                <small>Only confirmed invoice by auditors will be displayed for waybilling</small>
+                <small>(Only confirmed invoice by auditors will be displayed for waybilling)</small>
                 <el-select
                   v-model="selected_invoice"
                   placeholder="Select Invoice"

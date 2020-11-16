@@ -87,7 +87,10 @@
             slot="amount"
             slot-scope="props"
           >{{ currency + Number(props.row.amount).toLocaleString() }}</div>
-
+          <div
+            slot="confirmed_by"
+            slot-scope="props"
+          >{{ (props.row.confirmer) ? props.row.confirmer.name : '' }}</div>
           <div
             slot="waybill_generated"
             slot-scope="props"
@@ -211,6 +214,7 @@ export default {
         'created_at',
         'status',
         'waybill_generated',
+        'confirmed_by',
       ],
 
       options: {

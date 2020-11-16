@@ -69,7 +69,6 @@ class AuditConfirmsController extends Controller
         $user = $this->getUser();
         $invoice_items = $invoice->invoiceItems;
         foreach ($invoice_items as $invoice_item) {
-            $invoice_item->confirmed_by = $user->id;
             $invoice_item->is_confirmed = 1;
             $invoice_item->save();
         }

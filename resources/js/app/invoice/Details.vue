@@ -135,6 +135,7 @@
                     <td colspan="6">
                       <a
                         v-if="checkPermission(['audit confirm actions']) && activate_confirm_button"
+                        v-loading="confirm_loader"
                         class="btn btn-success"
                         title="Click to confirm"
                         @click="confirmInvoiceDetails()"
@@ -275,6 +276,7 @@ export default {
       downloadLoading: false,
       confirmed_items: [],
       activate_confirm_button: false,
+      confirm_loader: false,
     };
   },
   methods: {
@@ -293,6 +295,7 @@ export default {
       var param = { invoice_item_ids: app.confirmed_items };
       const message = 'Are you sure everything is intact? Click OK to confirm.';
       if (confirm(message)) {
+        app.confirm_loader = true;
         confirmInvoiceDetailsResource
           .update(app.invoice.id, param)
           .then(response => {
@@ -300,6 +303,7 @@ export default {
               app.activate_confirm_button = false;
               app.$message('Invoice Items Confirmed Successfully');
             }
+            app.confirm_loader = false;
           });
       }
     },
