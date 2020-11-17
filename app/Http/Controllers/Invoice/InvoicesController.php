@@ -1149,6 +1149,8 @@ class InvoicesController extends Controller
         $waybill_items = $waybill->waybillItems;
         foreach ($waybill_items as $waybill_item) {
             $invoice_item = $waybill_item->invoiceItem;
+            $invoice_item->quantity_supplied = 0;
+            $invoice_item->save();
             $batches = $invoice_item->batches;
             foreach ($batches as $batch) {
                 // we want to unreserve all reserved products made as a result of waybill generation
