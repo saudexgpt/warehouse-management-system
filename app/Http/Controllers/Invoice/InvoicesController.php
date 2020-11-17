@@ -736,6 +736,21 @@ class InvoicesController extends Controller
         $warehouse_id = $request->warehouse_id;
         $message = '';
         $invoice_items = json_decode(json_encode($request->invoice_items));
+
+        $waybill_no = $this->nextReceiptNo('waybill');
+        $waybill = new Waybill();
+        $waybill->warehouse_id = $warehouse_id;
+        // $waybill->invoice_id = $request->invoice_id;
+        $waybill->waybill_no = $waybill_no;
+        $waybill->status = $request->status;
+        $waybill->save();
+
+        $this->incrementReceiptNo('waybill');
+
+        $waybill->invoices()->sync($invoice_ids);
+        // create way bill items
+        $waybill_item_obj = new WaybillItem();
+        // $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_items);
         // $waybill = Waybill::where('waybill_no', $request->waybill_no)->first();
         // if ($waybill) {
         //     return response()->json(['message' => 'Dupicate Waybill No. Refresh the page please!!!'], 500);
@@ -751,10 +766,12 @@ class InvoicesController extends Controller
             $for_supply = (int) $invoice_item->quantity_for_supply;
             if ($for_supply > 0) {
                 if ($original_quantity > $quantity_supplied) {
-                    if ($original_quantity >= $for_supply) {
+                    if (($original_quantity - $quantity_supplied)  >= $for_supply) {
                         $invoice_item_update->quantity_supplied += $for_supply;
                         $invoice_item_update->save();
                         $this->createInvoiceItemBatches($invoice_item_update, $batches, $for_supply);
+
+                        $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_item);
                     }
                 }
             }
@@ -772,30 +789,6 @@ class InvoicesController extends Controller
             //     $message .= $invoice_item->item->name . ' remains only ' . $item_balance . ' ' . $invoice_item->item->package_type . ' in stock.<br>';
             // }
         }
-
-        // if ($message !== '') {
-        //     return response()->json(['status' => 'Insufficient Stock', 'message' => $message], 200);
-        // }
-        // $waybill = Waybill::where('invoice_id', $request->invoice_id)->first();
-        // if (!$waybill) {
-        // $waybill_no = $request->waybill_no;
-        $waybill_no = $this->nextReceiptNo('waybill');
-        $waybill = new Waybill();
-        $waybill->warehouse_id = $warehouse_id;
-        // $waybill->invoice_id = $request->invoice_id;
-        $waybill->waybill_no = $waybill_no;
-        $waybill->status = $request->status;
-        $waybill->save();
-
-        $this->incrementReceiptNo('waybill');
-
-        $waybill->invoices()->sync($invoice_ids);
-        // create way bill items
-        $waybill_item_obj = new WaybillItem();
-        $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_items);
-
-        // $invoice->status = 'waybill generated';
-        // $invoice->save();
 
         $invoice_nos = [];
         foreach ($invoice_ids as $invoice_id) {
