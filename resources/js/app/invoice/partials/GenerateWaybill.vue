@@ -339,6 +339,7 @@ export default {
         invoice_item.quantity_for_supply = supply_bal;
         if (supply_bal > total_batch_balance) {
           invoice_item.supply_bal = total_batch_balance;
+          invoice_item.quantity_for_supply = total_batch_balance;
         }
         invoice_item.total_batch_balance = total_batch_balance;
       });
