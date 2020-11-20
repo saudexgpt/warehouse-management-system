@@ -54,7 +54,7 @@
               <br>
               <label>Date:</label>
               {{
-                moment(invoice.invoice_date).format('MMMM Do YYYY, h:mm:ss a')
+                moment(invoice.invoice_date).format('MMMM Do YYYY')
               }}
               <br>
             </div>
@@ -176,7 +176,7 @@
                 <small>{{ invoice.notes }}</small>
               </p>
             </div>
-            <table class="table">
+            <table>
               <tbody>
                 <tr>
                   <td>Prepared By: ______________________________</td>
@@ -216,7 +216,7 @@
               v-for="(history, index) in invoice.histories"
               :key="index"
               :timestamp="
-                moment(history.created_at).format('MMMM Do YYYY, h:mm:ss a')
+                moment(history.created_at).format('MMMM Do YYYY')
               "
               placement="top"
             >
@@ -415,12 +415,15 @@ export default {
   .el-carousel__item:nth-child(2n + 1) {
     background-color: #d3dce6;
   }
+
 }
 </style>
 <style>
+
 @media print {
   .el-tabs__header {
     display: none !important;
   }
+
 }
 </style>
