@@ -87,10 +87,15 @@
                         <td><div class="alert alert-danger">{{ invoice_item.quantity - invoice_item.quantity_supplied }}</div></td>
                         <td>
                           <div v-if="invoice_item.supply_bal > 0">
-                            <el-select v-model="invoice_item.quantity_for_supply" placeholder="Set Quantity for Supply" filterable class="span">
-                              <el-option value="0" label="0" />
-                              <el-option v-for="(quantity, quantity_index) in invoice_item.supply_bal" :key="quantity_index" :value="quantity" :label="quantity" />
-                            </el-select>
+                            <input
+                              v-model="invoice_item.quantity_for_supply"
+                              class="form-control"
+                              placeholder="Set Quantity for Supply"
+                              type="number"
+                              :max="invoice_item.supply_bal"
+                              min="0"
+                              @change="checkForOverflow(invoice_item.supply_bal, index)"
+                            >
                           </div>
                         </td>
                       </tr>
@@ -189,6 +194,16 @@ export default {
       fetchProductBatches.list(param).then((response) => {
         return response.batches_of_items_in_stock;
       });
+    },
+    checkForOverflow(limit, index) {
+      const app = this;
+      const value = app.invoice_items[index].quantity_for_supply;
+      const product = app.invoice_items[index].item.name;
+      const package_type = app.invoice_items[index].item.package_type;
+      if (value > limit) {
+        app.$alert('Make sure you DO NOT exceed ' + limit + ' ' + package_type + ' for ' + product);
+        app.invoice_items[index].quantity_for_supply = limit;
+      }
     },
     fetchUndeliveredInvoices(index) {
       const app = this;

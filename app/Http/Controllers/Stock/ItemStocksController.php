@@ -218,25 +218,29 @@ class ItemStocksController extends Controller
     {
         //
         $user = $this->getUser();
-        $item_in_stock->warehouse_id = $request->warehouse_id;
-        $item_in_stock->item_id = $request->item_id;
-        $item_in_stock->batch_no = $request->batch_no;
-        // $item_in_stock->sub_batch_no = $batch['batch_no'];
-        $item_in_stock->quantity = $request->quantity;
-        // $item_in_stock->reserved_for_supply = 0;
-        // $item_in_stock->in_transit = 0; // initial values set to zero
-        // $item_in_stock->supplied = 0;
-        // $item_in_stock->balance = $batch['quantity'];
-        // $item_in_stock->goods_received_note = $batch['goods_received_note'];
-        $item_in_stock->expiry_date = date('Y-m-d', strtotime($request->expiry_date));
-        $item_in_stock->save();
+        $initial_stock = $item_in_stock->quantity;
+        if ($initial_stock < $request->quantity) {
+            $difference_in_stock = $request->quantity - $initial_stock;
 
-        // log this event
-        $title = 'Product in stock updated';
-        $description = $item_in_stock->item->name . " with batch number: ($item_in_stock->batch_no) was updated by " . $user->name;
-        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
-        $this->logUserActivity($title, $description, $roles);
+            $item_in_stock->warehouse_id = $request->warehouse_id;
+            $item_in_stock->item_id = $request->item_id;
+            $item_in_stock->batch_no = $request->batch_no;
+            // $item_in_stock->sub_batch_no = $batch['batch_no'];
+            $item_in_stock->quantity = $request->quantity;
+            // $item_in_stock->reserved_for_supply = 0;
+            // $item_in_stock->in_transit = 0; // initial values set to zero
+            // $item_in_stock->supplied = 0;
+            $item_in_stock->balance += $difference_in_stock;
+            // $item_in_stock->goods_received_note = $batch['goods_received_note'];
+            $item_in_stock->expiry_date = date('Y-m-d', strtotime($request->expiry_date));
+            $item_in_stock->save();
 
+            // log this event
+            $title = 'Product in stock updated';
+            $description = $item_in_stock->item->name . " with batch number: ($item_in_stock->batch_no) was updated by " . $user->name;
+            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+            $this->logUserActivity($title, $description, $roles);
+        }
         return $this->show($item_in_stock);
     }
 
