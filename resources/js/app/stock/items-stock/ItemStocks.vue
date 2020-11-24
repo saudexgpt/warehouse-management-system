@@ -35,8 +35,16 @@
             {{ row.supplied }} {{ formatPackageType(row.item.package_type) }}
 
           </div>
-          <div slot="balance" slot-scope="{row}" class="alert alert-success">
+          <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
+            {{ row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
+
+          </div>
+          <div slot="in_stock" slot-scope="{row}" class="alert alert-primary">
             {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
+
+          </div>
+          <div slot="balance" slot-scope="{row}" class="alert alert-success">
+            {{ (row.balance - row.reserved_for_supply) }} {{ formatPackageType(row.item.package_type) }}
 
           </div>
           <div slot="expiry_date" slot-scope="{row}" :class="'alert alert-'+ expiryFlag(moment(row.expiry_date).format('x'))">
@@ -94,7 +102,7 @@ export default {
     return {
       warehouses: [],
       items_in_stock: [],
-      columns: ['action', 'confirmer.name', 'item.name', 'stocker.name', 'batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'balance', 'created_at'],
+      columns: ['action', 'confirmer.name', 'item.name', 'stocker.name', 'batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance', 'created_at'],
 
       options: {
         headings: {
@@ -105,7 +113,9 @@ export default {
           quantity: 'Quantity Stocked',
           in_transit: 'In Transit',
           supplied: 'Supplied',
-          balance: 'Balance',
+          reserved_for_supply: 'Reserved for Supply',
+          in_stock: 'Physical Stock',
+          balance: 'Main Balance',
           expiry_date: 'Expires',
           created_at: 'Created',
 

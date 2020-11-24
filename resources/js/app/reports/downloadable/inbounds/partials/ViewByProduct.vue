@@ -18,12 +18,16 @@
         {{ row.supplied }} {{ formatPackageType(row.item.package_type) }}
 
       </div>
-      <div slot="balance" slot-scope="{row}" class="alert alert-success">
+      <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
+        {{ row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
+
+      </div>
+      <div slot="in_stock" slot-scope="{row}" class="alert alert-primary">
         {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
 
       </div>
-      <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
-        {{ row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
+      <div slot="balance" slot-scope="{row}" class="alert alert-success">
+        {{ (row.balance - row.reserved_for_supply) }} {{ formatPackageType(row.item.package_type) }}
 
       </div>
       <!-- <div slot="updated_at" slot-scope="{row}">
@@ -48,7 +52,7 @@ export default {
   },
   data() {
     return {
-      columns: ['item.name', 'quantity', 'in_transit', 'supplied', 'balance', 'reserved_for_supply'],
+      columns: ['item.name', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance'],
 
       options: {
         headings: {
@@ -56,13 +60,14 @@ export default {
           quantity: 'Quantity Stocked',
           in_transit: 'In Transit',
           supplied: 'Supplied',
-          balance: 'Balance',
-          reserved_for_supply: 'Reserved',
+          in_stock: 'Physical Stock',
+          balance: 'Main Balance',
+          reserved_for_supply: 'Reserved for Supply',
 
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['item.name', 'quantity', 'in_transit', 'supplied', 'balance', 'reserved_for_supply'],
+        sortable: ['item.name', 'quantity', 'in_transit', 'supplied', 'balance', 'in_stock', 'reserved_for_supply'],
         filterable: ['item.name'],
       },
       page: {
@@ -90,8 +95,8 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['PRODUCT', 'QUANTITY STOCKED', 'IN TRANSIT', 'SUPPLIED', 'BALANCE', 'RESERVED'];
+        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '']];
+        const tHeader = ['PRODUCT', 'QUANTITY STOCKED', 'IN TRANSIT', 'SUPPLIED', 'RESERVED', 'PHYSICAL STOCK', 'MAIN BALANCE'];
         const filterVal = this.columns;
         const list = this.itemsInStock;
         const data = this.formatJson(filterVal, list);

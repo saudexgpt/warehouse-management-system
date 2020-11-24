@@ -204,7 +204,7 @@ class ReportsController extends Controller
 
                 'categories'    => $categories,
                 'series'      => $series,
-                'title' => 'Number of Products in Stock at ' . $warehouse->name . $extra_title,
+                'title' => 'Number of Products Physically in Stock at ' . $warehouse->name . $extra_title,
                 'subtitle' => $subtitle,
 
             ],
