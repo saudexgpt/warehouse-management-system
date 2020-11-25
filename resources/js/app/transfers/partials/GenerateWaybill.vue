@@ -229,29 +229,35 @@ export default {
       var selected_invoice = app.selected_invoice;
       var invoice_items = [];
       var invoice_ids = [];
-      app.loading = true;
+      // app.loading = true;
       for (let index = 0; index < selected_invoice.length; index++) {
         const element = selected_invoice[index];
-        invoice_items.push(...app.transfer_requests[element].transfer_request_items);
-        invoice_ids.push(app.transfer_requests[element].id);
+        invoice_items.push(...app.invoices[element].invoice_items);
+        invoice_ids.push(app.invoices[element].id);
       }
-      invoice_items.forEach(invoice_item => {
+      // console.log(invoice_items);
+      invoice_items.forEach((invoice_item) => {
         var total_batch_balance = 0;
         var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied;
-        invoice_item.item.stocks.forEach(batch => {
-          total_batch_balance += parseInt(batch.balance - batch.reserved_for_supply);
+        var stocks = invoice_item.item.stocks;
+
+        stocks.forEach((stock_batch) => {
+          total_batch_balance +=
+            parseInt(stock_batch.balance) -
+            parseInt(stock_batch.reserved_for_supply);
         });
 
         invoice_item.supply_bal = supply_bal;
-        invoice_item.quantity_for_supply = null;
+        invoice_item.quantity_for_supply = supply_bal;
         if (supply_bal > total_batch_balance) {
           invoice_item.supply_bal = total_batch_balance;
+          invoice_item.quantity_for_supply = total_batch_balance;
         }
         invoice_item.total_batch_balance = total_batch_balance;
       });
-      app.form.invoice_items = invoice_items;
+      app.invoice_items = invoice_items;
       app.form.invoice_ids = invoice_ids;
-      app.loading = false;
+      // app.loading = false;
     },
     // fetchAvailableDrivers(){
     //   const app = this;
