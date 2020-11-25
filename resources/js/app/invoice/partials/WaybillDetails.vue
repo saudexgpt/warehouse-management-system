@@ -4,9 +4,14 @@
       <div class="row">
         <div class="col-xs-12 page-header" align="center">
           <img src="svg/logo.png" alt="Company Logo" width="50">
-          <span>
+          <span v-if="waybill.trips.length > 0">
             <label>{{ companyName }}</label>
-            <div class="pull-right no-print">
+            <div v-if="waybill.status === 'pending'" class="pull-right no-print">
+              <a v-if="checkPermission(['manage waybill'])" @click="form.status = 'in transit'; changeWaybillStatus(); ">
+                <i class="el-icon-printer" /> Print Waybill
+              </a>
+            </div>
+            <div v-else class="pull-right no-print">
               <a v-if="checkPermission(['manage waybill'])" @click="print_waybill = true;">
                 <i class="el-icon-printer" /> Print Waybill
               </a>
@@ -44,9 +49,11 @@
                   <div v-else>S/N</div>
                 </th>
                 <th>Invoice No.</th>
-                <th>Customer</th>
+                <!-- <th>Customer</th> -->
                 <th>Product</th>
                 <th>Quantity</th>
+                <th>Batch No.</th>
+                <th>Expires</th>
               </tr>
             </thead>
             <tbody>
@@ -67,10 +74,24 @@
                   </div>
                 </td>
                 <td>{{ waybill_item.invoice.invoice_number }}</td>
-                <td>{{ waybill_item.invoice.customer.user.name.toUpperCase() }}</td>
+                <!-- <td>{{ waybill_item.invoice.customer.user.name.toUpperCase() }}</td> -->
                 <td>{{ waybill_item.item.name }}</td>
                 <!-- <td>{{ waybill_item.item.description }}</td> -->
                 <td>{{ waybill_item.quantity+' '+formatPackageType(waybill_item.type) }}</td>
+                <td>
+                  <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
+                    <span v-if="batch.to_supply === waybill_item.quantity">
+                      {{ batch.item_stock_batch.batch_no }}
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
+                    <span v-if="batch.to_supply === waybill_item.quantity">
+                      {{ moment(batch.item_stock_batch.expiry_date).format('MMMM Do YYYY') }}
+                    </span>
+                  </div>
+                </td>
                 <!-- <td align="right">{{ currency + Number(waybill_item.rate).toLocaleString() }}</td>
                 <td>{{ waybill_item.type }}</td>
                 <td align="right">{{ currency + Number(waybill_item.amount).toLocaleString() }}</td>-->
@@ -161,7 +182,7 @@
               <a
                 class="btn btn-primary"
                 @click="form.status = 'in transit'; changeWaybillStatus()"
-              >Click to Mark Goods In Transit</a>
+              > <i class="el-icon-printer" /> Print Waybill</a>
               <span
                 class="label label-danger"
               >This should be done only when goods have left the warehouse to meet the customer</span>
@@ -201,7 +222,7 @@
               <a
                 class="btn btn-primary"
                 @click="form.status = 'in transit'; changeWaybillStatus()"
-              >Click to Mark Goods In Transit</a>
+              > <i class="el-icon-printer" /> Print Waybill</a>
               <span
                 class="label label-danger"
               >This should be done only when goods have left the warehouse to meet the customer</span>
@@ -290,6 +311,9 @@ export default {
         changeWaybillStatusResource.update(param.id, param)
           .then(response => {
             app.waybill.status = app.form.status;
+            if (app.form.status === 'in transit') {
+              app.print_waybill = true;
+            }
           });
       }
     },

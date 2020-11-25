@@ -36,17 +36,35 @@
           <thead>
             <tr>
               <th>S/N</th>
+              <th>Invoice No.</th>
+              <!-- <th>Customer</th> -->
               <th>Product</th>
-              <!-- <th>Description</th> -->
               <th>Quantity</th>
+              <th>Batch No.</th>
+              <th>Expires</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(waybill_item, index) in waybill.waybill_items" :key="index">
               <td>{{ index + 1 }}</td>
+              <td>{{ waybill_item.invoice.invoice_number }}</td>
               <td>{{ waybill_item.item.name }}</td>
               <!-- <td>{{ waybill_item.item.description }}</td> -->
               <td>{{ waybill_item.quantity+' '+waybill_item.type }}</td>
+              <td>
+                <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
+                  <span v-if="batch.to_supply === waybill_item.quantity">
+                    {{ batch.item_stock_batch.batch_no }}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
+                  <span v-if="batch.to_supply === waybill_item.quantity">
+                    {{ moment(batch.item_stock_batch.expiry_date).format('MMMM Do YYYY') }}
+                  </span>
+                </div>
+              </td>
               <!-- <td align="right">{{ currency + Number(waybill_item.rate).toLocaleString() }}</td>
               <td>{{ waybill_item.type }}</td>
               <td align="right">{{ currency + Number(waybill_item.amount).toLocaleString() }}</td> -->

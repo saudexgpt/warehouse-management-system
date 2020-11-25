@@ -689,7 +689,7 @@ class InvoicesController extends Controller
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;
-            $waybills = Waybill::with(['invoices.customer.user', 'dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItems.invoice.customer.user', 'waybillItems.item', 'trips', 'dispatchProducts'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
+            $waybills = Waybill::with(['invoices.customer.user', 'dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItems.invoice.customer.user', 'waybillItems.item', 'waybillItems.invoiceItem.batches.itemStockBatch', 'trips', 'dispatchProducts'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
         }
         // if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
         //     $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
