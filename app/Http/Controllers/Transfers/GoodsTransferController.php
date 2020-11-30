@@ -59,7 +59,7 @@ class GoodsTransferController extends Controller
         //
         $user = $this->getUser();
         $warehouse_id = $request->warehouse_id;
-        $waybill_no = $this->nextReceiptNo('waybill');
+        $waybill_no = $this->nextReceiptNo('transfer_request_waybill');
         /*$transfer_requests = TransferRequest::get();
         foreach ($transfer_requests as $transfer_request) {
             $customer = Customer::find($transfer_request->customer_id)->first();
@@ -107,11 +107,13 @@ class GoodsTransferController extends Controller
     {
 
         $user = $this->getUser();
-        $request_number  = $this->nextReceiptNo('transfer_request');
+        $request_number  = $request->request_number; // $this->nextReceiptNo('transfer_request');
         $transfer_request_items = json_decode(json_encode($request->request_items));
         $dupicate_invoice = TransferRequest::where('request_number', $request_number)->first();
         if ($dupicate_invoice) {
             $request_number  = $this->nextReceiptNo('transfer_request');
+            //////update next invoice number/////
+            $this->incrementReceiptNo('transfer_request');
         }
         $request_warehouse = Warehouse::find($request->request_warehouse_id);
         $supply_warehouse = Warehouse::find($request->supply_warehouse_id);
@@ -129,8 +131,7 @@ class GoodsTransferController extends Controller
         $this->createTransferRequestHistory($transfer_request, $title, $description);
         //create items invoiceed for
         $this->createTransferRequestItems($transfer_request, $transfer_request_items);
-        //////update next invoice number/////
-        $this->incrementReceiptNo('transfer_request');
+
 
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
@@ -368,7 +369,13 @@ class GoodsTransferController extends Controller
         // $waybill = TransferRequestWaybill::where('request_id', $request->request_id)->first();
         // if (!$waybill) {
         $request_warehouse_id = $transfer_request_items[0]->request_warehouse_id;
-        $waybill_no = $this->nextReceiptNo('transfer_request_waybill');
+        $waybill_no = $request->waybill_no; // $this->nextReceiptNo('transfer_request_waybill');
+        $duplicate_waybill = TransferRequestWaybill::where('transfer_request_waybill_no', $waybill_no)->first();
+        if ($duplicate_waybill) {
+            $waybill_no  = $this->nextReceiptNo('transfer_request_waybill');
+            //////update next invoice number/////
+            $this->incrementReceiptNo('transfer_request_waybill');
+        }
         $waybill = new TransferRequestWaybill();
         $waybill->supply_warehouse_id = $warehouse_id;
         $waybill->request_warehouse_id = $request_warehouse_id;
@@ -376,7 +383,7 @@ class GoodsTransferController extends Controller
         $waybill->status = $request->status;
         $waybill->save();
 
-        $this->incrementReceiptNo('transfer_request_waybill');
+
 
         $waybill->transferRequests()->sync($transfer_request_ids);
         // create way bill items
@@ -394,7 +401,7 @@ class GoodsTransferController extends Controller
                 $transfer_request->save();
             }
             $title = "Transfer Request Waybill Generated";
-            $description = "Transfer request waybill ($waybill->waybill_no) generated for invoice ($transfer_request->request_number) by $user->name ($user->email)";
+            $description = "Transfer request waybill ($waybill->transfer_request_waybill_no) generated for invoice ($transfer_request->request_number) by $user->name ($user->email)";
             //log this action to invoice history
             $this->createTransferRequestHistory($transfer_request, $title, $description);
 
@@ -744,8 +751,7 @@ class GoodsTransferController extends Controller
         $title = "TransferRequest deleted";
         $description = "TransferRequest ($transfer_request->request_number) was deleted by $actor->name ($actor->phone)";
         //log this activity
-        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
-        $this->logUserActivity($title, $description, $roles);
+
 
         // $transfer_request_items = $transfer_request->transferRequestItems; //()->batches()->delete();
         // foreach ($transfer_request_items as $transfer_request_item) {
@@ -763,6 +769,8 @@ class GoodsTransferController extends Controller
         // }
         $transfer_request->transferRequestItems()->delete();
         $transfer_request->delete();
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
         return response()->json(null, 204);
     }
 }

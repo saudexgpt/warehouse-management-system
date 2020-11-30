@@ -23,12 +23,6 @@
           <el-form ref="form" :model="form" label-width="120px">
             <el-row :gutter="5" class="padded">
               <el-col :xs="24" :sm="12" :md="12">
-                <!-- <label for>TXN Number</label>
-                <el-input
-                  v-model="form.request_number"
-                  placeholder="Enter TransferRequest Number"
-                  class="span"
-                />-->
                 <label for>Requesting Warehouse</label>
                 <el-select
                   v-model="form.request_warehouse_id"
@@ -44,6 +38,12 @@
                     :label="warehouse.name"
                   />
                 </el-select>
+                <label for>Transfer Invoice Number</label>
+                <el-input
+                  v-model="form.request_number"
+                  placeholder="Enter Transfer Invoice Number"
+                  class="span"
+                />
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>Supplying Warehouse</label>
@@ -184,6 +184,7 @@ export default {
       show_product_list: false,
       batches_of_items_in_stock: [],
       form: {
+        request_number: '',
         request_warehouse_id: '',
         supply_warehouse_id: '',
         status: 'pending',
@@ -197,6 +198,7 @@ export default {
         ],
       },
       empty_form: {
+        request_number: '',
         request_warehouse_id: '',
         supply_warehouse_id: '',
         status: 'pending',
@@ -294,6 +296,7 @@ export default {
       const app = this;
       var form = app.form;
       const checkEmptyFielads =
+        form.request_number === '' ||
         form.request_warehouse_id === '' ||
         form.supply_warehouse_id === '';
       if (!checkEmptyFielads) {
