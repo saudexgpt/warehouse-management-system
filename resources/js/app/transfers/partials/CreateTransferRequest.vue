@@ -38,12 +38,12 @@
                     :label="warehouse.name"
                   />
                 </el-select>
-                <label for>Transfer Invoice Number</label>
+                <!-- <label for>Transfer Invoice Number</label>
                 <el-input
                   v-model="form.request_number"
                   placeholder="Enter Transfer Invoice Number"
                   class="span"
-                />
+                /> -->
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>Supplying Warehouse</label>
@@ -296,7 +296,7 @@ export default {
       const app = this;
       var form = app.form;
       const checkEmptyFielads =
-        form.request_number === '' ||
+        // form.request_number === '' ||
         form.request_warehouse_id === '' ||
         form.supply_warehouse_id === '';
       if (!checkEmptyFielads) {

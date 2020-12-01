@@ -107,14 +107,14 @@ class GoodsTransferController extends Controller
     {
 
         $user = $this->getUser();
-        $request_number  = $request->request_number; // $this->nextReceiptNo('transfer_request');
+        $request_number  = $this->nextReceiptNo('transfer_request'); //$request->request_number;
         $transfer_request_items = json_decode(json_encode($request->request_items));
         $dupicate_invoice = TransferRequest::where('request_number', $request_number)->first();
         if ($dupicate_invoice) {
             $request_number  = $this->nextReceiptNo('transfer_request');
-            //////update next invoice number/////
-            $this->incrementReceiptNo('transfer_request');
         }
+        //////update next invoice number/////
+        $this->incrementReceiptNo('transfer_request');
         $request_warehouse = Warehouse::find($request->request_warehouse_id);
         $supply_warehouse = Warehouse::find($request->supply_warehouse_id);
         $transfer_request = new TransferRequest();
