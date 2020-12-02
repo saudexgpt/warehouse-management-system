@@ -4,19 +4,19 @@
       <div class="row">
         <div class="col-xs-12 page-header" align="center">
           <img src="svg/logo.png" alt="Company Logo" width="50">
-          <span v-if="waybill.trips.length > 0">
-            <label>{{ companyName }}</label>
-            <div v-if="waybill.status === 'pending'" class="pull-right no-print">
-              <a v-if="checkPermission(['manage waybill'])" @click="form.status = 'in transit'; changeWaybillStatus(); ">
-                <i class="el-icon-printer" /> Print Waybill
-              </a>
-            </div>
-            <div v-else class="pull-right no-print">
-              <a v-if="checkPermission(['manage waybill'])" @click="print_waybill = true;">
-                <i class="el-icon-printer" /> Print Waybill
-              </a>
-            </div>
-          </span>
+          <!-- <span v-if="waybill.trips.length > 0"> -->
+          <label>{{ companyName }}</label>
+          <div v-if="waybill.status === 'pending'" class="pull-right no-print">
+            <a v-if="checkPermission(['manage waybill'])" @click="form.status = 'in transit'; changeWaybillStatus(); ">
+              <i class="el-icon-printer" /> Print Waybill
+            </a>
+          </div>
+          <div v-else class="pull-right no-print">
+            <a v-if="checkPermission(['manage waybill'])" @click="print_waybill = true;">
+              <i class="el-icon-printer" /> Print Waybill
+            </a>
+          </div>
+          <!-- </span> -->
         </div>
         <!-- /.col -->
       </div>
@@ -77,7 +77,9 @@
                 <!-- <td>{{ waybill_item.invoice.customer.user.name.toUpperCase() }}</td> -->
                 <td>{{ waybill_item.item.name }}</td>
                 <!-- <td>{{ waybill_item.item.description }}</td> -->
-                <td>{{ waybill_item.quantity+' '+formatPackageType(waybill_item.type) }}</td>
+                <td>{{ waybill_item.quantity+' '+formatPackageType(waybill_item.type) }}<br>
+                  <small>({{ waybill_item.invoice_item.no_of_cartons }} CTN)</small>
+                </td>
                 <td>
                   <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
                     <span v-if="batch.to_supply === waybill_item.quantity">
