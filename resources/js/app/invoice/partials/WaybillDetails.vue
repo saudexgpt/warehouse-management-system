@@ -4,18 +4,21 @@
       <div class="row">
         <div class="col-xs-12 page-header" align="center">
           <img src="svg/logo.png" alt="Company Logo" width="50">
-          <!-- <span v-if="waybill.trips.length > 0"> -->
           <label>{{ companyName }}</label>
-          <div v-if="waybill.status === 'pending'" class="pull-right no-print">
-            <a v-if="checkPermission(['manage waybill'])" @click="form.status = 'in transit'; changeWaybillStatus(); ">
-              <i class="el-icon-printer" /> Print Waybill
-            </a>
-          </div>
-          <div v-else class="pull-right no-print">
-            <a v-if="checkPermission(['manage waybill'])" @click="print_waybill = true;">
-              <i class="el-icon-printer" /> Print Waybill
-            </a>
-          </div>
+          <!-- <span v-if="waybill.trips.length > 0"> -->
+          <span v-if="waybill.confirmed_by !== null">
+            <div v-if="waybill.status === 'pending'" class="pull-right no-print">
+              <a v-if="checkPermission(['manage waybill'])" @click="form.status = 'in transit'; changeWaybillStatus(); ">
+                <i class="el-icon-printer" /> Print Waybill
+              </a>
+            </div>
+            <div v-else class="pull-right no-print">
+              <a v-if="checkPermission(['manage waybill'])" @click="print_waybill = true;">
+                <i class="el-icon-printer" /> Print Waybill
+              </a>
+            </div>
+          </span>
+          <span v-else><h4 class="alert alert-danger">Items on this Waybill need confirmation by an Auditor</h4></span>
           <!-- </span> -->
         </div>
         <!-- /.col -->
@@ -336,6 +339,7 @@ export default {
 
             if (response.confirmed === 'success') {
               app.activate_confirm_button = false;
+              app.waybill.confirmed_by = 23;
               app.$message('Waybill Items Confirmed Successfully');
             }
           });
