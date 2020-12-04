@@ -74,7 +74,7 @@
         <div class="box-body">
           <v-client-table v-model="drivers" :columns="columns" :options="options">
             <div slot="action" slot-scope="props">
-              <a v-if="checkPermission(['manage drivers'])" class="btn btn-primary" @click="setEdit(props.row)"><i class="fa fa-edit" /> </a>
+              <a v-if="checkPermission(['manage drivers'])" class="btn btn-primary" @click="setEdit(props.index, props.row)"><i class="fa fa-edit" /> </a>
               <a v-if="checkPermission(['manage drivers'])" class="btn btn-danger" @click="confirmDelete(props)"><i class="fa fa-trash" /> </a>
 
               <!-- <a class="btn btn-default" @click="driver=props.row; page.option = 'view_details'"><i class="fa fa-eye" /> </a> -->
@@ -133,6 +133,7 @@ export default {
       selected_row_index: '',
       form_title: 'Add New Driver',
       form: {
+        id: '',
         name: '',
         email: '',
         phone: '',
@@ -187,16 +188,21 @@ export default {
         });
     },
 
-    setEdit(driver) {
+    setEdit(selected_driver_index, driver) {
       const app = this;
+      app.selected_row_index = selected_driver_index - 1;
       app.form_title = 'Edit Driver';
-      // app.drivers.splice(app.driver.index-1, 1);
-      app.form = driver;
+      app.form.id = driver.id;
       app.form.name = driver.user.name;
       app.form.email = driver.user.email;
       app.form.phone = driver.user.phone;
       app.form.address = driver.user.address;
       app.form.role = 'driver';
+      app.form.license_no = driver.license_no;
+      app.form.license_issue_date = driver.license_issue_date;
+      app.form.license_expiry_date = driver.license_expiry_date;
+      app.form.employee_no = driver.employee_no;
+      app.form.emergency_contact_details = driver.emergency_contact_details;
       app.edit_driver = true;
       app.dialogFormVisible = true;
     },
@@ -221,27 +227,28 @@ export default {
       }
     },
     updateDriver() {
-      this.$refs['form'].validate((valid) => {
+      const app = this;
+      app.$refs['form'].validate((valid) => {
         if (valid) {
-          this.form.roles = [this.form.role];
-          this.form.license_issue_date = this.moment(this.form.license_issue_date).format('LLL');
-          this.form.license_expiry_date = this.moment(this.form.license_expiry_date).format('LLL');
-          this.userCreating = true;
+          app.form.roles = [app.form.role];
+          app.form.license_issue_date = app.moment(app.form.license_issue_date).format('LLL');
+          app.form.license_expiry_date = app.moment(app.form.license_expiry_date).format('LLL');
+          app.userCreating = true;
           updateDriverResource
-            .update(this.form.id, this.form)
+            .update(app.form.id, app.form)
             .then(response => {
-              this.$message({
+              app.drivers[app.selected_row_index] = response.driver;
+              app.$message({
                 message: 'Driver updated successfully',
                 type: 'success',
-                duration: 5 * 1000,
+                // duration: 5 * 1000,
               });
-              // this.drivers.push(response.driver);
             })
             .catch(error => {
               console.log(error);
             })
             .finally(() => {
-              this.userCreating = false;
+              app.userCreating = false;
             });
         } else {
           console.log('error submit!!');
@@ -264,7 +271,7 @@ export default {
               this.$message({
                 message: 'New user ' + this.form.name + '(' + this.form.email + ') has been created successfully.',
                 type: 'success',
-                duration: 5 * 1000,
+                // duration: 5 * 1000,
               });
               this.drivers.push(response.driver);
               this.resetNewDriver();

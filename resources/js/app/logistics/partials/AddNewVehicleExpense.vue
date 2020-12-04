@@ -70,6 +70,7 @@
                           <el-select v-model="servicing_detail.service_type" placeholder="Select Service Type" filterable class="span">
                             <el-option value="Repairs">Repairs</el-option>
                             <el-option value="Replacement">Replacement</el-option>
+                            <el-option value="Servicing">Servicing</el-option>
                           </el-select>
                         </td>
                         <td>

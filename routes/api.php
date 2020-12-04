@@ -160,13 +160,13 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         $router->group(['middleware' => 'permission:manage transfer request'], function () use ($router) {
             $router->group(['prefix' => 'general'], function () use ($router) {
                 $router->get('/', 'GoodsTransferController@index');
-                $router->get('show/{invoice}', 'GoodsTransferController@show');
+                $router->get('show/{transfer_request}', 'GoodsTransferController@show');
 
                 $router->post('store', 'GoodsTransferController@store');
 
-                $router->put('update/{invoice}', 'GoodsTransferController@update');
+                $router->put('update/{transfer_request}', 'GoodsTransferController@update');
 
-                $router->delete('delete/{invoice}', 'GoodsTransferController@destroy');
+                $router->delete('delete/{transfer_request}', 'GoodsTransferController@destroy');
 
                 $router->put('assign-invoice-to-warehouse/{invoice}', 'GoodsTransferController@assignInvoiceToWarehouse');
             });

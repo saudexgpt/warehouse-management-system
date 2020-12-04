@@ -123,7 +123,7 @@
                 >
                   <i class="el-icon-tickets" />
                 </a>
-                <a
+                <!-- <a
                   v-if="
                     props.row.status === 'pending' &&
                       checkPermission(['manage transfer request'])
@@ -136,7 +136,7 @@
                   "
                 >
                   <i class="el-icon-edit" />
-                </a>
+                </a> -->
               </div>
             </v-client-table>
           </el-tab-pane>
@@ -254,7 +254,7 @@ const necessaryParams = new Resource('fetch-necessary-params');
 const fetchTransferRequests = new Resource('transfers/general');
 // const approveTransferRequestResource = new Resource('transfer_request/general/approve');
 // const deliverTransferRequestResource = new Resource('transfer_request/general/deliver');
-const cancelTransferRequestResource = new Resource('transfers/general/cancel');
+// const cancelTransferRequestResource = new Resource('transfers/general/cancel');
 const deleteTransferRequestResource = new Resource('transfers/general/delete');
 export default {
   nama: 'TransferRequest',
@@ -405,15 +405,15 @@ export default {
           console.log(error.message);
         });
     },
-    cancelTransferRequest(index, transfer_request) {
-      const app = this;
-      const param = { status: 'cancelled' };
-      cancelTransferRequestResource
-        .update(transfer_request.id, param)
-        .then((response) => {
-          app.incoming_transfer_requests.splice(index - 1, 1);
-        });
-    },
+    // cancelTransferRequest(index, transfer_request) {
+    //   const app = this;
+    //   const param = { status: 'cancelled' };
+    //   cancelTransferRequestResource
+    //     .update(transfer_request.id, param)
+    //     .then((response) => {
+    //       app.incoming_transfer_requests.splice(index - 1, 1);
+    //     });
+    // },
     deleteTransferRequest(index, transfer_request) {
       const app = this;
       const message = 'Are you sure? This cannot be undone!';
@@ -421,7 +421,7 @@ export default {
         deleteTransferRequestResource
           .destroy(transfer_request.id, transfer_request)
           .then((response) => {
-            app.incoming_transfer_requests.splice(index - 1, 1);
+            app.sent_requests.splice(index - 1, 1);
           });
       }
     },

@@ -210,6 +210,8 @@ class UserController extends Controller
         $description = ucwords($user->name) . "'s information was updated.";
         $roles = ['assistant admin', 'warehouse manager'];
         $this->logUserActivity($title, $description, $roles);
+
+        return response()->json(compact('driver'), 200);
     }
     /**
      * Store a newly created resource in storage.

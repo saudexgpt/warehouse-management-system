@@ -65,7 +65,8 @@
           <!-- Table row -->
           <div class="row">
             <div class="col-xs-12 table-responsive">
-              <legend>Invoice Products <small class="no-print"> Confirmed By: {{ (invoice.confirmer) ? invoice.confirmer.name : 'Not Confirmed' }}</small></legend>
+              <small class="pull-right no-print"> Confirmed By: {{ (invoice.confirmer) ? invoice.confirmer.name : 'Not Confirmed' }}</small>
+              <legend>Invoice Products</legend>
               <table class="table table-bordered">
                 <thead>
                   <tr>
@@ -79,6 +80,7 @@
                     <!-- <th>Description</th> -->
                     <th>Quantity</th>
                     <th>Supplied</th>
+                    <th>Balance</th>
                     <th>Rate</th>
                     <th>Per</th>
                     <th>Amount</th>
@@ -113,11 +115,22 @@
                     <!-- <td>{{ invoice_item.item.description }}</td> -->
                     <td>
                       {{ invoice_item.quantity }} {{ invoice_item.type }}
-                      <small>({{ invoice_item.no_of_cartons }} CTN)</small>
+                      <small>({{ invoice_item.quantity/invoice_item.quantity_per_carton }} CTN)</small>
                     </td>
                     <td>
-                      {{ invoice_item.quantity_supplied }}
-                      {{ invoice_item.type }}
+                      <div class="alert alert-danger">
+                        {{ invoice_item.quantity_supplied }}
+                        {{ invoice_item.type }}
+                        <small>({{ invoice_item.quantity_supplied/invoice_item.quantity_per_carton }} CTN)</small>
+                      </div>
+
+                    </td>
+                    <td>
+                      <div class="alert alert-warning">
+                        {{ invoice_item.quantity - invoice_item.quantity_supplied }}
+                        {{ invoice_item.type }}
+                        <small>({{ (invoice_item.quantity - invoice_item.quantity_supplied) / invoice_item.quantity_per_carton }} CTN)</small>
+                      </div>
                     </td>
                     <td align="right">
                       {{
@@ -132,7 +145,7 @@
                     </td>
                   </tr>
                   <tr v-if="checkPermission(['audit confirm actions']) && activate_confirm_button">
-                    <td colspan="6">
+                    <td colspan="7">
                       <a
                         v-if="checkPermission(['audit confirm actions']) && activate_confirm_button"
                         v-loading="confirm_loader"
@@ -145,7 +158,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="6" align="right">
+                    <td colspan="7" align="right">
                       <label>Subtotal</label>
                     </td>
                     <td align="right">
@@ -153,7 +166,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="6" align="right">
+                    <td colspan="7" align="right">
                       <label>Discount</label>
                     </td>
                     <td align="right">
@@ -161,7 +174,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="6" align="right">
+                    <td colspan="7" align="right">
                       <label>Grand Total</label>
                     </td>
                     <td align="right">
