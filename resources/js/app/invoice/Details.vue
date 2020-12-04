@@ -118,19 +118,14 @@
                       <small>({{ invoice_item.quantity/invoice_item.quantity_per_carton }} CTN)</small>
                     </td>
                     <td>
-                      <div class="alert alert-danger">
-                        {{ invoice_item.quantity_supplied }}
-                        {{ invoice_item.type }}
-                        <small>({{ invoice_item.quantity_supplied/invoice_item.quantity_per_carton }} CTN)</small>
-                      </div>
-
+                      {{ invoice_item.quantity_supplied }}
+                      {{ invoice_item.type }}
+                      <small>({{ invoice_item.quantity_supplied/invoice_item.quantity_per_carton }} CTN)</small>
                     </td>
                     <td>
-                      <div class="alert alert-warning">
-                        {{ invoice_item.quantity - invoice_item.quantity_supplied }}
-                        {{ invoice_item.type }}
-                        <small>({{ (invoice_item.quantity - invoice_item.quantity_supplied) / invoice_item.quantity_per_carton }} CTN)</small>
-                      </div>
+                      {{ invoice_item.quantity - invoice_item.quantity_supplied }}
+                      {{ invoice_item.type }}
+                      <small>({{ (invoice_item.quantity - invoice_item.quantity_supplied) / invoice_item.quantity_per_carton }} CTN)</small>
                     </td>
                     <td align="right">
                       {{
