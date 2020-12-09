@@ -20,7 +20,7 @@ class TransferRequestItem extends Model
     }
     public function transferRequest()
     {
-        return $this->belongsTo(TransferRequest::class);
+        return $this->belongsTo(TransferRequest::class, 'transfer_request_id', 'id');
     }
     public function item()
     {

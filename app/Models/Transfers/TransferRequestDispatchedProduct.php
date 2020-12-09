@@ -20,11 +20,11 @@ class TransferRequestDispatchedProduct extends Model
     }
     public function transferWaybill()
     {
-        return $this->belongsTo(TransferRequestWaybill::class);
+        return $this->belongsTo(TransferRequestWaybill::class, 'transfer_request_waybill_id', 'id');
     }
     public function transferWaybillItem()
     {
-        return $this->belongsTo(TransferRequestWaybillItem::class);
+        return $this->belongsTo(TransferRequestWaybillItem::class, 'transfer_request_waybill_item_id', 'id');
     }
     public function itemStock()
     {

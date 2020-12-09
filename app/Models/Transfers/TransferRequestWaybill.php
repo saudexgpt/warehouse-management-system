@@ -22,7 +22,7 @@ class TransferRequestWaybill extends Model
 
     public function transferRequests()
     {
-        return $this->belongsToMany(TransferRequest::class);
+        return $this->belongsToMany(TransferRequest::class, 'transfer_request_id', 'id');
     }
 
     // public function trips()
