@@ -383,7 +383,7 @@ class InvoicesController extends Controller
         $invoices = Invoice::with(['customer.user', 'confirmer', 'invoiceItems' => function ($q) {
             $q->where('supply_status', '!=', 'Complete');
         }, 'invoiceItems.item.stocks' => function ($p) use ($warehouse_id) {
-            $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id);
+            $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id)->where('confirmed_by', '!=', null);
         }])->where('warehouse_id', $warehouse_id)->where('full_waybill_generated', '0')->where('confirmed_by', '!=', null)->orderBy('id', 'DESC')->get();
         return response()->json(compact('invoices', 'waybill_no'), 200);
     }

@@ -581,6 +581,7 @@ class ReportsController extends Controller
             ->where('dispatched_products.warehouse_id', $warehouse_id)
             ->where('item_stock_sub_batches.item_id', $item_id)
             ->where('dispatched_products.created_at', '<', $date_from)
+            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
             ->orderby('dispatched_products.created_at')->first();
 
@@ -588,6 +589,7 @@ class ReportsController extends Controller
             ->where('supply_warehouse_id', $warehouse_id)
             ->where('item_stock_sub_batches.item_id', $item_id)
             ->where('transfer_request_dispatched_products.created_at', '<', $date_from)
+            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
             ->orderby('transfer_request_dispatched_products.created_at')->first();
         // return [
@@ -598,6 +600,7 @@ class ReportsController extends Controller
         $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
+            ->where('confirmed_by', '!=', null)
             ->orderby('created_at')
             ->get();
         $bincards = [];
@@ -633,6 +636,7 @@ class ReportsController extends Controller
             ->where('item_stock_sub_batches.item_id', $item_id)
             ->where('dispatched_products.created_at', '>=', $date_from)
             ->where('dispatched_products.created_at', '<=', $date_to)
+            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('dispatched_products.created_at')->get();
         foreach ($outbounds as $outbound) {
             //$running_balance -= $outbound->quantity_supplied;
@@ -656,6 +660,7 @@ class ReportsController extends Controller
             ->where('item_stock_sub_batches.item_id', $item_id)
             ->where('transfer_request_dispatched_products.created_at', '>=', $date_from)
             ->where('transfer_request_dispatched_products.created_at', '<=', $date_to)
+            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
         foreach ($outbounds2 as $outbound) {
             //$running_balance -= $outbound->quantity_supplied;
