@@ -46,8 +46,9 @@
                 <label for>Invoice Number</label>
                 <el-input
                   v-model="form.invoice_number"
-                  placeholder="Enter Invoice Number"
+                  placeholder="Will be auto generated when submitted"
                   class="span"
+                  disabled
                 />
                 <label for>Select Warehouse</label>
                 <el-select

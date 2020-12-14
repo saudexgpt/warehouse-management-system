@@ -112,7 +112,10 @@ class ReturnsController extends Controller
         // update the approved quantity
         $returned_prod = ReturnedProduct::find($details->id);
         $returned_prod->quantity_approved += $approved_quantity;
-        $returned_prod->save();
+        if ($returned_prod->quantity >= $returned_prod->quantity_approved) {
+            $returned_prod->save();
+        }
+
 
         $title = "Returned products approval";
         $description = "Product returned with entry batch no: " . $returned_prod->batch_no . " was approved by $user->name ($user->phone)";

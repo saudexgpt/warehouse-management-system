@@ -639,16 +639,17 @@ class GoodsTransferController extends Controller
                 $item_stock_sub_batch->warehouse_id = $waybill->request_warehouse_id;
                 $item_stock_sub_batch->item_id = $dispatched_stock->item_id;
                 // we suffix 'Trans-' so that we can differentiate between transfered stock and normal ones
-                $item_stock_sub_batch->batch_no = '(Trans)' . $dispatched_stock->batch_no;
-                $item_stock_sub_batch->sub_batch_no = '(Trans)' . $dispatched_stock->batch_no;
+                $item_stock_sub_batch->batch_no = $dispatched_stock->batch_no; // '(Trans)' . $dispatched_stock->batch_no;
+                $item_stock_sub_batch->sub_batch_no = $dispatched_stock->batch_no; //'(Trans)' . $dispatched_stock->batch_no;
                 $item_stock_sub_batch->quantity = $dispatched_product->quantity_supplied;
                 $item_stock_sub_batch->reserved_for_supply = 0;
                 $item_stock_sub_batch->in_transit = 0; // initial values set to zero
                 $item_stock_sub_batch->supplied = 0;
                 $item_stock_sub_batch->balance = $dispatched_product->quantity_supplied;
-                $item_stock_sub_batch->goods_received_note = '(Trans)' . $dispatched_stock->goods_received_note;
+                $item_stock_sub_batch->goods_received_note = $dispatched_stock->goods_received_note; // '(Trans)' . $dispatched_stock->goods_received_note;
 
                 $item_stock_sub_batch->expiry_date = $dispatched_stock->expiry_date;
+                $item_stock_sub_batch->is_warehouse_transfered = 1;
                 $item_stock_sub_batch->save();
 
                 //mark as stocked

@@ -430,7 +430,7 @@ class InvoicesController extends Controller
         $invoice->subtotal            = $request->subtotal;
         $invoice->discount            = $request->discount;
         $invoice->amount              = $request->amount;
-        $invoice->invoice_number      = $request->invoice_number; // $this->nextInvoiceNo();
+        $invoice->invoice_number      = $this->nextReceiptNo('invoice'); // $request->invoice_number; // $this->nextInvoiceNo();
         $invoice->status              = $request->status;
         $invoice->notes              = $request->notes;
         $invoice->invoice_date        = date('Y-m-d H:i:s', strtotime($request->invoice_date));
@@ -442,7 +442,7 @@ class InvoicesController extends Controller
         //create items invoiceed for
         $this->createInvoiceItems($invoice, $invoice_items);
         //////update next invoice number/////
-        // $this->incrementInvoiceNo();
+        $this->incrementReceiptNo('invoice');
 
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
