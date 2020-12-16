@@ -98,7 +98,7 @@ export default {
     moment,
     editProduct() {
       const app = this;
-      if (app.form.quantity > app.initial_stock) {
+      if (app.form.quantity >= app.initial_stock) {
         const load = updateProduct.loaderShow();
         var form = app.form;
         form.expiry_date = app.moment(form.expiry_date).format('LLL');
