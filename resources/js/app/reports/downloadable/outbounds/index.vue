@@ -37,7 +37,7 @@
           </el-button>
         </div>
         <v-client-table v-model="invoice_items" :columns="columns" :options="options">
-          <div slot="child_row" slot-scope="props">
+          <!-- <div slot="child_row" slot-scope="props">
             <aside>
               <legend>Delivery Details for Invoice No.: {{ props.row.invoice.invoice_number }}</legend>
               <v-client-table v-model="props.row.waybill_items" :columns="['waybill_no', 'quantity', 'supply_status', 'dispatchers', 'supply_date']">
@@ -65,13 +65,13 @@
 
                 </div>
                 <div slot="supply_date" slot-scope="{row}">
-                  {{ moment(row.updated_at).format('MMMM Do YYYY') }}
+                  {{ moment(row.updated_at).format('MMM D, YYYY') }}
                 </div>
               </v-client-table>
             </aside>
 
-          </div>
-          <div slot="batches" slot-scope="props">
+          </div> -->
+          <!-- <div slot="batches" slot-scope="props">
             <div v-for="(invoice_batch, batch_index) in props.row.batches" :key="batch_index">
               <div v-if="invoice_batch.item_stock_batch">
                 {{ invoice_batch.item_stock_batch.batch_no }}
@@ -91,10 +91,22 @@
             {{ props.row.quantity - props.row.quantity_supplied + ' ' + props.row.type }}
           </div>
           <div slot="invoice.invoice_date" slot-scope="props">
-            {{ moment(props.row.invoice.invoice_date).format('MMMM Do YYYY') }}
+            {{ moment(props.row.invoice.invoice_date).format('MMM D, YYYY') }}
           </div>
-          <div slot="invoice.created_at" slot-scope="props">
-            {{ moment(props.row.invoice.created_at).format('MMMM Do YYYY') }}
+          <div slot="created_at" slot-scope="props">
+            {{ moment(props.row.created_at).format('MMM D, YYYY') }}
+          </div>
+          <div slot="updated_at" slot-scope="props">
+            {{ (props.row.delivery_status === 'delivered') ? moment(props.row.updated_at).format('MMM D, YYYY') : 'Pending' }}
+          </div> -->
+          <div slot="amount" slot-scope="props">
+            {{ currency + Number(props.row.amount).toLocaleString() }}
+          </div>
+          <div slot="date" slot-scope="props">
+            {{ moment(props.row.date).format('MMM D, YYYY') }}
+          </div>
+          <div slot="delivery_date" slot-scope="props">
+            {{ (props.row.status === 'delivered') ? moment(props.row.delivery_date).format('MMM D, YYYY') : 'Pending' }}
           </div>
 
         </v-client-table>
@@ -124,24 +136,25 @@ export default {
       invoice_items: [],
       invoice_statuses: [],
       currency: '',
-      columns: ['invoice.invoice_number', 'invoice.customer.user.name', 'item.name', 'batches', 'amount', 'quantity', 'quantity_supplied', 'balance', 'invoice.invoice_date', 'invoice.created_at', 'invoice.status'],
+      columns: ['dispatcher', 'invoice_no', 'customer', 'product', 'batch_nos', 'amount', 'quantity', 'supplied', 'balance', 'date', 'status', 'delivery_date'],
 
       options: {
         headings: {
-          'invoice.customer.user.name': 'Customer',
-          'invoice.invoice_number': 'Invoice',
-          'batches': 'Batch Nos.',
-          'item.name': 'Product',
-          'quantity_supplied': 'Supplied',
-          'invoice.invoice_date': 'Invoice Date',
-          'invoice.created_at': 'Date Saved',
-          'invoice.status': 'Status',
+          // 'invoice.customer.user.name': 'Customer',
+          // 'invoice.invoice_number': 'Invoice',
+          // 'batches': 'Batch Nos.',
+          // 'item.name': 'Product',
+          // 'quantity_supplied': 'Supplied',
+          // 'invoice.invoice_date': 'Invoice Date',
+          // 'created_at': 'Date Saved',
+          // 'delivery_status': 'Status',
+          // 'updated_at': 'Delivery Date',
 
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['invoice.invoice_number', 'invoice.customer.user.name', 'invoice.invoice_date', 'invoice.created_at', 'invoice.status'],
-        filterable: ['invoice.invoice_number', 'invoice.customer.user.name', 'invoice.invoice_date', 'invoice.created_at', 'invoice.status'],
+        sortable: ['invoice_no', 'customer', 'date', 'created_at', 'status', 'delivery_date'],
+        filterable: ['invoice_no', 'customer', 'date', 'created_at', 'status', 'delivery_date'],
       },
       page: {
         option: 'list',
@@ -163,7 +176,7 @@ export default {
       invoice: {},
       selected_row_index: '',
       downloadLoading: false,
-      filename: 'Invoices',
+      filename: 'Outbounds',
 
     };
   },
@@ -215,7 +228,7 @@ export default {
       param.warehouse_id = app.warehouses[param.warehouse_index].id;
       outboundReport.list(param)
         .then(response => {
-          app.invoice_items = response.invoice_items;
+          app.invoice_items = response.outbounds;
           app.table_title = 'Outbounds  in ' + app.warehouses[param.warehouse_index].name + ' from: ' + app.form.from + ' to: ' + app.form.to;
           loader.hide();
         })
@@ -227,8 +240,8 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Invoice', 'Customer', 'Product', 'Batches', 'Amount', 'Quantity', 'Supplied', 'Balance', 'Invoice Date', 'Date Saved', 'Status'];
+        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Dispatcher', 'Invoice No.', 'Customer', 'Product', 'Batch No.', 'Amount', 'Quantity', 'Supplied', 'Balance', 'Date', 'Status', 'Delivery Date'];
         const filterVal = this.columns;
         const list = this.invoice_items;
         const data = this.formatJson(filterVal, list);
@@ -245,42 +258,50 @@ export default {
     },
     formatJson(filterVal, jsonData) {
       return jsonData.map(v => filterVal.map(j => {
-        if (j === 'invoice.invoice_date') {
-          return parseTime(v['invoice']['invoice_date']);
+        if (j === 'date') {
+          return parseTime(v['date']);
         }
-        if (j === 'invoice.created_at') {
-          return parseTime(v['invoice']['created_at']);
-        }
-        if (j === 'invoice.customer.user.name') {
-          return v['invoice']['customer']['user']['name'];
-        }
-        if (j === 'amount') {
-          return v['invoice']['amount'];
-        }
-        if (j === 'invoice.invoice_number') {
-          return v['invoice']['invoice_number'];
-        }
-        if (j === 'item.name') {
-          return v['item']['name'];
-        }
-        if (j === 'balance') {
-          var balance = v['quantity'] - v['quantity_supplied'] + ' ' + v['type'];
-          return balance;
-        }
-        if (j === 'invoice.status') {
-          return v['invoice']['status'];
-        }
-        if (j === 'batches') {
-          var batches = v['batches'];
-          var batch_no = '';
-          if (batches.length > 0) {
-            batches.forEach(invoice_batch => {
-              var num = invoice_batch.item_stock_batch.batch_no;
-              batch_no += num + ', ';
-            });
+        if (j === 'delivery_date') {
+          if (v['status'] === 'delivered') {
+            return parseTime(v['delivery_date']);
+          } else {
+            return 'Pending';
           }
-          return batch_no;
         }
+        // if (j === 'updated_at') {
+        //   if (v['delivery_status'] === 'delivered') {
+        //     return parseTime(v['updated_at']);
+        //   } else {
+        //     return 'Pending';
+        //   }
+        // }
+        // if (j === 'invoice.customer.user.name') {
+        //   return v['invoice']['customer']['user']['name'];
+        // }
+        // if (j === 'amount') {
+        //   return v['invoice']['amount'];
+        // }
+        // if (j === 'invoice.invoice_number') {
+        //   return v['invoice']['invoice_number'];
+        // }
+        // if (j === 'item.name') {
+        //   return v['item']['name'];
+        // }
+        // if (j === 'balance') {
+        //   var balance = v['quantity'] - v['quantity_supplied'] + ' ' + v['type'];
+        //   return balance;
+        // }
+        // if (j === 'batches') {
+        //   var batches = v['batches'];
+        //   var batch_no = '';
+        //   if (batches.length > 0) {
+        //     batches.forEach(invoice_batch => {
+        //       var num = invoice_batch.item_stock_batch.batch_no;
+        //       batch_no += num + ', ';
+        //     });
+        //   }
+        //   return batch_no;
+        // }
         return v[j];
       }));
     },

@@ -22,6 +22,12 @@
 
         </el-col>
         <br><br><br><br>
+        <div>
+          <el-button :loading="downloadLoading" style="margin:0 0 20px 20px;" type="primary" icon="document" @click="handleDownload">
+            Export Excel
+          </el-button>
+        </div>
+
         <v-client-table v-model="items_in_stock" :columns="columns" :options="options">
           <div slot="quantity" slot-scope="{row}" class="alert alert-info">
             {{ row.quantity }} {{ formatPackageType(row.item.package_type) }}
@@ -83,6 +89,7 @@
 </template>
 <script>
 import moment from 'moment';
+import { parseTime } from '@/utils';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 
@@ -145,6 +152,8 @@ export default {
       itemInStock: {},
       selected_row_index: '',
       product_expiry_date_alert_in_months: 9, // defaults to 9 months
+      downloadLoading: false,
+      filename: 'Products in Stock',
 
     };
   },
@@ -245,6 +254,63 @@ export default {
       //   formated_type = type + 'es';
       // }
       return type;
+    },
+    handleDownload() {
+      this.downloadLoading = true;
+      import('@/vendor/Export2Excel').then(excel => {
+        const multiHeader = [['List of Products ' + this.in_warehouse, '', '', '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Confirmed By', 'Product', 'Stocked By', 'Batch No.', 'Expires', 'Quantity', 'In Transit', 'Supplied', 'Physical Stock', 'Reserved for Supply', 'Main Balance', 'Created'];
+        const filterVal = ['confirmer.name', 'item.name', 'stocker.name', 'batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance', 'created_at'];
+        const list = this.items_in_stock;
+        const data = this.formatJson(filterVal, list);
+        excel.export_json_to_excel({
+          multiHeader,
+          header: tHeader,
+          data,
+          filename: this.filename,
+          autoWidth: true,
+          bookType: 'csv',
+        });
+        this.downloadLoading = false;
+      });
+    },
+    formatJson(filterVal, jsonData) {
+      return jsonData.map(v => filterVal.map(j => {
+        if (j === 'confirmer.name') {
+          return v['confirmer']['name'];
+        }
+        if (j === 'item.name') {
+          return v['item']['name'];
+        }
+        if (j === 'expiry_date') {
+          return parseTime(v['expiry_date']);
+        }
+        if (j === 'created_at') {
+          return parseTime(v['created_at']);
+        }
+        if (j === 'stocker.name') {
+          return v['stocker']['name'];
+        }
+        if (j === 'quantity') {
+          return v['quantity'] + ' ' + v['item']['package_type'];
+        }
+        if (j === 'in_transit') {
+          return v['in_transit'] + ' ' + v['item']['package_type'];
+        }
+        if (j === 'reserved_for_supply') {
+          return v['reserved_for_supply'] + ' ' + v['item']['package_type'];
+        }
+        if (j === 'supplied') {
+          return v['supplied'] + ' ' + v['item']['package_type'];
+        }
+        if (j === 'in_stock') {
+          return v['balance'] + ' ' + v['item']['package_type'];
+        }
+        if (j === 'balance') {
+          return (v['balance'] - v['reserved_for_supply']) + ' ' + v['item']['package_type'];
+        }
+        return v[j];
+      }));
     },
   },
 };

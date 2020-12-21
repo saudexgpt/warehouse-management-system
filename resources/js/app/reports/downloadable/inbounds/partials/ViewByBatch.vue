@@ -47,10 +47,11 @@ export default {
   },
   data() {
     return {
-      columns: ['item.name', 'batch_no', 'quantity', 'in_transit', 'supplied', 'balance', 'updated_at'],
+      columns: ['warehouse.name', 'item.name', 'batch_no', 'quantity', 'in_transit', 'supplied', 'balance', 'updated_at'],
 
       options: {
         headings: {
+          'warehouse.name': 'Warehouse',
           'item.name': 'Product',
           batch_no: 'Batch No.',
           quantity: 'Quantity Stocked',
@@ -62,8 +63,8 @@ export default {
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['item.name', 'batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'balance', 'updated_at'],
-        filterable: ['item.name', 'batch_no', 'expiry_date', 'updated_at'],
+        sortable: ['warehouse.name', 'item.name', 'batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'balance', 'updated_at'],
+        filterable: ['warehouse.name', 'item.name', 'batch_no', 'expiry_date', 'updated_at'],
       },
       page: {
         option: 'list',

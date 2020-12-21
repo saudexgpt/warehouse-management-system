@@ -26,7 +26,14 @@ class TransferRequestItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
-
+    public function batches()
+    {
+        return $this->hasMany(TransferRequestItemBatch::class, 'transfer_request_item_id', 'id');
+    }
+    public function waybillItems()
+    {
+        return $this->hasMany(TransferRequestWaybillItem::class, 'transfer_request_item_id', 'id');
+    }
     public function updateTransferRequestItemsForTransferRequestWaybill($waybill_items)
     {
         foreach ($waybill_items as $waybill_item) {

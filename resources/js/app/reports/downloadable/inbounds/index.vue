@@ -5,6 +5,7 @@
         <el-col v-if="params.warehouses.length > 0" :xs="24" :sm="8" :md="8">
           <label for="">Select Warehouse</label>
           <el-select v-model="warehouse_index" placeholder="Select Warehouse" class="span" filterable>
+            <el-option value="all" label="All Warehouses" />
             <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="index" :label="warehouse.name" />
 
           </el-select>
@@ -124,14 +125,22 @@ export default {
     fetchItemStocks() {
       const app = this;
       app.show_progress = true;
-      app.form.warehouse_id = app.warehouses[app.warehouse_index].id;
+      if (app.warehouse_index === 'all') {
+        app.form.warehouse_id = 'all';
+        app.title = app.table_title = 'List of Products in all warehouses from: ' + app.form.from + ' to: ' + app.form.to;
+      } else {
+        app.form.warehouse_id = app.warehouses[app.warehouse_index].id;
+
+        app.table_title = 'List of Products in ' + app.warehouses[app.warehouse_index].name + ' from: ' + app.form.from + ' to: ' + app.form.to;
+      }
+
       const loader = itemsInStock.loaderShow();
       const param = app.form;
       param.view_by = app.view_by;
       itemsInStock.list(param)
         .then(response => {
           app.items_in_stock = response.items_in_stock;
-          app.table_title = 'List of Products in ' + app.warehouses[app.warehouse_index].name + ' from: ' + app.form.from + ' to: ' + app.form.to;
+
           loader.hide();
         })
         .catch(error => {

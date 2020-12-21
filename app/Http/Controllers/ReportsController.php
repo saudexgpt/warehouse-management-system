@@ -11,9 +11,9 @@ use App\Models\Logistics\Vehicle;
 use App\Models\Logistics\VehicleCondition;
 use App\Models\Logistics\VehicleExpense;
 use App\Models\Stock\Item;
-use App\Models\Stock\ItemStock;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Transfers\TransferRequestDispatchedProduct;
+use App\Models\Transfers\TransferRequestItem;
 use App\Models\Warehouse\Warehouse;
 use App\Notification;
 use Carbon\Carbon;
@@ -224,16 +224,29 @@ class ReportsController extends Controller
         $panel = $request->panel;
         $view_by = $request->view_by;
         if ($view_by === 'sub_batch') {
-            $items_in_stock = ItemStockSubBatch::with('item')->where('warehouse_id', $warehouse_id)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->orderBy('expiry_date')->get();
+            if ($warehouse_id === 'all') {
+                $items_in_stock = ItemStockSubBatch::with(['item', 'warehouse'])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->orderBy('expiry_date')->get();
+            } else {
+                $items_in_stock = ItemStockSubBatch::with(['item', 'warehouse'])->where('warehouse_id', $warehouse_id)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->orderBy('expiry_date')->get();
+            }
+
             return response()->json(compact('items_in_stock'));
         }
         if ($view_by === 'batch') {
             // $items_in_stock = ItemStockSubBatch::with(['item'])->where('warehouse_id', $warehouse_id)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
-            $items_in_stock = ItemStockSubBatch::with(['item'])->groupBy('batch_no')->where('warehouse_id', $warehouse_id)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->select('*', \DB::raw('SUM(quantity) as quantity'), \DB::raw('SUM(in_transit) as in_transit'), \DB::raw('SUM(supplied) as supplied'), \DB::raw('SUM(balance) as balance'))->get();
+            if ($warehouse_id === 'all') {
+                $items_in_stock = ItemStockSubBatch::with(['item', 'warehouse'])->groupBy('batch_no')->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->select('*', \DB::raw('SUM(quantity) as quantity'), \DB::raw('SUM(in_transit) as in_transit'), \DB::raw('SUM(supplied) as supplied'), \DB::raw('SUM(balance) as balance'))->get();
+            } else {
+                $items_in_stock = ItemStockSubBatch::with(['item', 'warehouse'])->groupBy('batch_no')->where('warehouse_id', $warehouse_id)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->select('*', \DB::raw('SUM(quantity) as quantity'), \DB::raw('SUM(in_transit) as in_transit'), \DB::raw('SUM(supplied) as supplied'), \DB::raw('SUM(balance) as balance'))->get();
+            }
             return response()->json(compact('items_in_stock'));
         }
         if ($view_by === 'product') {
-            $items_in_stock = ItemStockSubBatch::with(['item'])->groupBy('item_id')->where('warehouse_id', $warehouse_id)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->select('*', \DB::raw('SUM(quantity) as quantity'), \DB::raw('SUM(in_transit) as in_transit'), \DB::raw('SUM(supplied) as supplied'), \DB::raw('SUM(balance) as balance'), \DB::raw('SUM(reserved_for_supply) as reserved_for_supply'))->get();
+            if ($warehouse_id === 'all') {
+                $items_in_stock = ItemStockSubBatch::with(['item', 'warehouse'])->groupBy('item_id')->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->select('*', \DB::raw('SUM(quantity) as quantity'), \DB::raw('SUM(in_transit) as in_transit'), \DB::raw('SUM(supplied) as supplied'), \DB::raw('SUM(balance) as balance'), \DB::raw('SUM(reserved_for_supply) as reserved_for_supply'))->get();
+            } else {
+                $items_in_stock = ItemStockSubBatch::with(['item'])->groupBy('item_id')->where('warehouse_id', $warehouse_id)->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('confirmed_by', '!=', null)->select('*', \DB::raw('SUM(quantity) as quantity'), \DB::raw('SUM(in_transit) as in_transit'), \DB::raw('SUM(supplied) as supplied'), \DB::raw('SUM(balance) as balance'), \DB::raw('SUM(reserved_for_supply) as reserved_for_supply'))->get();
+            }
             return response()->json(compact('items_in_stock'));
         }
     }
@@ -488,18 +501,81 @@ class ReportsController extends Controller
     public function outbounds(Request $request)
     {
         $warehouse_id = $request->warehouse_id;
-        $date_from = Carbon::now()->startOfYear();
-        $date_to = Carbon::now()->endOfYear();
-        $panel = 'year';
+        $date_from = Carbon::now()->startOfMonth();
+        $date_to = Carbon::now()->endOfMonth();
+        $panel = 'month';
         if (isset($request->from, $request->to, $request->panel)) {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
             $panel = $request->panel;
         }
+        $outbounds = [];
+
         $invoice_items = InvoiceItem::with(['warehouse', 'invoice.customer.user', 'item', 'waybillItems.waybill.dispatcher.vehicle.vehicleDrivers.driver.user', 'batches.itemStockBatch'])->where(['warehouse_id' => $warehouse_id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
 
+        foreach ($invoice_items as $invoice_item) {
+            $batches = $invoice_item->batches;
+            $batch_nos = '';
+            foreach ($batches as $batch) {
+                $batch_nos .= str_replace('(Trans)', '', $batch->itemStockBatch->batch_no);
+            }
+            $dispatcher = '';
+            foreach ($invoice_item->waybillItems as $waybillItem) {
+                if ($waybillItem->waybill->dispatcher) {
+                    foreach ($waybillItem->waybill->dispatcher->vehicle->vehicleDrivers as $vehicle_driver) {
+                        $dispatcher .= ($vehicle_driver->driver) ? $vehicle_driver->driver->user->name : '-';
+                    }
+                }
+            }
+            $outbounds[]  = [
 
-        return response()->json(compact('invoice_items'));
+                'dispatcher' => $dispatcher,
+                'invoice_no' => $invoice_item->invoice->invoice_number,
+                'customer' => $invoice_item->invoice->customer->user->name,
+                'product' => $invoice_item->item->name,
+                'batch_nos' => $batch_nos,
+                'amount' => $invoice_item->amount,
+                'quantity' => $invoice_item->quantity . ' ' . $invoice_item->type,
+                'supplied' => $invoice_item->quantity_supplied . ' ' . $invoice_item->type,
+                'balance' => $invoice_item->quantity - $invoice_item->quantity_supplied . ' ' . $invoice_item->type, // initially set to zero
+                'date' => $invoice_item->invoice->invoice_date,
+                'status' => $invoice_item->delivery_status,
+                'delivery_date' => ($invoice_item->delivery_status === 'delivered') ? $invoice_item->updated_at : 'Pending',
+            ];
+        }
+        $transfer_request_items = TransferRequestItem::with(['supplyWarehouse', 'requestWarehouse', 'waybillItems', 'item', 'batches.itemStockBatch'])->where(['supply_warehouse_id' => $warehouse_id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
+        foreach ($transfer_request_items as $invoice_item) {
+            $batches = $invoice_item->batches;
+            $batch_nos = '';
+            foreach ($batches as $batch) {
+                $batch_nos = ($batch->itemStockBatch) ? $batch->itemStockBatch->batch_no : '';
+            }
+            $dispatcher = '';
+            foreach ($invoice_item->waybillItems as $waybillItem) {
+                if ($waybillItem->waybill->dispatcher) {
+                    $dispatcher = $waybillItem->waybill->dispatcher->name;
+                }
+            }
+            $outbounds[]  = [
+                'dispatcher' => $dispatcher,
+                'invoice_no' => $invoice_item->transferRequest->request_number,
+                'customer' => $invoice_item->requestWarehouse->name,
+                'product' => $invoice_item->item->name,
+                'batch_nos' => $batch_nos,
+                'amount' => $invoice_item->amount,
+                'quantity' => $invoice_item->quantity . ' ' . $invoice_item->type,
+                'supplied' => $invoice_item->quantity_supplied . ' ' . $invoice_item->type,
+                'balance' => $invoice_item->quantity - $invoice_item->quantity_supplied . ' ' . $invoice_item->type, // initially set to zero
+                'date' => $invoice_item->created_at,
+                'status' => $invoice_item->delivery_status,
+                'delivery_date' => ($invoice_item->delivery_status === 'delivered') ? $invoice_item->updated_at : 'Pending',
+            ];
+        }
+        usort($outbounds, function ($a, $b) {
+            return strtotime($a['date']) - strtotime($b['date']);
+        });
+
+        return response()->json(compact('outbounds'));
     }
     // public function waybills(Request $request)
     // {

@@ -51,10 +51,11 @@ export default {
   },
   data() {
     return {
-      columns: ['item.name', 'batch_no', 'sub_batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'balance', 'created_at', 'updated_at'],
+      columns: ['warehouse.name', 'item.name', 'batch_no', 'sub_batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'balance', 'created_at', 'updated_at'],
 
       options: {
         headings: {
+          'warehouse.name': 'Warehouse',
           'item.name': 'Product',
           batch_no: 'Batch No.',
           sub_batch_no: 'Sub-Batch No.',
@@ -77,8 +78,8 @@ export default {
           filter: 'Search:',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['item.name', 'batch_no', 'batch_no', 'expiry_date', 'created_at', 'updated_at'],
-        filterable: ['item.name', 'batch_no', 'batch_no', 'expiry_date', 'created_at', 'updated_at'],
+        sortable: ['warehouse.name', 'item.name', 'batch_no', 'batch_no', 'expiry_date', 'created_at', 'updated_at'],
+        filterable: ['warehouse.name', 'item.name', 'batch_no', 'batch_no', 'expiry_date', 'created_at', 'updated_at'],
       },
       page: {
         option: 'list',

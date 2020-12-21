@@ -52,10 +52,11 @@ export default {
   },
   data() {
     return {
-      columns: ['item.name', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance'],
+      columns: ['warehouse.name', 'item.name', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance'],
 
       options: {
         headings: {
+          'warehouse.name': 'Warehouse',
           'item.name': 'Product',
           quantity: 'Quantity Stocked',
           in_transit: 'In Transit',
@@ -67,8 +68,8 @@ export default {
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['item.name', 'quantity', 'in_transit', 'supplied', 'balance', 'in_stock', 'reserved_for_supply'],
-        filterable: ['item.name'],
+        sortable: ['warehouse.name', 'item.name', 'quantity', 'in_transit', 'supplied', 'balance', 'in_stock', 'reserved_for_supply'],
+        filterable: ['warehouse.name', 'item.name'],
       },
       page: {
         option: 'list',

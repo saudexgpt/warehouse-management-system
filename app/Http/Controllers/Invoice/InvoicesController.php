@@ -564,7 +564,7 @@ class InvoicesController extends Controller
             $invoice_item->item_id = $item->item_id;
             $invoice_item->quantity = $item->quantity;
             $invoice_item->quantity_per_carton = $item->quantity_per_carton;
-            $invoice_item->no_of_cartons = $item->no_of_cartons;
+            $invoice_item->no_of_cartons = $item->quantity / $item->quantity_per_carton; //$item->no_of_cartons;
             $invoice_item->type = $item->type;
             $invoice_item->rate = $item->rate;
             $invoice_item->amount = $item->amount;
