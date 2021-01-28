@@ -4,11 +4,12 @@ namespace App\Models\Invoice;
 
 use App\Models\Stock\ItemStockSubBatch;
 use Illuminate\Database\Eloquent\Model;
-// use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class InvoiceItemBatch extends Model
 {
     //
-    // use SoftDeletes;
+    use SoftDeletes;
     public function invoiceItem()
     {
         return $this->belongsTo(InvoiceItem::class);

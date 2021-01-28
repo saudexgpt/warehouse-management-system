@@ -277,7 +277,9 @@ export default {
     formatJson(filterVal, jsonData) {
       return jsonData.map(v => filterVal.map(j => {
         if (j === 'confirmer.name') {
-          return v['confirmer']['name'];
+          if (v['confirmer'] != null) {
+            return v['confirmer']['name'];
+          }
         }
         if (j === 'item.name') {
           return v['item']['name'];
@@ -289,7 +291,9 @@ export default {
           return parseTime(v['created_at']);
         }
         if (j === 'stocker.name') {
-          return v['stocker']['name'];
+          if (v['stocker'] != null) {
+            return v['stocker']['name'];
+          }
         }
         if (j === 'quantity') {
           return v['quantity'] + ' ' + v['item']['package_type'];
