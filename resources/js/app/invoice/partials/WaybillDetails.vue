@@ -81,7 +81,7 @@
                 <td>{{ waybill_item.item.name }}</td>
                 <!-- <td>{{ waybill_item.item.description }}</td> -->
                 <td>{{ waybill_item.quantity+' '+formatPackageType(waybill_item.type) }}<br>
-                  <small>({{ waybill_item.invoice_item.no_of_cartons }} CTN)</small>
+                  <small>({{ waybill_item.quantity / waybill_item.invoice_item.quantity_per_carton }} CTN)</small>
                 </td>
                 <td>
                   <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">

@@ -827,7 +827,7 @@ class InvoicesController extends Controller
     {
         $warehouse_id = $request->warehouse_id;
         $trip_no = $this->nextReceiptNo('trip');
-        $vehicles = Vehicle::with('vehicleDrivers.driver.user')->where('warehouse_id', $warehouse_id)->get();
+        $vehicles = Vehicle::with('vehicleDrivers.driver.user')/*->where('warehouse_id', $warehouse_id)*/->get();
         $delivery_trips = DeliveryTrip::with('cost.confirmer', 'waybills', 'vehicle.vehicleDrivers.driver.user')->orderBy('id', 'DESC')->where(['warehouse_id' => $warehouse_id])->get();
 
         $waybills_with_pending_wayfare = Waybill::where(['warehouse_id' => $warehouse_id, 'waybill_wayfare_status' => 'pending'])->where('confirmed_by', '!=', null)->get();
