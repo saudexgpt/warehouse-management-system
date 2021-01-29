@@ -55,6 +55,9 @@
               <div slot="request_warehouse" slot-scope="{row}">
                 {{ row.request_warehouse.name }}
               </div>
+              <div slot="supply_warehouse" slot-scope="{row}">
+                {{ row.supply_warehouse.name }}
+              </div>
               <div slot="transfer_requests" slot-scope="props">
                 <div v-if="props.row.transfer_requests.length > 0">
                   <span v-for="(invoice, invoice_index) in props.row.transfer_requests" :key="invoice_index">
@@ -92,8 +95,12 @@
           </el-tab-pane>
           <el-tab-pane label="My Request Waybills" name="Sent">
             <v-client-table v-model="my_request_waybills" :columns="columns" :options="options">
-              <div slot="request_warehouse" slot-scope="{row}">
+              <div slot="request_warehouse" slot-scope="{ row }">
                 {{ row.request_warehouse.name }}
+              </div>
+
+              <div slot="supply_warehouse" slot-scope="{row}">
+                {{ row.supply_warehouse.name }}
               </div>
               <div slot="transfer_requests" slot-scope="props">
                 <div v-if="props.row.transfer_requests.length > 0">
@@ -170,11 +177,12 @@ export default {
         { code: 'delivered', name: 'Delivered' },
       ],
       currency: '',
-      columns: ['action', 'request_warehouse', 'transfer_request_waybill_no', 'transfer_requests', 'created_at', 'status'],
+      columns: ['action', 'request_warehouse', 'supply_warehouse', 'transfer_request_waybill_no', 'transfer_requests', 'created_at', 'status'],
 
       options: {
         headings: {
           request_warehouse: 'Request By',
+          supply_warehouse: 'Supplied By',
           transfer_request_waybill_no: 'Waybill Number',
           transfer_requests: 'Invoices',
           created_at: 'Request Date',

@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 
 class GoodsTransferController extends Controller
 {
+
     /**
      * Display a listing of the resource.
      *
@@ -24,7 +25,6 @@ class GoodsTransferController extends Controller
      */
     public function index(Request $request)
     {
-        //
         $user = $this->getUser();
         $warehouse_id = $request->warehouse_id;
         $transfer_requests = [];
@@ -282,9 +282,9 @@ class GoodsTransferController extends Controller
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;
-            $waybills = TransferRequestWaybill::with(['request_warehouse', 'dispatcher', 'transferRequests.requestWarehouse', 'transferRequests.requestBy', 'waybillItems.item', 'waybillItems.invoice.requestBy'])->where(['supply_warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
+            $waybills = TransferRequestWaybill::with(['request_warehouse', 'supply_warehouse', 'dispatcher', 'transferRequests.requestWarehouse', 'transferRequests.requestBy', 'waybillItems.item', 'waybillItems.invoice.requestBy'])->where(['supply_warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
 
-            $my_request_waybills = TransferRequestWaybill::with(['request_warehouse', 'dispatcher', 'transferRequests.requestWarehouse', 'transferRequests.requestBy', 'waybillItems.item', 'waybillItems.invoice.requestBy'])->where(['request_warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
+            $my_request_waybills = TransferRequestWaybill::with(['request_warehouse', 'supply_warehouse', 'dispatcher', 'transferRequests.requestWarehouse', 'transferRequests.requestBy', 'waybillItems.item', 'waybillItems.invoice.requestBy'])->where(['request_warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
         }
         // if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
         //     $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
