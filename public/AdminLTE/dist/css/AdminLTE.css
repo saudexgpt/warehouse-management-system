@@ -5381,6 +5381,9 @@ th {
     float: left;
     width: 33.3333333%;
   }
+  .print-padded {
+    margin-top: -15px !important;
+  }
   .table-responsive {
     overflow: auto;
   }

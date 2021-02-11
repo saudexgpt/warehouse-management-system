@@ -1,5 +1,5 @@
 <template>
-  <el-card v-if="invoice">
+  <div v-if="invoice" class="print-padded">
     <el-tabs v-model="activeActivity">
       <el-tab-pane label="Invoice Summary" name="first">
         <section class="invoice">
@@ -64,7 +64,7 @@
 
           <!-- Table row -->
           <div class="row">
-            <div class="col-xs-12 table-responsive">
+            <div class="col-xs-12">
               <small class="pull-right no-print"> Confirmed By: {{ (invoice.confirmer) ? invoice.confirmer.name : 'Not Confirmed' }}</small>
               <legend>Invoice Products</legend>
               <table class="table table-bordered">
@@ -186,16 +186,14 @@
               <p>
                 <small>{{ invoice.notes }}</small>
               </p>
-            </div>
-            <table>
-              <tbody>
+              <table>
                 <tr>
                   <td>Prepared By: ______________________________</td>
                   <td>Authorized By: ______________________________</td>
                   <td>Approved By: ______________________________</td>
                 </tr>
-              </tbody>
-            </table>
+              </table>
+            </div>
 
             <!-- /.col -->
           </div>
@@ -240,7 +238,7 @@
         </div>
       </el-tab-pane>
     </el-tabs>
-  </el-card>
+  </div>
 </template>
 
 <script>
