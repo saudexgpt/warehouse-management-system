@@ -642,6 +642,74 @@ class InvoicesController extends Controller
         }
     }
     /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Invoice\Invoice  $invoice
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, Invoice $invoice)
+    {
+        //
+        $user = $this->getUser();
+        $invoice_items = json_decode(json_encode($request->invoice_items));
+        $invoice = Invoice::find($request->id);
+        $old_invoice_number = $invoice->invoice_number;
+        $invoice->invoice_number      = $request->invoice_number;
+        $invoice->customer_id      = $request->customer_id;
+        $invoice->invoice_date      = date('Y-m-d H:i:s', strtotime($request->invoice_date));
+        $invoice->subtotal            = $request->subtotal;
+        $invoice->discount            = $request->discount;
+        $invoice->amount              = $request->amount;
+        $invoice->notes              = $request->notes;
+        $invoice->save();
+        $extra_info = "";
+        if ($old_invoice_number !== $invoice->invoice_number) {
+            $extra_info = $old_invoice_number . ' was changed to ' . $invoice->invoice_number;
+        }
+        if ($invoice->waybillItems()->count() < 1) {
+            // delete existing invoice items
+            $invoice->invoiceItems()->delete();
+            //create new set of invoice items
+            $this->createInvoiceItems($invoice, $invoice_items);
+        }
+
+        $title = "Invoice modified";
+        $description = "invoice ($old_invoice_number) was updated by $user->name ($user->email) " . $extra_info;
+        //log this action to invoice history
+        $this->createInvoiceHistory($invoice, $title, $description);
+        //create items invoiceed for
+
+        //////update next invoice number/////
+        // $this->incrementInvoiceNo();
+
+        //log this activity
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+        $this->logUserActivity($title, $description, $roles);
+        return $this->show($invoice);
+    }
+
+    private function updateInvoiceItems($invoice_items)
+    {
+        foreach ($invoice_items as $item) {
+            // $batches = $item->batches;
+            $invoice_item = InvoiceItem::find($item->id);
+            // keep the old quantity
+            // $old_quantity = $invoice_item->quantity;
+
+            $invoice_item->quantity = $item->quantity;
+            $invoice_item->no_of_cartons = $item->no_of_cartons;
+            $invoice_item->item_id = $item->item_id;
+            $invoice_item->type = $item->type;
+            $invoice_item->rate = $item->rate;
+            $invoice_item->amount = $item->amount;
+            $invoice_item->save();
+
+            // $batches = $invoice_item->batches;
+            // $this->removeOldInvoiceItemBatchesAndCreateNewOne($invoice_item, $batches, $old_quantity);
+        }
+    }
+    /**
      * Display the specified resource.
      *
      * @param  \App\Models\Invoice\Invoice  $invoice
@@ -650,7 +718,7 @@ class InvoicesController extends Controller
     public function show(Invoice $invoice)
     {
         //
-        $invoice =  $invoice->with(['warehouse', 'customer.user', 'customer.type', 'confirmer', 'invoiceItems.item', 'histories' => function ($q) {
+        $invoice =  $invoice->with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer', 'invoiceItems.item', 'histories' => function ($q) {
             $q->orderBy('id', 'DESC');
         }])->find($invoice->id);
         return response()->json(compact('invoice'), 200);
@@ -1023,68 +1091,7 @@ class InvoicesController extends Controller
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
         $this->logUserActivity($title, $description, $roles);
     }
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Invoice\Invoice  $invoice
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, Invoice $invoice)
-    {
-        //
-        $user = $this->getUser();
-        $invoice_items = json_decode(json_encode($request->invoice_items));
-        $invoice = Invoice::find($request->id);
-        $old_invoice_number = $invoice->invoice_number;
-        $invoice->invoice_number      = $request->invoice_number;
-        $invoice->customer_id      = $request->customer_id;
-        $invoice->invoice_date      = date('Y-m-d H:i:s', strtotime($request->invoice_date));
-        $invoice->subtotal            = $request->subtotal;
-        $invoice->discount            = $request->discount;
-        $invoice->amount              = $request->amount;
-        $invoice->notes              = $request->notes;
-        $invoice->save();
-        $extra_info = "";
-        if ($old_invoice_number !== $invoice->invoice_number) {
-            $extra_info = $old_invoice_number . ' was changed to ' . $invoice->invoice_number;
-        }
-        $this->updateInvoiceItems($invoice_items);
-        $title = "Invoice modified";
-        $description = "invoice ($old_invoice_number) was updated by $user->name ($user->email) " . $extra_info;
-        //log this action to invoice history
-        $this->createInvoiceHistory($invoice, $title, $description);
-        //create items invoiceed for
 
-        //////update next invoice number/////
-        // $this->incrementInvoiceNo();
-
-        //log this activity
-        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
-        $this->logUserActivity($title, $description, $roles);
-        return $this->show($invoice);
-    }
-
-    private function updateInvoiceItems($invoice_items)
-    {
-        foreach ($invoice_items as $item) {
-            // $batches = $item->batches;
-            $invoice_item = InvoiceItem::find($item->id);
-            // keep the old quantity
-            // $old_quantity = $invoice_item->quantity;
-
-            $invoice_item->quantity = $item->quantity;
-            $invoice_item->no_of_cartons = $item->no_of_cartons;
-            $invoice_item->item_id = $item->item_id;
-            $invoice_item->type = $item->type;
-            $invoice_item->rate = $item->rate;
-            $invoice_item->amount = $item->amount;
-            $invoice_item->save();
-
-            // $batches = $invoice_item->batches;
-            // $this->removeOldInvoiceItemBatchesAndCreateNewOne($invoice_item, $batches, $old_quantity);
-        }
-    }
     // private function removeOldInvoiceItemBatchesAndCreateNewOne($invoice_item, $batches, $old_quantity)
     // {
     //     $batch_ids = [];

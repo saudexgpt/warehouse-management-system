@@ -46,7 +46,7 @@
               <el-row :gutter="2" class="padded">
                 <el-col>
                   <div style="overflow: auto">
-                    <label for>Products</label>
+                    <label for>PRODUCT DETAILS</label>
                     <table class="table table-binvoiceed">
                       <thead>
                         <tr>
@@ -60,7 +60,19 @@
                       </thead>
                       <tbody>
                         <tr v-for="(invoice_item, index) in form.invoice_items" :key="index">
-                          <td>{{ index + 1 }}</td>
+                          <td>
+                            <span>
+                              <a
+                                class="btn btn-danger btn-flat fa fa-trash"
+                                @click="removeLine(index)"
+                              />
+                              <a
+                                v-if="index + 1 === invoice_items.length"
+                                class="btn btn-info btn-flat fa fa-plus"
+                                @click="addLine(index)"
+                              />
+                            </span>
+                          </td>
                           <td>
                             <span v-if="invoice_item.item">{{ invoice_item.item.name }}</span>
                             <el-select v-model="invoice_item.item_index" filterable placeholder="Change" @input="fetchItemDetails(index)">
@@ -460,6 +472,8 @@ export default {
       app.invoice_items[index].item_id = item.id;
       app.invoice_items[index].item = item;
       app.invoice_items[index].type = item.package_type;
+      app.invoice_items[index].quantity_per_carton = item.quantity_per_carton;
+      app.invoice_items[index].no_of_cartons = 0;
       // let tax = 0;
       // for (let a = 0; a < item.taxes.length; a++) {
       //   tax += parseFloat(item.taxes[a].rate);

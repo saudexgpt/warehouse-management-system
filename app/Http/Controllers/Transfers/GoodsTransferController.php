@@ -369,19 +369,20 @@ class GoodsTransferController extends Controller
         // $waybill = TransferRequestWaybill::where('request_id', $request->request_id)->first();
         // if (!$waybill) {
         $request_warehouse_id = $transfer_request_items[0]->request_warehouse_id;
-        $waybill_no = $request->waybill_no; // $this->nextReceiptNo('transfer_request_waybill');
-        $duplicate_waybill = TransferRequestWaybill::where('transfer_request_waybill_no', $waybill_no)->first();
-        if ($duplicate_waybill) {
-            $waybill_no  = $this->nextReceiptNo('transfer_request_waybill');
-            //////update next invoice number/////
-            $this->incrementReceiptNo('transfer_request_waybill');
-        }
+        $waybill_no = $this->nextReceiptNo('transfer_request_waybill'); // $request->waybill_no; // $this->nextReceiptNo('transfer_request_waybill');
+        // $duplicate_waybill = TransferRequestWaybill::where('transfer_request_waybill_no', $waybill_no)->first();
+        // if ($duplicate_waybill) {
+        //     $waybill_no  = $this->nextReceiptNo('transfer_request_waybill');
+        //     //////update next invoice number/////
+        //     $this->incrementReceiptNo('transfer_request_waybill');
+        // }
         $waybill = new TransferRequestWaybill();
         $waybill->supply_warehouse_id = $warehouse_id;
         $waybill->request_warehouse_id = $request_warehouse_id;
         $waybill->transfer_request_waybill_no = $waybill_no;
         $waybill->status = $request->status;
         $waybill->save();
+        $this->incrementReceiptNo('transfer_request_waybill');
 
 
 
