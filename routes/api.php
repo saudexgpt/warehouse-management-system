@@ -24,8 +24,9 @@ $router->get('stabilize-invoice-items', 'Invoice\InvoicesController@stabilizeInv
 $router->get('deliver-items', 'Invoice\InvoicesController@deliverProducts');
 $router->get('correct-dispatch-product', 'Invoice\InvoicesController@correctDispatchProductDate');
 $router->get('invoice-items-without-waybill', 'Invoice\InvoicesController@checkInvoiceItemsWithoutWaybill');
-$router->get('clear-partial-invoices', 'Invoice\InvoicesController@clearPartialInvoices');
+$router->get('set-transfer-request-warehouse', 'Transfers\GoodsTransferController@setTransferRequestWarehouse');
 
+$router->get('clear-partial-invoices', 'Invoice\InvoicesController@clearPartialInvoices');
 $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
     $router->get('auth/user', 'AuthController@user');
@@ -84,6 +85,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         $router->get('notification/mark-as-read', 'ReportsController@markAsRead');
         $router->get('backups', 'ReportsController@backUps'); //->middleware('permission:backup database');
         $router->get('bin-card', 'ReportsController@fetchBinCard');
+        $router->get('instant-balances', 'ReportsController@instantBalances');
     });
     ////////////////////////////////////////////////////////////////////////////////////////
     $router->group(['prefix' => 'user'], function () use ($router) {

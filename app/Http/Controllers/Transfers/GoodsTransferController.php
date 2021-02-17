@@ -17,7 +17,15 @@ use Illuminate\Http\Request;
 
 class GoodsTransferController extends Controller
 {
+    public function setTransferRequestWarehouse()
+    {
+        $dispatchedRequests = TransferRequestDispatchedProduct::get();
 
+        foreach ($dispatchedRequests as $dispatchedRequest) {
+            $dispatchedRequest->request_warehouse_id = $dispatchedRequest->transferWaybill->request_warehouse_id;
+            $dispatchedRequest->save();
+        }
+    }
     /**
      * Display a listing of the resource.
      *
@@ -637,6 +645,7 @@ class GoodsTransferController extends Controller
 
                 $item_stock_sub_batch = new ItemStockSubBatch();
                 $item_stock_sub_batch->stocked_by = $user->id;
+                $item_stock_sub_batch->confirmed_by = $user->id;
                 $item_stock_sub_batch->warehouse_id = $waybill->request_warehouse_id;
                 $item_stock_sub_batch->item_id = $dispatched_stock->item_id;
                 // we suffix 'Trans-' so that we can differentiate between transfered stock and normal ones

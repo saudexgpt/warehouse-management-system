@@ -7,6 +7,7 @@ use App\Models\Invoice\Waybill;
 use App\Models\Invoice\DeliveryTripExpense;
 use App\Models\Invoice\DispatchedProduct;
 use App\Models\Invoice\InvoiceItem;
+use App\Models\Invoice\WaybillItem;
 use App\Models\Logistics\Vehicle;
 use App\Models\Logistics\VehicleCondition;
 use App\Models\Logistics\VehicleExpense;
@@ -14,6 +15,7 @@ use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Transfers\TransferRequestDispatchedProduct;
 use App\Models\Transfers\TransferRequestItem;
+use App\Models\Transfers\TransferRequestWaybillItem;
 use App\Models\Warehouse\Warehouse;
 use App\Notification;
 use Carbon\Carbon;
@@ -646,39 +648,8 @@ class ReportsController extends Controller
         }
         $warehouse_id = $request->warehouse_id;
         $item_id = $request->item_id;
-        $total_stock_till_date = ItemStockSubBatch::groupBy('item_id')
-            ->where('warehouse_id', $warehouse_id)
-            ->where('item_id', $item_id)
-            ->where('created_at', '<', $date_from)
-            ->where('confirmed_by', '!=', null)
-            ->select('*', \DB::raw('SUM(quantity) as quantity'))
-            ->first();
-        $previous_outbound = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
-            ->where('dispatched_products.warehouse_id', $warehouse_id)
-            ->where('item_stock_sub_batches.item_id', $item_id)
-            ->where('dispatched_products.created_at', '<', $date_from)
-            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
-            ->orderby('dispatched_products.created_at')->first();
+        list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $inbounds, $outbounds, $outbounds2) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
 
-        $previous_transfer_outbound = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
-            ->where('supply_warehouse_id', $warehouse_id)
-            ->where('item_stock_sub_batches.item_id', $item_id)
-            ->where('transfer_request_dispatched_products.created_at', '<', $date_from)
-            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
-            ->orderby('transfer_request_dispatched_products.created_at')->first();
-        // return [
-        //     'total' => $total_stock_till_date,
-        //     'previous_outbound' => $previous_outbound,
-        //     'today_stock' => $total_inbound_for_duration,
-        // ];
-        $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
-            ->where('created_at', '>=', $date_from)
-            ->where('created_at', '<=', $date_to)
-            ->where('confirmed_by', '!=', null)
-            ->orderby('created_at')
-            ->get();
         $bincards = [];
         $quantity_in_stock = ($total_stock_till_date) ? $total_stock_till_date->quantity : 0;
         $quantity_supplied = ($previous_outbound) ? $previous_outbound->quantity_supplied : 0;
@@ -701,19 +672,6 @@ class ReportsController extends Controller
                 'sign' => '',
             ];
         }
-        // $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
-        //     ->where('item_stock_sub_batches.item_id', $item_id)
-        //     ->where('dispatched_products.created_at', '>=', $date_from)
-        //     ->where('dispatched_products.created_at', '<=', $date_to)
-        //     ->select('dispatched_products.*')->orderby('dispatched_products.created_at')->get();
-        $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
-            ->groupBy('waybill_id')
-            ->where('dispatched_products.warehouse_id', $warehouse_id)
-            ->where('item_stock_sub_batches.item_id', $item_id)
-            ->where('dispatched_products.created_at', '>=', $date_from)
-            ->where('dispatched_products.created_at', '<=', $date_to)
-            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('dispatched_products.created_at')->get();
         foreach ($outbounds as $outbound) {
             //$running_balance -= $outbound->quantity_supplied;
             $bincards[] = [
@@ -730,14 +688,6 @@ class ReportsController extends Controller
                 'sign' => '',
             ];
         }
-        $outbounds2 = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
-            ->groupBy('transfer_request_waybill_id')
-            ->where('supply_warehouse_id', $warehouse_id)
-            ->where('item_stock_sub_batches.item_id', $item_id)
-            ->where('transfer_request_dispatched_products.created_at', '>=', $date_from)
-            ->where('transfer_request_dispatched_products.created_at', '<=', $date_to)
-            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
         foreach ($outbounds2 as $outbound) {
             //$running_balance -= $outbound->quantity_supplied;
             $bincards[] = [
@@ -760,5 +710,179 @@ class ReportsController extends Controller
         $date_from_formatted = date('Y-m-d', strtotime($date_from));
         $date_to_formatted = date('Y-m-d', strtotime($date_to));
         return  response()->json(compact('bincards', 'brought_forward', 'date_from_formatted', 'date_to_formatted'), 200);
+    }
+
+    private function getProductTransaction($item_id, $date_from, $date_to, $warehouse_id)
+    {
+
+        $total_stock_till_date = ItemStockSubBatch::groupBy('item_id')
+            ->where('warehouse_id', $warehouse_id)
+            ->where('item_id', $item_id)
+            ->where('created_at', '<', $date_from)
+            ->where('confirmed_by', '!=', null)
+            ->select('*', \DB::raw('SUM(quantity) as quantity'))
+            ->first();
+        $previous_outbound = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
+            ->where('dispatched_products.warehouse_id', $warehouse_id)
+            ->where('item_stock_sub_batches.item_id', $item_id)
+            ->where('dispatched_products.created_at', '<', $date_from)
+            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
+            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
+            ->orderby('dispatched_products.created_at')->first();
+
+        $previous_transfer_outbound = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
+            ->where('supply_warehouse_id', $warehouse_id)
+            ->where('item_stock_sub_batches.item_id', $item_id)
+            ->where('transfer_request_dispatched_products.created_at', '<', $date_from)
+            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
+            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
+            ->orderby('transfer_request_dispatched_products.created_at')->first();
+
+        $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
+            ->where('created_at', '>=', $date_from)
+            ->where('created_at', '<=', $date_to)
+            ->where('confirmed_by', '!=', null)
+            ->orderby('created_at')
+            ->get();
+        $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
+            ->groupBy(['item_stock_sub_batch_id', 'status'])
+            ->where('dispatched_products.warehouse_id', $warehouse_id)
+            ->where('item_stock_sub_batches.item_id', $item_id)
+            ->where('dispatched_products.created_at', '>=', $date_from)
+            ->where('dispatched_products.created_at', '<=', $date_to)
+            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
+            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('dispatched_products.created_at')->get();
+        $outbounds2 = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
+            ->groupBy(['item_stock_sub_batch_id', 'status'])
+            ->where('supply_warehouse_id', $warehouse_id)
+            ->where('item_stock_sub_batches.item_id', $item_id)
+            ->where('transfer_request_dispatched_products.created_at', '>=', $date_from)
+            ->where('transfer_request_dispatched_products.created_at', '<=', $date_to)
+            ->where('item_stock_sub_batches.confirmed_by', '!=', null)
+            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
+
+        return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $inbounds, $outbounds, $outbounds2);
+    }
+    public function instantBalances(Request $request)
+    {
+        $date_from = Carbon::now()->startOfMonth();
+        $date_to = Carbon::now()->endOfMonth();
+        $panel = 'month';
+        if (isset($request->from, $request->to)) {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $panel = $request->panel;
+        }
+
+        $items = Item::orderBy('name')->get();
+        $items_in_stock = [];
+        foreach ($items as $item) {
+            $item_id = $item->id;
+            $warehouse_id = $request->warehouse_id;
+            if ($warehouse_id === 'all') {
+                $warehouses = Warehouse::get();
+            } else {
+                // we do it this way to get a collection even though it is single
+                $warehouses = Warehouse::where('id', $warehouse_id)->get();
+            }
+            $products = [];
+            foreach ($warehouses as $warehouse) {
+                $warehouse_id = $warehouse->id;
+                list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $inbounds, $outbounds, $outbounds2) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
+
+                $waybill_items = WaybillItem::where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->where('created_at', '>=', $date_from)
+                    ->where('created_at', '<=', $date_to)->get();
+
+                $transfer_waybill_items = TransferRequestWaybillItem::where(['supply_warehouse_id' => $warehouse_id, 'item_id' => $item_id])->where('created_at', '>=', $date_from)
+                    ->where('created_at', '<=', $date_to)->get();
+
+                $quantity_in_stock = ($total_stock_till_date) ? $total_stock_till_date->quantity : 0;
+                $quantity_supplied = ($previous_outbound) ? $previous_outbound->quantity_supplied : 0;
+                $transfer_item_quantity_supplied = ($previous_transfer_outbound) ? $previous_transfer_outbound->quantity_supplied : 0;
+
+                $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied;
+
+                $total_in = $brought_forward;
+                $total_out = 0; //$quantity_supplied + $transfer_item_quantity_supplied;
+                $total_on_transit = 0;
+                $total_delivered = 0;
+                $total_reserved = 0;
+
+                foreach ($inbounds as $inbound) {
+                    $total_in += $inbound->quantity;
+                }
+                foreach ($outbounds as $outbound) {
+                    $total_out += $outbound->quantity_supplied;
+                    if ($outbound->status == 'on transit') {
+                        $total_on_transit += $outbound->quantity_supplied;
+                    } else {
+                        $total_delivered += $outbound->quantity_supplied;
+                    }
+                }
+                foreach ($outbounds2 as $outbound2) {
+                    $total_out += $outbound2->quantity_supplied;
+                    if ($outbound2->status == 'on transit') {
+                        $total_on_transit += $outbound2->quantity_supplied;
+                    } else {
+                        $total_delivered += $outbound2->quantity_supplied;
+                    }
+                }
+                foreach ($waybill_items as $waybill_item) {
+                    $dispatched_products = DispatchedProduct::groupBy('waybill_item_id')->where(['warehouse_id' => $warehouse_id, 'waybill_item_id' => $waybill_item->id])->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
+
+                    if ($dispatched_products) {
+                        $quantity_supplied = (int) $waybill_item->quantity - (int) $dispatched_products->quantity_supplied;
+                        $total_reserved += $quantity_supplied;
+                    } else {
+                        $total_reserved += $waybill_item->quantity;
+                    }
+
+                    // $on_transit = DispatchedProduct::groupBy('waybill_item_id')->where(['warehouse_id' => $warehouse_id, 'waybill_item_id' => $waybill_item->id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('status', 'on transit')->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
+
+                    // $delivered = DispatchedProduct::groupBy('waybill_item_id')->where(['warehouse_id' => $warehouse_id, 'waybill_item_id' => $waybill_item->id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('status', 'delivered')->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
+
+                    // $total_on_transit += ($on_transit) ? (int) $on_transit->quantity_supplied : 0;
+                    // $total_delivered += ($delivered) ? (int) $delivered->quantity_supplied : 0;
+                }
+                foreach ($transfer_waybill_items as $transfer_waybill_item) {
+                    $dispatched_products2 = TransferRequestDispatchedProduct::groupBy('transfer_request_waybill_item_id')->where(['supply_warehouse_id' => $warehouse_id, 'transfer_request_waybill_item_id' => $transfer_waybill_item->id])->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
+
+                    if ($dispatched_products2) {
+                        $quantity_supplied = (int) $transfer_waybill_item->quantity - (int) $dispatched_products2->quantity_supplied;
+                        $total_reserved += $quantity_supplied;
+                    } else {
+                        $total_reserved += $transfer_waybill_item->quantity;
+                    }
+
+                    // $on_transit2 = TransferRequestDispatchedProduct::groupBy('transfer_request_waybill_item_id')->where(['supply_warehouse_id' => $warehouse_id, 'transfer_request_waybill_item_id' => $transfer_waybill_item->id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('status', 'on transit')->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
+
+                    // $delivered2 = TransferRequestDispatchedProduct::groupBy('transfer_request_waybill_item_id')->where(['supply_warehouse_id' => $warehouse_id, 'transfer_request_waybill_item_id' => $transfer_waybill_item->id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('status', 'delivered')->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
+
+                    // $total_on_transit += ($on_transit2) ? (int) $on_transit2->quantity_supplied : 0;
+                    // $total_delivered += ($delivered2) ? (int) $delivered2->quantity_supplied : 0;
+                }
+
+                // $warehouse->total_in = $total_in;
+                // $warehouse->total_out = $total_out;
+                // $warehouse->total_reserved = $total_reserved;
+                // $warehouse->total_physical_count = $total_in - $total_out;
+                // return $item;
+                $products[] = [
+                    'product_id' => $item->id,
+                    'product_name' => $item->name,
+                    'package_type' => $item->package_type,
+                    'warehouse' => $warehouse->name,
+                    'total_in' => $total_in,
+                    'total_out' => $total_out,
+                    'total_on_transit' => $total_on_transit,
+                    'total_delivered' => $total_delivered,
+                    'total_reserved' => $total_reserved,
+                    'total_physical_count' => $total_in - $total_out,
+                ];
+            }
+            $item->products = $products;
+            $items_in_stock = array_merge($items_in_stock, $products);
+        }
+        return response()->json(compact('items_in_stock'), 200);
     }
 }

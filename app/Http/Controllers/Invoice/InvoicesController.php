@@ -773,18 +773,18 @@ class InvoicesController extends Controller
     {
         //
         $warehouse_id = $request->warehouse_id;
-        $vehicles = Vehicle::with('vehicleDrivers.driver.user')->where('warehouse_id', $warehouse_id)->get();
-        $available_vehicles = [];
-        foreach ($vehicles as $vehicle) {
-            $dispatched_waybill = DispatchedWaybill::where('vehicle_id', $vehicle->id)->orderBy('id', 'Desc')->first();
-            if ($dispatched_waybill) {
-                if ($dispatched_waybill->waybill->status === 'delivered') {
-                    $available_vehicles[] = $vehicle;
-                }
-            } else {
-                $available_vehicles[] = $vehicle;
-            }
-        }
+        $available_vehicles = Vehicle::with('vehicleDrivers.driver.user')->where(['warehouse_id' => $warehouse_id, 'availabilty' => 'available'])->get();
+        // $available_vehicles = [];
+        // foreach ($vehicles as $vehicle) {
+        //     $dispatched_waybill = DispatchedWaybill::where('vehicle_id', $vehicle->id)->orderBy('id', 'Desc')->first();
+        //     if ($dispatched_waybill) {
+        //         if ($dispatched_waybill->waybill->status === 'delivered') {
+        //             $available_vehicles[] = $vehicle;
+        //         }
+        //     } else {
+        //         $available_vehicles[] = $vehicle;
+        //     }
+        // }
         return response()->json(compact('available_vehicles'), 200);
     }
 
@@ -1049,6 +1049,11 @@ class InvoicesController extends Controller
         $this->logUserActivity($title, $description, $roles);
         return $this->showDeliveryTrip($delivery_trip->id, $delivery_trip->warehouse_id);
     }
+    private function setVehicleAvailability(Vehicle $vehicle, $status)
+    {
+        $vehicle->availability = $status;
+        $vehicle->save();
+    }
     public function changeWaybillStatus(Request $request, Waybill $waybill)
     {
         //
@@ -1059,11 +1064,17 @@ class InvoicesController extends Controller
         // update waybill status
         $waybill->status = $status;
         $waybill->save();
+        $vehicle = ($waybill->dispatcher) ? $waybill->dispatcher->vehicle : '';
 
         // update invoice items to account for partial supplies and complete ones
         $invoice_item_obj->updateInvoiceItemsForWaybill($waybill->waybillItems);
         // update items in stock based on waybill status
         if ($status === 'in transit') {
+            // change vehicle status to 'in transit'
+            if ($vehicle) {
+                $this->setVehicleAvailability($vehicle, 'in transit');
+            }
+
             $item_in_stock_obj->sendItemInStockForDelivery($waybill->waybillItems);
             // let's update the invoice items for this waybill
         }
@@ -1071,6 +1082,11 @@ class InvoicesController extends Controller
         $title = "Waybill status updated";
         $description = "Waybill ($waybill->waybill_no) status updated to " . strtoupper($waybill->status) . " by $user->name ($user->email)";
         if ($status === 'delivered') {
+            // change vehicle status to 'available'
+            if ($vehicle) {
+
+                $this->setVehicleAvailability($vehicle, 'available');
+            }
             $item_in_stock_obj->confirmItemInStockAsSupplied($waybill->dispatchProducts);
             foreach ($invoices as  $invoice) {
 

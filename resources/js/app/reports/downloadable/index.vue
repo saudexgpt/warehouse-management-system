@@ -4,9 +4,14 @@
       <el-tabs v-model="activeActivity">
         <el-tab-pane label="Inbounds" name="Inbounds">
           <keep-alive>
-            <inbounds v-if="params != null && activeActivity=='Inbounds'" :params="params" />
+            <instant-balances v-if="params != null && activeActivity=='Inbounds'" :params="params" />
           </keep-alive>
         </el-tab-pane>
+        <!-- <el-tab-pane label="Inbounds" name="Inbounds">
+          <keep-alive>
+            <inbounds v-if="params != null && activeActivity=='Inbounds'" :params="params" />
+          </keep-alive>
+        </el-tab-pane> -->
         <el-tab-pane label="Outbounds" name="Outbounds">
           <keep-alive>
             <outbounds v-if="params != null && activeActivity=='Outbounds'" :params="params" />
@@ -34,8 +39,9 @@
 
 <script>
 import Resource from '@/api/resource';
-import Inbounds from './inbounds';
+// import Inbounds from './inbounds';
 import Outbounds from './outbounds';
+import InstantBalances from './InstantBalances';
 import Products from '@/app/stock/item/ManageItem';
 import Fleets from './fleets';
 import Users from './users/List';
@@ -43,7 +49,7 @@ const necessaryParams = new Resource('fetch-necessary-params');
 export default {
   name: 'DownloadReports',
   components: {
-    Inbounds, Outbounds, Products, Fleets, Users,
+    /* Inbounds, */Outbounds, InstantBalances, Products, Fleets, Users,
   },
   data() {
     return {

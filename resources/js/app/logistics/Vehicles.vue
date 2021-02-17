@@ -29,6 +29,9 @@
             Export Excel
           </el-button>
           <v-client-table v-model="vehicles" :columns="columns" :options="options">
+            <div slot="availability" slot-scope="props">
+              {{ props.row.availability.toUpperCase() }}
+            </div>
             <div slot="purchase_date" slot-scope="props">
               {{ moment(props.row.purchase_date).format('MMMM Do YYYY') }}
             </div>
@@ -120,7 +123,7 @@ export default {
       vehicles: [],
       drivers: [],
       dialogFormVisible: false,
-      columns: ['action', 'plate_no', 'vehicle_type.type', 'brand', 'model', 'initial_mileage', 'engine_type', 'purchase_date', 'drivers'],
+      columns: ['action', 'plate_no', 'vehicle_type.type', 'brand', 'model', 'initial_mileage', 'engine_type', 'purchase_date', 'drivers', 'availability'],
 
       options: {
         headings: {
@@ -133,6 +136,15 @@ export default {
           drivers: 'Drivers',
 
           // id: 'S/N',
+        },
+        rowAttributesCallback: row => {
+          if (row.availability === 'available') {
+            return { 'style': 'background: #a8ee99;' };
+          } else if (row.availability === 'in transit'){
+            return { 'style': 'background: #97f0f0;' };
+          } else if (row.availability === 'repairs') {
+            return { 'style': 'background: #f08c8c;' };
+          }
         },
         pagination: {
           dropdown: true,

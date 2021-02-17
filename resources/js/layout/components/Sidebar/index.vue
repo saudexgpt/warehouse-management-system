@@ -10,7 +10,7 @@
       active-text-color="#409EFF"
     >
       <div align="center">
-        <img src="svg/logo.png" style="width: 50%;">
+        <img src="/svg/logo.png" style="width: 50%;">
       </div>
       <sidebar-item
         v-for="route in routes"
