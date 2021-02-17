@@ -24,7 +24,10 @@ class ItemStocksController extends Controller
 
         $items_in_stock = ItemStockSubBatch::with(['warehouse', 'item' => function ($q) {
             $q->orderBy('name');
-        }, 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->where('balance', '>', '0')->orderBy('expiry_date')->get();
+        }, 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->where(function ($q) {
+            $q->where('balance', '>', '0');
+            $q->orWhere('in_transit', '>', '0');
+        })->orderBy('expiry_date')->get();
 
         // $items_in_stock = ItemStock::with(['warehouse', 'item'])->groupBy('item_id')->having('warehouse_id', $warehouse_id)
         // ->select('*',\DB::raw('SUM(quantity) as total_quantity'))->get();
