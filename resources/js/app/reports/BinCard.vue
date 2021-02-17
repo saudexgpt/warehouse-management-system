@@ -4,7 +4,7 @@
       <el-row :gutter="10">
         <el-col :xs="24" :sm="8" :md="8">
           <label for="">Select Warehouse</label>
-          <el-select v-model="form.warehouse_index" placeholder="Select Warehouse" class="span" filterable>
+          <el-select v-model="form.warehouse_index" placeholder="Select Warehouse" class="span" filterable @input="getBinCard">
             <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="index" :label="warehouse.name" />
 
           </el-select>
