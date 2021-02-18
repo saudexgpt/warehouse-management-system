@@ -2,16 +2,16 @@
   <div class="dashboard-editor-container">
     <el-card>
       <el-tabs v-model="activeActivity">
-        <el-tab-pane label="Inbounds" name="Inbounds">
+        <el-tab-pane label="Instant Balances" name="InstantBalances">
           <keep-alive>
-            <instant-balances v-if="params != null && activeActivity=='Inbounds'" :params="params" />
+            <instant-balances v-if="params != null && activeActivity=='InstantBalances'" :params="params" />
           </keep-alive>
         </el-tab-pane>
-        <!-- <el-tab-pane label="Inbounds" name="Inbounds">
+        <el-tab-pane label="Inbounds" name="Inbounds">
           <keep-alive>
             <inbounds v-if="params != null && activeActivity=='Inbounds'" :params="params" />
           </keep-alive>
-        </el-tab-pane> -->
+        </el-tab-pane>
         <el-tab-pane label="Outbounds" name="Outbounds">
           <keep-alive>
             <outbounds v-if="params != null && activeActivity=='Outbounds'" :params="params" />
@@ -39,7 +39,7 @@
 
 <script>
 import Resource from '@/api/resource';
-// import Inbounds from './inbounds';
+import Inbounds from './inbounds';
 import Outbounds from './outbounds';
 import InstantBalances from './InstantBalances';
 import Products from '@/app/stock/item/ManageItem';
@@ -49,11 +49,11 @@ const necessaryParams = new Resource('fetch-necessary-params');
 export default {
   name: 'DownloadReports',
   components: {
-    /* Inbounds, */Outbounds, InstantBalances, Products, Fleets, Users,
+    Inbounds, Outbounds, InstantBalances, Products, Fleets, Users,
   },
   data() {
     return {
-      activeActivity: 'Inbounds',
+      activeActivity: 'InstantBalances',
       data_summary: '',
       params: null,
     };

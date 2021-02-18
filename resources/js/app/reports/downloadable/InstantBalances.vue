@@ -25,7 +25,7 @@
             placement="right"
             trigger="click"
           >
-            <date-range-picker :from="$route.query.from" :to="$route.query.to" :panel="panel" :panels="panels" :submit-title="submitTitle" :future="future" @update="setDateRange" />
+            <date-range-picker :from="$route.query.from" :to="$route.query.to" :panel="panel" :panels="panels" :submit-title="submitTitle" :future="future" @update="showCalendar" />
             <el-button id="pick_date" slot="reference" type="success">
               <i class="el-icon-date" /> Pick Date Range
             </el-button>
@@ -43,24 +43,20 @@
           Export Excel
         </el-button>
         <v-client-table v-model="items_in_stock" :columns="columns" :options="options">
-          <div slot="total_in" slot-scope="{row}" class="alert alert-info">
-            {{ row['total_in'] }} {{ formatPackageType(row['package_type']) }}
+          <div slot="brought_forward" slot-scope="{row}" class="alert alert-info">
+            {{ row['brought_forward'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
-          <div slot="total_on_transit" slot-scope="{row}" class="alert alert-warning">
-            {{ row['total_on_transit'] }} {{ formatPackageType(row['package_type']) }}
+          <div slot="quantity_stocked" slot-scope="{row}" class="alert alert-warning">
+            {{ row['quantity_stocked'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
-          <div slot="total_delivered" slot-scope="{row}" class="alert alert-danger">
-            {{ row['total_delivered'] }} {{ formatPackageType(row['package_type']) }}
+          <div slot="sold_out" slot-scope="{row}" class="alert alert-danger">
+            {{ row['sold_out'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
-          <div slot="total_physical_count" slot-scope="{row}" class="alert alert-success">
-            {{ row['total_physical_count'] }} {{ formatPackageType(row['package_type']) }}
-
-          </div>
-          <div slot="total_reserved" slot-scope="{row}" class="alert alert-primary">
-            {{ row['total_reserved'] }} {{ formatPackageType(row['package_type']) }}
+          <div slot="balance" slot-scope="{row}" class="alert alert-success">
+            {{ row['balance'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
           <!-- <div slot="updated_at" slot-scope="{row}">
@@ -92,24 +88,21 @@ export default {
       warehouses: [],
       items_in_stock: [],
       view_by: null,
-      columns: ['product_name', 'warehouse', 'total_in', /* 'total_out',*/ 'total_on_transit', 'total_delivered', 'total_physical_count', 'total_reserved'],
+      columns: ['product_name', 'warehouse', 'brought_forward', 'quantity_stocked', 'sold_out', 'balance'],
 
       options: {
         headings: {
           'warehouse': 'Warehouse',
           'product_name': 'Product',
-          total_in: 'Quantity Stocked',
+          brought_forward: 'Brought Forward',
           // total_out: 'Total Supplied',
-          total_on_transit: 'In Transit',
-          total_delivered: 'Supplied',
-          total_physical_count: 'Main Balance',
-          total_reserved: 'Reserved for Supply',
-
-          // id: 'S/N',
+          quantity_stocked: 'Quantity Stocked',
+          total_out: 'Sold Out',
+          balance: 'Balance',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['warehouse', 'product_name', 'total_in', 'total_on_transit', 'total_delivered', 'total_physical_count', 'total_reserved'],
-        filterable: ['warehouse', 'product_name', 'total_in', 'total_on_transit', 'total_delivered', 'total_physical_count', 'total_reserved'],
+        sortable: ['warehouse', 'product_name', 'brought_forward', 'quantity_stocked', 'sold_out', 'balance'],
+        filterable: ['warehouse', 'product_name', 'brought_forward', 'quantity_stocked', 'sold_out', 'balance'],
       },
       page: {
         option: 'list',
@@ -155,16 +148,16 @@ export default {
       // }
       return type;
     },
-    showCalendar(){
-      this.show_calendar = !this.show_calendar;
-    },
     format(date) {
       var month = date.toLocaleString('en-US', { month: 'short' });
       return month + ' ' + date.getDate() + ', ' + date.getFullYear();
     },
+    showCalendar(values){
+      document.getElementById('pick_date').click();
+      this.setDateRange(values);
+    },
     setDateRange(values){
       const app = this;
-      document.getElementById('pick_date').click();
       let panel = 'month';
       let from = app.format(new Date(app.moment().clone().startOf('month').format('YYYY-MM-DD hh:mm')));
       let to = app.format(new Date(app.moment().clone().endOf('month').format('YYYY-MM-DD hh:mm')));
@@ -177,7 +170,6 @@ export default {
       app.form.to = to;
       app.form.panel = panel;
       app.fetchItemStocks();
-      document.getElementById('pick_date').click();
     },
     fetchItemStocks() {
       const app = this;
@@ -208,8 +200,8 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '']];
-        const tHeader = ['PRODUCT', 'WAREHOUSE', 'QUANTITY STOCKED', 'IN TRANSIT', 'SUPPLIED', 'MAIN BALANCE', 'RESERVED FOR SUPPLY'];
+        const multiHeader = [[this.table_title, '', '', '', '', '', '']];
+        const tHeader = ['PRODUCT', 'WAREHOUSE', 'BROUGHT FORWARD', 'QUANTITY STOCKED', 'SOLD OUT', 'BALANCE'];
         const filterVal = this.columns;
         const list = this.items_in_stock;
         const data = this.formatJson(filterVal, list);
@@ -217,7 +209,7 @@ export default {
           multiHeader,
           header: tHeader,
           data,
-          filename: 'Inbounds',
+          filename: 'Instant_Balances',
           autoWidth: true,
           bookType: 'csv',
         });

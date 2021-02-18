@@ -14,7 +14,7 @@ class ReturnsController extends Controller
     {
         //
         $warehouse_id = $request->warehouse_id;
-        $returned_products = ReturnedProduct::with(['warehouse', 'item', 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->orderBy('id', 'DESC')->get();
+        $returned_products = ReturnedProduct::with(['warehouse', 'item', 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->where('quantity', '>', 'quantity_approved')->orderBy('id', 'DESC')->get();
 
         // $items_in_stock = ItemStock::with(['warehouse', 'item'])->groupBy('item_id')->having('warehouse_id', $warehouse_id)
         // ->select('*',\DB::raw('SUM(quantity) as total_quantity'))->get();
