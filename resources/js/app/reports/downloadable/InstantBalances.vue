@@ -47,12 +47,12 @@
             {{ row['brought_forward'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
-          <div slot="quantity_stocked" slot-scope="{row}" class="alert alert-warning">
-            {{ row['quantity_stocked'] }} {{ formatPackageType(row['package_type']) }}
+          <div slot="quantity_in" slot-scope="{row}" class="alert alert-warning">
+            {{ row['quantity_in'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
-          <div slot="sold_out" slot-scope="{row}" class="alert alert-danger">
-            {{ row['sold_out'] }} {{ formatPackageType(row['package_type']) }}
+          <div slot="quantity_out" slot-scope="{row}" class="alert alert-danger">
+            {{ row['quantity_out'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
           <div slot="balance" slot-scope="{row}" class="alert alert-success">
@@ -88,7 +88,7 @@ export default {
       warehouses: [],
       items_in_stock: [],
       view_by: null,
-      columns: ['product_name', 'warehouse', 'brought_forward', 'quantity_stocked', 'sold_out', 'balance'],
+      columns: ['product_name', 'warehouse', 'brought_forward', 'quantity_in', 'quantity_out', 'balance'],
 
       options: {
         headings: {
@@ -96,13 +96,13 @@ export default {
           'product_name': 'Product',
           brought_forward: 'Brought Forward',
           // total_out: 'Total Supplied',
-          quantity_stocked: 'Quantity Stocked',
-          total_out: 'Sold Out',
+          quantity_in: 'Quantity IN',
+          quantity_out: 'Quantity OUT',
           balance: 'Balance',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['warehouse', 'product_name', 'brought_forward', 'quantity_stocked', 'sold_out', 'balance'],
-        filterable: ['warehouse', 'product_name', 'brought_forward', 'quantity_stocked', 'sold_out', 'balance'],
+        sortable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'balance'],
+        filterable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'balance'],
       },
       page: {
         option: 'list',
@@ -201,7 +201,7 @@ export default {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [[this.table_title, '', '', '', '', '', '']];
-        const tHeader = ['PRODUCT', 'WAREHOUSE', 'BROUGHT FORWARD', 'QUANTITY STOCKED', 'SOLD OUT', 'BALANCE'];
+        const tHeader = ['PRODUCT', 'WAREHOUSE', 'BROUGHT FORWARD', 'QUANTITY IN', 'QUANTITY OUT', 'BALANCE'];
         const filterVal = this.columns;
         const list = this.items_in_stock;
         const data = this.formatJson(filterVal, list);

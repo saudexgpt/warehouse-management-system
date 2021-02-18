@@ -802,17 +802,17 @@ class ReportsController extends Controller
 
                 $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied;
 
-                $quantity_stocked = 0;
-                $sold_out = 0; //$quantity_supplied + $transfer_item_quantity_supplied;
+                $quantity_in = 0;
+                $quantity_out = 0; //$quantity_supplied + $transfer_item_quantity_supplied;
                 $total_on_transit = 0;
                 $total_delivered = 0;
                 $total_reserved = 0;
 
                 foreach ($inbounds as $inbound) {
-                    $quantity_stocked += $inbound->quantity;
+                    $quantity_in += $inbound->quantity;
                 }
                 foreach ($outbounds as $outbound) {
-                    $sold_out += $outbound->quantity_supplied;
+                    $quantity_out += $outbound->quantity_supplied;
                     if ($outbound->status == 'on transit') {
                         $total_on_transit += $outbound->quantity_supplied;
                     } else {
@@ -820,7 +820,7 @@ class ReportsController extends Controller
                     }
                 }
                 foreach ($outbounds2 as $outbound2) {
-                    $sold_out += $outbound2->quantity_supplied;
+                    $quantity_out += $outbound2->quantity_supplied;
                     if ($outbound2->status == 'on transit') {
                         $total_on_transit += $outbound2->quantity_supplied;
                     } else {
@@ -873,9 +873,9 @@ class ReportsController extends Controller
                     'package_type' => $item->package_type,
                     'warehouse' => $warehouse->name,
                     'brought_forward' => $brought_forward,
-                    'quantity_stocked' => $quantity_stocked,
-                    'sold_out' => $sold_out,
-                    'balance' => $brought_forward + $quantity_stocked - $sold_out,
+                    'quantity_in' => $quantity_in,
+                    'quantity_out' => $quantity_out,
+                    'balance' => $brought_forward + $quantity_in - $quantity_out,
                 ];
             }
             $item->products = $products;
