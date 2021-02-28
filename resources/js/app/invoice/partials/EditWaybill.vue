@@ -153,7 +153,7 @@
                               type="number"
                               :max="invoice_item.supply_bal"
                               min="0"
-                              @change="checkForOverflow(invoice_item.supply_bal, index)"
+                              @change="checkForOverflow(invoice_item.supply_bal, invoice_item.quantity_supplied, index)"
                             >
                             <!-- <el-select
                               v-model="invoice_item.quantity_for_supply"
@@ -381,8 +381,9 @@ export default {
 
       // app.loading = false;
     },
-    checkForOverflow(limit, index) {
+    checkForOverflow(to_supply, supplied, index) {
       const app = this;
+      const limit = parseInt(to_supply) + parseInt(supplied);
       const value = app.invoice_items[index].quantity_for_supply;
       const product = app.invoice_items[index].item.name;
       const package_type = app.invoice_items[index].item.package_type;
