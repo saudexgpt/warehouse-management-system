@@ -757,7 +757,7 @@ class InvoicesController extends Controller
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;
-            $waybills = Waybill::with(['invoices.customer.user', 'dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItems.invoice.customer.user', 'waybillItems.item', 'waybillItems.invoiceItem.batches.itemStockBatch', 'trips', 'dispatchProducts'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
+            $waybills = Waybill::with(['invoices.customer.user', 'invoices.invoiceItems.item.stocks', 'waybillItems.invoice.customer.user', 'waybillItems.item', 'waybillItems.invoiceItem.batches.itemStockBatch', 'dispatcher.vehicle.vehicleDrivers.driver.user', 'trips', 'dispatchProducts'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
         }
         // if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
         //     $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
@@ -880,6 +880,131 @@ class InvoicesController extends Controller
         return response()->json(compact('waybill'), 200);
     }
 
+    public function updateWaybill(Request $request, $waybill_id)
+    {
+        $user = $this->getUser();
+
+        $waybill = Waybill::find($waybill_id);
+        // we fetch previous waybill items
+        $waybill_items = $waybill->waybillItems;
+
+        foreach ($waybill_items as $waybill_item) {
+            // we want to get all invoice item for this waybill item and deduct what was reserved
+            $invoice_item = $waybill_item->invoiceItem;
+            $invoice_item->quantity_supplied -= $waybill_item->quantity;
+            $invoice_item->save();
+
+            // we wanna get and remove all reserved products
+
+            $waybill_quantity = $waybill_item->quantity;
+            $reserved_batches = $invoice_item->batches()->where('to_supply', '<=', $waybill_quantity)->get();
+            foreach ($reserved_batches as $reserved_batch) {
+                if ($reserved_batch->to_supply <= $waybill_quantity) {
+                    $item_stock_batch = $reserved_batch->itemStockBatch;
+                    $item_stock_batch->reserved_for_supply -= $reserved_batch->to_supply;
+                    $item_stock_batch->save();
+
+                    $waybill_quantity -= $reserved_batch->to_supply;
+                    // delete the invoice item batch
+                    $reserved_batch->delete();
+                } else {
+                    $item_stock_batch = $reserved_batch->itemStockBatch;
+                    $item_stock_batch->reserved_for_supply -= $waybill_quantity;
+                    $item_stock_batch->save();
+
+                    $reserved_batch->to_supply -= $waybill_quantity;
+                    $reserved_batch->quantity -= $waybill_quantity;
+                    $reserved_batch->save();
+                    break;
+                }
+            }
+
+            // delete the waybill item
+            $waybill_item->delete();
+        }
+        // now we want to create a new waybill item with their reservations
+        $invoice_ids = $request->invoice_ids;
+        $warehouse_id = $request->warehouse_id;
+        $message = '';
+        $invoice_items = json_decode(json_encode($request->invoice_items));
+
+        $waybill->invoices()->sync($invoice_ids);
+        // create way bill items
+        $waybill_item_obj = new WaybillItem();
+        // $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_items);
+        // $waybill = Waybill::where('waybill_no', $request->waybill_no)->first();
+        // if ($waybill) {
+        //     return response()->json(['message' => 'Dupicate Waybill No. Refresh the page please!!!'], 500);
+        // }
+        // check if there are items in stock for this waybil to be generated
+        $partial_waybill_generated = [];
+        $invoice_items_ids = [];
+        foreach ($invoice_items as $invoice_item) {
+            if (!in_array($invoice_item->id, $invoice_items_ids)) {
+                $invoice_items_ids[] = $invoice_item->id;
+                $batches = $invoice_item->batches;
+
+                $invoice_item_update = InvoiceItem::find($invoice_item->id);
+                $original_quantity = $invoice_item_update->quantity;
+                $original_quantity_supplied = $invoice_item_update->quantity_supplied;
+                $quantity_supplied = (int) $invoice_item->quantity_supplied;
+                $for_supply = (int) $invoice_item->quantity_for_supply;
+                // this will enable previously generated invoice items to be intact if not modified
+                if ($for_supply < 1 && $quantity_supplied > 0) {
+                    $for_supply = $quantity_supplied;
+                    $invoice_item->quantity_for_supply = $quantity_supplied;
+                }
+                if ($for_supply > 0) {
+                    if ($original_quantity > $original_quantity_supplied) {
+                        if (($original_quantity - $original_quantity_supplied)  >= $for_supply) {
+                            $invoice_item_update->quantity_supplied += $for_supply;
+                            $invoice_item_update->save();
+                            $this->createInvoiceItemBatches($invoice_item_update, $batches, $for_supply);
+
+                            $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_item);
+                        }
+                    }
+                }
+
+                if ($original_quantity > $invoice_item_update->quantity_supplied) {
+                    $partial_waybill_generated[] = $invoice_item->invoice_id;
+                }
+            }
+
+
+            // $item_in_stock_obj = new ItemStockSubBatch();
+            // $item_balance = $item_in_stock_obj->fetchBalanceOfItemsInStock($warehouse_id, $invoice_item->item_id);
+
+            // $quantity_for_supply = $invoice_item->quantity_for_supply;
+            // // check whether the balance is up to what was raised in the invoice
+            // if ($quantity_for_supply > $item_balance) {
+            //     $message .= $invoice_item->item->name . ' remains only ' . $item_balance . ' ' . $invoice_item->item->package_type . ' in stock.<br>';
+            // }
+        }
+
+        $invoice_nos = [];
+        foreach ($invoice_ids as $invoice_id) {
+            $invoice = Invoice::find($invoice_id);
+            if (!in_array($invoice_id, $partial_waybill_generated)) {
+                $invoice->full_waybill_generated = '1';
+            } else {
+                $invoice->full_waybill_generated = '0';
+            }
+            $invoice->save();
+            $title = "Waybill Generated";
+            $description = "Waybill ($waybill->waybill_no) generated for invoice ($invoice->invoice_number) by $user->name ($user->email)";
+            //log this action to invoice history
+            $this->createInvoiceHistory($invoice, $title, $description);
+
+            //log this activity
+            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+            $this->logUserActivity($title, $description, $roles);
+        }
+        // }
+        // $this->createDispatchedWaybill($waybill, $request);
+
+        return response()->json(compact('waybill'), 200);
+    }
     private function createDispatchedWaybill($waybill_id, $vehicle_id)
     {
         //

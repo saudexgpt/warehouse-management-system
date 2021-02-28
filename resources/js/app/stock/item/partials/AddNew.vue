@@ -182,10 +182,10 @@ export default {
         category_id: '',
         description: '',
         picture: 'images/no-image.jpeg',
-        currency_id: '',
+        currency_id: 1,
         // tax_ids: [],
         // purchase_price: '',
-        sale_price: '',
+        sale_price: 0,
       };
     },
 

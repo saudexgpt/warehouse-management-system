@@ -135,7 +135,7 @@
               class="label label-danger"
             >This should be done only when goods have left the warehouse to meet the customer</span>
           </div>
-          <div v-else-if="waybill.status === 'in transit' && warehouseId === waybill.request_warehouse_id && checkPermission(['audit confirm actions'])">
+          <div v-else-if="waybill.status === 'in transit' && warehouseId === waybill.request_warehouse_id && checkPermission(['audit confirm actions']) ">
             <a
               class="btn btn-success"
               @click="form.status = 'delivered'; changeWaybillStatus()"

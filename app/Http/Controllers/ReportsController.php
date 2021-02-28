@@ -745,7 +745,7 @@ class ReportsController extends Controller
             ->orderby('created_at')
             ->get();
         $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
-            ->groupBy(['item_stock_sub_batch_id', 'status'])
+            ->groupBy(['item_stock_sub_batch_id', 'waybill_item_id', 'status'])
             ->where('dispatched_products.warehouse_id', $warehouse_id)
             ->where('item_stock_sub_batches.item_id', $item_id)
             ->where('dispatched_products.created_at', '>=', $date_from)
@@ -753,7 +753,7 @@ class ReportsController extends Controller
             ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('dispatched_products.created_at')->get();
         $outbounds2 = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
-            ->groupBy(['item_stock_sub_batch_id', 'status'])
+            ->groupBy(['item_stock_sub_batch_id', 'transfer_request_waybill_item_id', 'status'])
             ->where('supply_warehouse_id', $warehouse_id)
             ->where('item_stock_sub_batches.item_id', $item_id)
             ->where('transfer_request_dispatched_products.created_at', '>=', $date_from)

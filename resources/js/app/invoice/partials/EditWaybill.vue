@@ -1,17 +1,9 @@
 <template>
   <div class="app-container">
-    <span v-if="params">
-      <router-link
-        v-if="checkPermission(['manage waybill'])"
-        :to="{ name: 'Waybills' }"
-        class="btn btn-default"
-      >
-        View Waybills</router-link>
-    </span>
     <div>
-      <div v-if="params" class="box">
+      <div class="box">
         <div class="box-header">
-          <h4 class="box-title">Generate Waybill</h4>
+          <h4 class="box-title">Edit Waybill</h4>
         </div>
         <div class="box-body">
           <el-form ref="form" :model="form" label-width="120px">
@@ -179,6 +171,9 @@
                               />
                             </el-select> -->
                           </div>
+                          <div v-else>
+                            <el-radio v-if="invoice_item.quantity_supplied > 0" v-model="invoice_item.quantity_for_supply" :label="invoice_item.quantity_supplied" :value="invoice_item.quantity_supplied" border checked />
+                          </div>
                         </td>
                       </tr>
                     </tbody>
@@ -212,13 +207,21 @@
               </el-form>
             </el-row>
             <el-row v-if="form.waybill_no" :gutter="2" class="padded">
-              <el-col :xs="24" :sm="6" :md="6">
+              <el-col :xs="12" :sm="6" :md="4">
                 <el-button
                   type="success"
                   :disabled="disabled"
-                  @click="generateWaybill()"
+                  @click="updateWaybill()"
                 ><i class="el-icon-upload" />
-                  Submit
+                  Update Waybill
+                </el-button>
+              </el-col>
+              <el-col :xs="12" :sm="6" :md="4">
+                <el-button
+                  type="warning"
+                  @click="page.option = 'list'"
+                ><i class="el-icon-close" />
+                  Cancel
                 </el-button>
               </el-col>
             </el-row>
@@ -235,22 +238,34 @@ import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 
 import Resource from '@/api/resource';
-// const createInvoice = new Resource('invoice/general/store');
-const necessaryParams = new Resource('fetch-necessary-params');
 const unDeliveredInvoices = new Resource(
   'invoice/waybill/undelivered-invoices'
 );
 // const availableVehicles = new Resource('invoice/waybill/fetch-available-vehicles');
-const storeWaybillResource = new Resource('invoice/waybill/store');
+const updateWaybillResource = new Resource('invoice/waybill/update');
 const fetchProductBatches = new Resource(
   'stock/items-in-stock/product-batches'
 );
 export default {
-  name: 'GenerateWaybill',
-
+  // name: 'GenerateWaybill',
+  props: {
+    waybill: {
+      type: Object,
+      default: () => ({}),
+    },
+    page: {
+      type: Object,
+      default: () => ({
+        option: 'edit_waybill',
+      }),
+    },
+    params: {
+      type: Object,
+      default: () => ({}),
+    },
+  },
   data() {
     return {
-      params: {},
       form: {
         warehouse_id: '',
         waybill_no: '',
@@ -261,7 +276,6 @@ export default {
       invoices: [],
       selected_invoice: [],
       invoice_items: [],
-      waybill_items: [],
       available_vehicles: [],
       batches_of_items_in_stock: [],
       rules: {
@@ -279,7 +293,9 @@ export default {
     };
   },
   created() {
-    this.fetchNecessaryParams();
+    this.form = this.waybill;
+    // this.selected_invoice = this.waybill.invoices;
+    this.fetchUndeliveredInvoices();
   },
   methods: {
     // moment,
@@ -297,33 +313,36 @@ export default {
     },
     fetchUndeliveredInvoices(index) {
       const app = this;
-      var form = app.form;
+      const param = {
+        warehouse_id: app.form.warehouse_id,
+      };
       const loader = unDeliveredInvoices.loaderShow();
-      unDeliveredInvoices.list(form).then((response) => {
+      unDeliveredInvoices.list(param).then((response) => {
         app.invoices = response.invoices;
-        app.form.waybill_no = response.waybill_no;
+        app.invoices.unshift(...app.waybill.invoices);
         loader.hide();
+        if (app.waybill.invoices.length > 0) {
+          var selected_invoices = app.waybill.invoices;
+          for (let index = 0; index < selected_invoices.length; index++) {
+            app.selected_invoice.push(index);
+          }
+          app.displayInvoiceitems();
+          // var selected_invoice = app.selected_invoice;
+          // var invoice_items = [];
+          // var invoice_ids = [];
+          // // app.loading = true;
+          // for (let index = 0; index < selected_invoice.length; index++) {
+          //   const invoice = selected_invoice[index];
+          //   invoice_items.push(...invoice.invoice_items);
+          //   invoice_ids.push(invoice.id);
+          // }
+          // app.processInvoiceItems(invoice_items, invoice_ids);
+        }
         // app.fetchAvailableDrivers();
       });
     },
-    fetchNecessaryParams() {
+    processInvoiceItems(invoice_items, invoice_ids) {
       const app = this;
-      necessaryParams.list().then((response) => {
-        app.params = response.params;
-      });
-    },
-    displayInvoiceitems() {
-      const app = this;
-      var selected_invoice = app.selected_invoice;
-      var invoice_items = [];
-      var invoice_ids = [];
-      // app.loading = true;
-      for (let index = 0; index < selected_invoice.length; index++) {
-        const element = selected_invoice[index];
-        invoice_items.push(...app.invoices[element].invoice_items);
-        invoice_ids.push(app.invoices[element].id);
-      }
-      // console.log(invoice_items);
       invoice_items.forEach((invoice_item) => {
         var total_batch_balance = 0;
         var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied;
@@ -345,6 +364,21 @@ export default {
       });
       app.invoice_items = invoice_items;
       app.form.invoice_ids = invoice_ids;
+    },
+    displayInvoiceitems() {
+      const app = this;
+      var selected_invoice = app.selected_invoice;
+      var invoice_items = [];
+      var invoice_ids = [];
+      // app.loading = true;
+      for (let index = 0; index < selected_invoice.length; index++) {
+        const element = selected_invoice[index];
+        invoice_items.push(...app.invoices[element].invoice_items);
+        invoice_ids.push(app.invoices[element].id);
+      }
+      app.processInvoiceItems(invoice_items, invoice_ids);
+      // console.log(invoice_items);
+
       // app.loading = false;
     },
     checkForOverflow(limit, index) {
@@ -353,8 +387,8 @@ export default {
       const product = app.invoice_items[index].item.name;
       const package_type = app.invoice_items[index].item.package_type;
       if (value > limit) {
-        app.invoice_items[index].quantity_for_supply = limit;
         app.$alert('Make sure you DO NOT exceed ' + limit + ' ' + package_type + ' for ' + product);
+        app.invoice_items[index].quantity_for_supply = limit;
       }
     },
     // fetchAvailableDrivers(){
@@ -366,7 +400,7 @@ export default {
     //       app.available_vehicles = response.available_vehicles;
     //     });
     // },
-    generateWaybill() {
+    updateWaybill() {
       this.$refs['form'].validate((valid) => {
         if (valid) {
           this.$confirm(
@@ -379,22 +413,22 @@ export default {
             }
           )
             .then(() => {
-              const loader = storeWaybillResource.loaderShow();
+              const loader = updateWaybillResource.loaderShow();
               this.form.invoice_items = this.invoice_items;
               this.disabled = true;
-              storeWaybillResource
-                .store(this.form)
+              updateWaybillResource
+                .update(this.form.id, this.form)
                 .then((response) => {
                   if (response.status) {
                     this.error_message = response.status + response.message;
                   } else {
                     this.$message({
-                      message: 'Waybill created successfully.',
+                      message: 'Waybill update successfully.',
                       type: 'success',
                       duration: 5 * 1000,
                     });
                     loader.hide();
-                    this.$router.replace('waybill');
+                    this.$emit('update', response.warehouse);
                   }
                 })
                 .catch((error) => {

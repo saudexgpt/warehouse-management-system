@@ -166,7 +166,7 @@ export default {
     setEditForm() {
       const app = this;
       app.form = app.item;
-      app.item_price = app.item.price;
+      app.item_price = (app.item.price) ? app.item.price : app.item_price;
     },
     cropUploadSuccess(jsonData, field){
       console.log('-------- upload success --------');

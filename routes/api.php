@@ -154,6 +154,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
                 $router->get('undelivered-invoices', 'InvoicesController@unDeliveredInvoices');
                 $router->get('fetch-available-vehicles', 'InvoicesController@fetchAvailableVehicles');
                 $router->post('store', 'InvoicesController@generateWaybill');
+                $router->put('update/{waybill_id}', 'InvoicesController@updateWaybill');
                 $router->put('change-status/{waybill}', 'InvoicesController@changeWaybillStatus');
             });
         });

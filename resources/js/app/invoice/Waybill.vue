@@ -79,7 +79,7 @@
           </div>
           <div slot="action" slot-scope="props">
             <a class="btn btn-default" @click="waybill=props.row; page.option='waybill_details'"><i class="el-icon-tickets" /></a>
-
+            <a v-if="checkPermission(['generate waybill']) && props.row.status==='pending'" class="btn btn-warning" @click="waybill=props.row; page.option='edit_waybill'"><i class="el-icon-edit" /></a>
             <a v-if="props.row.dispatch_products.length < 1 && checkPermission(['delete pending waybill'])" class="btn btn-danger" @click="deleteWaybill(props.index, props.row)"><i class="el-icon-delete" /></a>
 
             <a v-if="props.row.status === 'waybill_generated'" class="btn btn-default" @click="waybill=props.row; waybill.index= props.index - 1; page.option='waybill_details'"><i class="el-icon-success" /></a>
@@ -105,9 +105,11 @@
 
       </div>
     </div>
-    <div v-if="page.option==='waybill_details'">
+    <div v-if="page.option !=='list'">
       <a class="btn btn-danger no-print" @click="page.option='list'">Go Back</a>
-      <waybill-details :waybill="waybill" :page="page" :company-name="params.company_name" :company-contact="params.company_contact" :currency="currency" />
+      <waybill-details v-if="page.option==='waybill_details'" :waybill="waybill" :page="page" :company-name="params.company_name" :company-contact="params.company_contact" :currency="currency" />
+
+      <edit-waybill v-if="page.option==='edit_waybill'" :waybill="waybill" :page="page" :params="params" :currency="currency" @update="updateTable" />
     </div>
   </div>
 </template>
@@ -118,11 +120,13 @@ import checkRole from '@/utils/role';
 import { parseTime } from '@/utils';
 import Resource from '@/api/resource';
 import WaybillDetails from './partials/WaybillDetails';
+import EditWaybill from './partials/EditWaybill';
 const necessaryParams = new Resource('fetch-necessary-params');
 const fetchWaybills = new Resource('invoice/waybill');
 const deleteWaybill = new Resource('invoice/waybill/delete');
 export default {
-  components: { WaybillDetails },
+  // name: 'Waybills',
+  components: { WaybillDetails, EditWaybill },
   props: {
     canGenerateNewWaybill: {
       type: Boolean,
@@ -250,6 +254,11 @@ export default {
           loader.hide();
           console.log(error.message);
         });
+    },
+    updateTable(updated_row) {
+      const app = this;
+      app.getWaybills();
+      app.page.option = 'list';
     },
     deleteWaybill(index, waybill) {
       const app = this;

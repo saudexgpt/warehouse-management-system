@@ -62,7 +62,7 @@ class ItemStocksController extends Controller
     public function show(ItemStockSubBatch $item_in_stock)
     {
         //
-        return $item_in_stock = $item_in_stock->with(['warehouse', 'item', 'stocker', 'confirmer'])->find($item_in_stock->id);
+        $item_in_stock = $item_in_stock->with(['warehouse', 'item', 'stocker', 'confirmer'])->find($item_in_stock->id);
         return response()->json(compact('item_in_stock'), 200);
     }
 
