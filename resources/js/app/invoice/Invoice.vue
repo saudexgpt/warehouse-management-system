@@ -81,6 +81,17 @@
             @click="handleDownload"
           >Export Excel</el-button>
         </div>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12" :md="12">
+            <el-input
+              v-model="form.keyword"
+              placeholder="Search"
+              style="width: 200px"
+              class="filter-item"
+              @input="handleFilter"
+            />
+          </el-col>
+        </el-row>
         <v-client-table v-model="invoices" :columns="columns" :options="options">
 
           <div
@@ -159,6 +170,15 @@
           </div>
         </v-client-table>
       </div>
+      <el-row :gutter="20">
+        <pagination
+          v-show="total > 0"
+          :total="total"
+          :page.sync="form.page"
+          :limit.sync="form.limit"
+          @pagination="getInvoices"
+        />
+      </el-row>
     </div>
     <div v-if="page.option==='invoice_details'">
       <a class="btn btn-danger no-print" @click="page.option='list'">Go Back</a>
@@ -177,6 +197,7 @@
   </div>
 </template>
 <script>
+import Pagination from '@/components/Pagination'; // Secondary package based on el-pagination
 import moment from 'moment';
 import { parseTime } from '@/utils';
 import Resource from '@/api/resource';
@@ -191,7 +212,7 @@ const fetchInvoices = new Resource('invoice/general');
 const cancelInvoiceResource = new Resource('invoice/general/cancel');
 const deleteInvoiceResource = new Resource('invoice/general/delete');
 export default {
-  components: { InvoiceDetails, EditInvoice },
+  components: { InvoiceDetails, EditInvoice, Pagination },
   props: {
     canCreateNewInvoice: {
       type: Boolean,
@@ -229,6 +250,11 @@ export default {
 
           // id: 'S/N',
         },
+        pagination: {
+          dropdown: true,
+          chunk: 10,
+        },
+        perPage: 10,
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: [
           'invoice_number',
@@ -236,12 +262,13 @@ export default {
           'invoice_date',
           'status',
         ],
-        filterable: [
-          'invoice_number',
-          'customer.user.name',
-          'invoice_date',
-          'status',
-        ],
+        filterable: false,
+        // filterable: [
+        //   'invoice_number',
+        //   'customer.user.name',
+        //   'invoice_date',
+        //   'status',
+        // ],
       },
       page: {
         option: 'list',
@@ -253,7 +280,15 @@ export default {
         to: '',
         panel: '',
         status: 'pending',
+        page: 1,
+        limit: 10,
+        keyword: '',
       },
+      total: 0,
+      loading: false,
+      load_table: false,
+      downloading: false,
+      userCreating: false,
       submitTitle: 'Fetch Report',
       panel: 'month',
       future: false,
@@ -319,10 +354,15 @@ export default {
       app.form.panel = panel;
       app.getInvoices();
     },
+    handleFilter() {
+      this.form.page = 1;
+      this.getInvoices();
+    },
     getInvoices() {
       const app = this;
       const loader = fetchInvoices.loaderShow();
-
+      const { limit, page } = app.form;
+      app.options.perPage = limit;
       const param = app.form;
       param.warehouse_id = app.warehouses[param.warehouse_index].id;
       var extra_tableTitle = '';
@@ -337,7 +377,12 @@ export default {
       fetchInvoices
         .list(param)
         .then(response => {
-          app.invoices = response.invoices;
+          // app.invoices = response.invoices;
+          app.invoices = response.invoices.data;
+          app.invoices.forEach((element, index) => {
+            element['index'] = (page - 1) * limit + index + 1;
+          });
+          app.total = response.invoices.total;
           loader.hide();
         })
         .catch(error => {

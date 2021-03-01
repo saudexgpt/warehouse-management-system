@@ -202,14 +202,15 @@
         </template>
       </el-table-column>
     </el-table>-->
-
-    <pagination
-      v-show="total > 0"
-      :total="total"
-      :page.sync="query.page"
-      :limit.sync="query.limit"
-      @pagination="getList"
-    />
+    <el-row :gutter="20">
+      <pagination
+        v-show="total > 0"
+        :total="total"
+        :page.sync="query.page"
+        :limit.sync="query.limit"
+        @pagination="getList"
+      />
+    </el-row>
 
     <el-dialog
       :visible.sync="dialogPermissionVisible"

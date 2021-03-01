@@ -25,29 +25,31 @@ use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Warehouse\Warehouse;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 class InvoicesController extends Controller
 {
-    public function clearPartialInvoices()
-    {
-        $invoice_items = InvoiceItem::where(['delivery_status' => 'delivered', 'supply_status' => 'Partial'])->whereRaw('quantity = quantity_supplied')->get();
-        foreach ($invoice_items as $invoice_item) {
-            $invoice_item->supply_status = 'Complete';
-            $invoice_item->save();
-        }
+    const ITEM_PER_PAGE = 10;
+    // public function clearPartialInvoices()
+    // {
+    //     $invoice_items = InvoiceItem::where(['delivery_status' => 'delivered', 'supply_status' => 'Partial'])->whereRaw('quantity = quantity_supplied')->get();
+    //     foreach ($invoice_items as $invoice_item) {
+    //         $invoice_item->supply_status = 'Complete';
+    //         $invoice_item->save();
+    //     }
 
-        $invoices = Invoice::where('status', 'partially supplied')->get();
-        foreach ($invoices as  $invoice) {
+    //     $invoices = Invoice::where('status', 'partially supplied')->get();
+    //     foreach ($invoices as  $invoice) {
 
-            $incomplete_invoice_item = $invoice->invoiceItems()->where('supply_status', '=', 'Partial')->first();
-            if (!$incomplete_invoice_item) {
-                $invoice->status = 'delivered';
-                $invoice->full_waybill_generated = '1';
-                $invoice->save();
-            }
-        }
-        return 'done';
-    }
+    //         $incomplete_invoice_item = $invoice->invoiceItems()->where('supply_status', '=', 'Partial')->first();
+    //         if (!$incomplete_invoice_item) {
+    //             $invoice->status = 'delivered';
+    //             $invoice->full_waybill_generated = '1';
+    //             $invoice->save();
+    //         }
+    //     }
+    //     return 'done';
+    // }
     // public function checkInvoiceItemsWithoutWaybill()
     // {
     //     $invoice_items = InvoiceItem::has('waybillItems', '<', 1)->with('batches')->where('quantity_supplied', '>', 0)->get();
@@ -345,24 +347,41 @@ class InvoicesController extends Controller
     public function index(Request $request)
     {
         //
+        $searchParams = $request->all();
+        $invoiceQuery = Invoice::query();
+        $limit = Arr::get($searchParams, 'limit', static::ITEM_PER_PAGE);
+        $keyword = Arr::get($searchParams, 'keyword', '');
+        if (!empty($keyword)) {
+            $invoiceQuery->where(function ($q) use ($keyword) {
+                $q->where('invoice_number', 'LIKE', '%' . $keyword . '%');
+                $q->orWhere('invoice_date', 'LIKE', '%' . $keyword . '%');
+                $q->orWhere('amount', 'LIKE', '%' . $keyword . '%');
+                $q->orWhere('created_at', 'LIKE', '%' . $keyword . '%');
+                $q->orWhereHas('customer', function ($q) use ($keyword) {
+                    $q->whereHas('user', function ($q) use ($keyword) {
+                        $q->where('name', 'LIKE', '%' . $keyword . '%');
+                    });
+                });
+            });
+        }
         $user = $this->getUser();
         $warehouse_id = $request->warehouse_id;
         $invoices = [];
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;
-            $invoices = Invoice::with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer', 'invoiceItems.item', 'histories' => function ($q) {
+            $invoices = $invoiceQuery->with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer', 'invoiceItems.item', 'histories' => function ($q) {
                 $q->orderBy('id', 'DESC');
-            }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
+            }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('updated_at', 'DESC')->paginate($limit);
         }
         if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
             $status = $request->status;
             $panel = $request->panel;
-            $invoices = Invoice::with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer',  'invoiceItems.item', 'histories' => function ($q) {
+            $invoices = $invoiceQuery->with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer',  'invoiceItems.item', 'histories' => function ($q) {
                 $q->orderBy('id', 'DESC');
-            }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
+            }])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('updated_at', 'DESC')->paginate($limit);
         }
         return response()->json(compact('invoices'));
     }
@@ -751,13 +770,29 @@ class InvoicesController extends Controller
     // this fetches all generated waybills
     public function waybills(Request $request)
     {
+        $searchParams = $request->all();
+        $waybillQuery = Waybill::query();
+        $limit = Arr::get($searchParams, 'limit', static::ITEM_PER_PAGE);
+        $keyword = Arr::get($searchParams, 'keyword', '');
+
         $warehouse_id = $request->warehouse_id;
         $waybills = [];
 
         if (isset($request->status) && $request->status != '') {
-            ////// query by status //////////////
             $status = $request->status;
-            $waybills = Waybill::with(['invoices.customer.user', 'invoices.invoiceItems.item.stocks', 'waybillItems.invoice.customer.user', 'waybillItems.item', 'waybillItems.invoiceItem.batches.itemStockBatch', 'dispatcher.vehicle.vehicleDrivers.driver.user', 'trips', 'dispatchProducts'])->where(['warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
+
+            ////// query by status //////////////
+            $waybillQuery->with(['invoices.customer.user', 'invoices.invoiceItems.item.stocks', 'waybillItems.invoice.customer.user', 'waybillItems.item', 'waybillItems.invoiceItem.batches.itemStockBatch', 'dispatcher.vehicle.vehicleDrivers.driver.user', 'trips', 'dispatchProducts'])->where(['warehouse_id' => $warehouse_id, 'status' => $status]);
+            if (!empty($keyword)) {
+                $waybillQuery->where(function ($q) use ($keyword) {
+                    $q->where('waybill_no', 'LIKE', '%' . $keyword . '%');
+                    $q->orWhere('dispatch_company', 'LIKE', '%' . $keyword . '%');
+                    $q->orWhereHas('invoices', function ($q) use ($keyword) {
+                        $q->where('invoice_number', 'LIKE', '%' . $keyword . '%');
+                    });
+                });
+            }
+            $waybills = $waybillQuery->orderBy('id', 'DESC')->paginate($limit);
         }
         // if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
         //     $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';

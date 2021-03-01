@@ -49,6 +49,17 @@
             Export Excel
           </el-button>
         </div>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12" :md="12">
+            <el-input
+              v-model="form.keyword"
+              placeholder="Search"
+              style="width: 200px"
+              class="filter-item"
+              @input="handleFilter"
+            />
+          </el-col>
+        </el-row>
         <v-client-table v-model="waybills" :columns="columns" :options="options">
           <div slot="invoices" slot-scope="props">
             <div v-if="props.row.invoices.length > 0">
@@ -104,6 +115,15 @@
         </v-client-table>
 
       </div>
+      <el-row :gutter="20">
+        <pagination
+          v-show="total > 0"
+          :total="total"
+          :page.sync="form.page"
+          :limit.sync="form.limit"
+          @pagination="getWaybills"
+        />
+      </el-row>
     </div>
     <div v-if="page.option !=='list'">
       <a class="btn btn-danger no-print" @click="page.option='list'">Go Back</a>
@@ -114,6 +134,7 @@
   </div>
 </template>
 <script>
+import Pagination from '@/components/Pagination'; // Secondary package based on el-pagination
 import moment from 'moment';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
@@ -126,7 +147,7 @@ const fetchWaybills = new Resource('invoice/waybill');
 const deleteWaybill = new Resource('invoice/waybill/delete');
 export default {
   // name: 'Waybills',
-  components: { WaybillDetails, EditWaybill },
+  components: { WaybillDetails, EditWaybill, Pagination },
   props: {
     canGenerateNewWaybill: {
       type: Boolean,
@@ -156,9 +177,15 @@ export default {
 
           // id: 'S/N',
         },
+        pagination: {
+          dropdown: true,
+          chunk: 10,
+        },
+        perPage: 10,
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: ['created_at', 'updated_at'],
-        filterable: ['invoice.invoice_number', 'invoices', 'waybill_no', 'trip_no', 'created_at', 'updated_at'],
+        filterable: false,
+        // filterable: ['invoice.invoice_number', 'invoices', 'waybill_no', 'trip_no', 'created_at', 'updated_at'],
       },
       page: {
         option: 'list',
@@ -171,7 +198,11 @@ export default {
         to: '',
         panel: '',
         status: 'pending',
+        page: 1,
+        limit: 10,
+        keyword: '',
       },
+      total: 0,
       tableTitle: '',
       waybill: {},
       selected_row_index: '',
@@ -234,10 +265,15 @@ export default {
       app.form.panel = panel;
       app.getWaybills();
     },
+    handleFilter() {
+      this.form.page = 1;
+      this.getWaybills();
+    },
     getWaybills() {
       const app = this;
       const loader = fetchWaybills.loaderShow();
-
+      const { limit, page } = app.form;
+      app.options.perPage = limit;
       const param = app.form;
       param.warehouse_id = app.warehouses[param.warehouse_index].id;
       var extra_tableTitle = '';
@@ -247,7 +283,12 @@ export default {
       app.tableTitle = param.status.toUpperCase() + ' Waybills in ' + app.warehouses[param.warehouse_index].name + extra_tableTitle;
       fetchWaybills.list(param)
         .then(response => {
-          app.waybills = response.waybills;
+          // app.waybills = response.waybills;
+          app.waybills = response.waybills.data;
+          app.waybills.forEach((element, index) => {
+            element['index'] = (page - 1) * limit + index + 1;
+          });
+          app.total = response.waybills.total;
           loader.hide();
         })
         .catch(error => {
