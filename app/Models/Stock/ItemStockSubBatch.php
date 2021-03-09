@@ -29,10 +29,10 @@ class ItemStockSubBatch extends Model
     {
         return $this->belongsTo(Item::class);
     }
-    // public function itemStock()
-    // {
-    //     return $this->belongsTo(ItemStock::class);
-    // }
+    public function expiredProducts()
+    {
+        return $this->hasMany(ExpiredProduct::class, 'item_stock_batch_id', 'id');
+    }
     public function stocker()
     {
         return $this->belongsTo(User::class, 'stocked_by', 'id');

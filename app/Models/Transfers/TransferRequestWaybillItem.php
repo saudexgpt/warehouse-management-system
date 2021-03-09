@@ -30,18 +30,18 @@ class TransferRequestWaybillItem extends Model
     {
         return $this->belongsTo(TransferRequestItem::class, 'transfer_request_item_id', 'id');
     }
-    public function createTransferRequestWaybillItems($waybill_id, $warehouse_id, $transfer_request_items)
+    public function createTransferRequestWaybillItems($waybill_id, $warehouse_id, $transfer_request_item)
     {
-        foreach ($transfer_request_items as $transfer_request_item) {
-            $waybill_item = new TransferRequestWaybillItem();
-            $waybill_item->supply_warehouse_id = $warehouse_id;
-            $waybill_item->transfer_request_id = $transfer_request_item->transfer_request_id;
-            $waybill_item->transfer_request_waybill_id = $waybill_id;
-            $waybill_item->item_id = $transfer_request_item->item_id;
-            $waybill_item->transfer_request_item_id = $transfer_request_item->id;
-            $waybill_item->quantity = $transfer_request_item->quantity_for_supply;
-            $waybill_item->type = $transfer_request_item->type;
-            $waybill_item->save();
-        }
+        // foreach ($transfer_request_items as $transfer_request_item) {
+        $waybill_item = new TransferRequestWaybillItem();
+        $waybill_item->supply_warehouse_id = $warehouse_id;
+        $waybill_item->transfer_request_id = $transfer_request_item->transfer_request_id;
+        $waybill_item->transfer_request_waybill_id = $waybill_id;
+        $waybill_item->item_id = $transfer_request_item->item_id;
+        $waybill_item->transfer_request_item_id = $transfer_request_item->id;
+        $waybill_item->quantity = $transfer_request_item->quantity_for_supply;
+        $waybill_item->type = $transfer_request_item->type;
+        $waybill_item->save();
+        // }
     }
 }

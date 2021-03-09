@@ -8,10 +8,11 @@ use App\Models\Logistics\Vehicle;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Warehouse extends Model
 {
-    //
+    use SoftDeletes;
     // protected $hidden = ['pivot'];
     public function users()
     {

@@ -211,7 +211,7 @@ class GoodsTransferController extends Controller
 
         if ($quantity > 0) {
             // If a specific batch was NOT set when raising the invoice, we make it automatic here using FIFO (First In First Out) principle
-            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $transfer_request_item->invoice->warehouse_id, 'item_id' => $transfer_request_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->get();
+            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $transfer_request_item->supply_warehouse_id, 'item_id' => $transfer_request_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->get();
 
             foreach ($batches_of_items_in_stock as $item_sub_batch) {
                 $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
@@ -338,6 +338,27 @@ class GoodsTransferController extends Controller
         $warehouse_id = $request->warehouse_id;
         $message = '';
         $transfer_request_items = json_decode(json_encode($request->invoice_items));
+        $request_warehouse_id = $transfer_request_items[0]->request_warehouse_id;
+        $waybill_no = $this->nextReceiptNo('transfer_request_waybill'); // $request->waybill_no; // $this->nextReceiptNo('transfer_request_waybill');
+        // $duplicate_waybill = TransferRequestWaybill::where('transfer_request_waybill_no', $waybill_no)->first();
+        // if ($duplicate_waybill) {
+        //     $waybill_no  = $this->nextReceiptNo('transfer_request_waybill');
+        //     //////update next invoice number/////
+        //     $this->incrementReceiptNo('transfer_request_waybill');
+        // }
+        $waybill = new TransferRequestWaybill();
+        $waybill->supply_warehouse_id = $warehouse_id;
+        $waybill->request_warehouse_id = $request_warehouse_id;
+        $waybill->transfer_request_waybill_no = $waybill_no;
+        $waybill->status = $request->status;
+        $waybill->save();
+        $this->incrementReceiptNo('transfer_request_waybill');
+
+
+
+        $waybill->transferRequests()->sync($transfer_request_ids);
+        // create way bill items
+        $waybill_item_obj = new TransferRequestWaybillItem();
         // check if there are items in stock for this waybil to be generated
         $partial_waybill_generated = [];
         foreach ($transfer_request_items as $transfer_request_item) {
@@ -350,9 +371,11 @@ class GoodsTransferController extends Controller
             if ($for_supply > 0) {
                 if ($original_quantity > $quantity_supplied) {
                     if ($original_quantity >= $for_supply) {
-                        $this->createTransferRequestItemBatches($transfer_request_item_update, $batches, $for_supply);
                         $transfer_request_item_update->quantity_supplied += $for_supply;
                         $transfer_request_item_update->save();
+                        $this->createTransferRequestItemBatches($transfer_request_item_update, $batches, $for_supply);
+
+                        $waybill_item_obj->createTransferRequestWaybillItems($waybill->id, $warehouse_id, $transfer_request_item);
                     }
                 }
             }
@@ -376,28 +399,7 @@ class GoodsTransferController extends Controller
         // }
         // $waybill = TransferRequestWaybill::where('request_id', $request->request_id)->first();
         // if (!$waybill) {
-        $request_warehouse_id = $transfer_request_items[0]->request_warehouse_id;
-        $waybill_no = $this->nextReceiptNo('transfer_request_waybill'); // $request->waybill_no; // $this->nextReceiptNo('transfer_request_waybill');
-        // $duplicate_waybill = TransferRequestWaybill::where('transfer_request_waybill_no', $waybill_no)->first();
-        // if ($duplicate_waybill) {
-        //     $waybill_no  = $this->nextReceiptNo('transfer_request_waybill');
-        //     //////update next invoice number/////
-        //     $this->incrementReceiptNo('transfer_request_waybill');
-        // }
-        $waybill = new TransferRequestWaybill();
-        $waybill->supply_warehouse_id = $warehouse_id;
-        $waybill->request_warehouse_id = $request_warehouse_id;
-        $waybill->transfer_request_waybill_no = $waybill_no;
-        $waybill->status = $request->status;
-        $waybill->save();
-        $this->incrementReceiptNo('transfer_request_waybill');
 
-
-
-        $waybill->transferRequests()->sync($transfer_request_ids);
-        // create way bill items
-        $waybill_item_obj = new TransferRequestWaybillItem();
-        $waybill_item_obj->createTransferRequestWaybillItems($waybill->id, $warehouse_id, $transfer_request_items);
 
         // $transfer_request->status = 'waybill generated';
         // $transfer_request->save();
@@ -622,7 +624,7 @@ class GoodsTransferController extends Controller
         }
         $transfer_requests = $waybill->transferRequests;
         $title = "Transfer Request Waybill status updated";
-        $description = "Transfer Request Waybill ($waybill->waybill_no) status updated to " . strtoupper($waybill->status) . " by $user->name ($user->email)";
+        $description = "Transfer Request Waybill ($waybill->transfer_request_waybill_no) status updated to " . strtoupper($waybill->status) . " by $user->name ($user->email)";
         if ($status === 'delivered') {
             $item_in_stock_obj->confirmItemInStockAsSupplied($waybill->dispatchProducts);
             foreach ($transfer_requests as  $transfer_request) {

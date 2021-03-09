@@ -20,6 +20,10 @@
         {{ row.supplied }} {{ formatPackageType(row.item.package_type) }}
 
       </div>
+      <div slot="expired" slot-scope="{row}" class="alert alert-danger">
+        {{ row.expired }} {{ formatPackageType(row.item.package_type) }}
+
+      </div>
       <div slot="balance" slot-scope="{row}" class="alert alert-success">
         {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
 
@@ -51,7 +55,7 @@ export default {
   },
   data() {
     return {
-      columns: ['warehouse.name', 'item.name', 'batch_no', 'sub_batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'balance', 'created_at', 'updated_at'],
+      columns: ['warehouse.name', 'item.name', 'batch_no', 'sub_batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'expired', 'balance', 'created_at', 'updated_at'],
 
       options: {
         headings: {
@@ -62,8 +66,6 @@ export default {
           expiry_date: 'Expires',
           quantity: 'Quantity Stocked',
           in_transit: 'In Transit',
-          supplied: 'Supplied',
-          balance: 'Balance',
           created_at: 'Stock Date',
           updated_at: 'Last Modified',
 
@@ -106,8 +108,8 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['PRODUCT', 'BATCH NO.', 'SUB-BATCH NO.', 'EXPIRES', 'QUANTITY STOCKED', 'IN TRANSIT', 'SUPPLIED', 'BALANCE', 'STOCK DATE', 'LAST MODIFIED'];
+        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['PRODUCT', 'BATCH NO.', 'SUB-BATCH NO.', 'EXPIRES', 'QUANTITY STOCKED', 'IN TRANSIT', 'SUPPLIED', 'EXPIRED', 'BALANCE', 'STOCK DATE', 'LAST MODIFIED'];
         const filterVal = this.columns;
         const list = this.itemsInStock;
         const data = this.formatJson(filterVal, list);

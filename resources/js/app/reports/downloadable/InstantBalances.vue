@@ -55,6 +55,10 @@
             {{ row['quantity_out'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
+          <div slot="quantity_expired" slot-scope="{row}" class="alert alert-danger">
+            {{ row['quantity_expired'] }} {{ formatPackageType(row['package_type']) }}
+
+          </div>
           <div slot="balance" slot-scope="{row}" class="alert alert-success">
             {{ row['balance'] }} {{ formatPackageType(row['package_type']) }}
 
@@ -88,21 +92,22 @@ export default {
       warehouses: [],
       items_in_stock: [],
       view_by: null,
-      columns: ['product_name', 'warehouse', 'brought_forward', 'quantity_in', 'quantity_out', 'balance'],
+      columns: ['product_name', 'warehouse', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
 
       options: {
         headings: {
-          'warehouse': 'Warehouse',
-          'product_name': 'Product',
-          brought_forward: 'Brought Forward',
+          'warehouse': 'WAREHOUSE',
+          'product_name': 'PRODUCT',
+          brought_forward: 'BROUGHT FORWARD',
           // total_out: 'Total Supplied',
-          quantity_in: 'Quantity IN',
-          quantity_out: 'Quantity OUT',
-          balance: 'Balance',
+          quantity_in: 'QTY IN',
+          quantity_out: 'QTY OUT',
+          quantity_expired: 'QTY EXPIRED',
+          balance: 'BALANCE',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'balance'],
-        filterable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'balance'],
+        sortable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
+        filterable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
       },
       page: {
         option: 'list',

@@ -49,6 +49,7 @@
   </div>
 </template>
 <script>
+import moment from 'moment';
 import ViewBySubBatch from './partials/ViewBySubBatch';
 import ViewByBatch from './partials/ViewByBatch';
 import ViewByProduct from './partials/ViewByProduct';
@@ -100,6 +101,7 @@ export default {
 
   },
   methods: {
+    moment,
     showCalendar(){
       this.show_calendar = !this.show_calendar;
     },
@@ -111,8 +113,8 @@ export default {
       const app = this;
       document.getElementById('pick_date').click();
       let panel = app.panel;
-      let from = app.week_start;
-      let to = app.week_end;
+      let from = app.format(new Date(app.moment().clone().startOf('month').format('YYYY-MM-DD hh:mm')));
+      let to = app.format(new Date(app.moment().clone().endOf('month').format('YYYY-MM-DD hh:mm')));
       if (values !== '') {
         to = this.format(new Date(values.to));
         from = this.format(new Date(values.from));

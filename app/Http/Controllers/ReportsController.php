@@ -11,6 +11,7 @@ use App\Models\Invoice\WaybillItem;
 use App\Models\Logistics\Vehicle;
 use App\Models\Logistics\VehicleCondition;
 use App\Models\Logistics\VehicleExpense;
+use App\Models\Stock\ExpiredProduct;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Transfers\TransferRequestDispatchedProduct;
@@ -648,62 +649,85 @@ class ReportsController extends Controller
         }
         $warehouse_id = $request->warehouse_id;
         $item_id = $request->item_id;
-        list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $inbounds, $outbounds, $outbounds2) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
+        list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_product) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
 
         $bincards = [];
         $quantity_in_stock = ($total_stock_till_date) ? $total_stock_till_date->quantity : 0;
         $quantity_supplied = ($previous_outbound) ? $previous_outbound->quantity_supplied : 0;
         $transfer_item_quantity_supplied = ($previous_transfer_outbound) ? $previous_transfer_outbound->quantity_supplied : 0;
+        $expired_quantity = ($previous_expired_product) ? $previous_expired_product->quantity : 0;
 
-        $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied;
-        foreach ($inbounds as $inbound) {
-            //$running_balance += $inbound->quantity;
-            $bincards[]  = [
-                'type' => 'in_bound',
-                'date' => $inbound->created_at,
-                'invoice_no' => '',
-                'waybill_grn' => $inbound->goods_received_note,
-                'quantity_transacted' => $inbound->quantity,
-                'in' => $inbound->quantity,
-                'out' => '',
-                'balance' => 0, // initially set to zero
-                'packaging' => $inbound->item->package_type,
-                'physical_quantity' => '',
-                'sign' => '',
-            ];
+        $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied - (int) $expired_quantity;
+        if ($inbounds->isNotEmpty()) {
+            foreach ($inbounds as $inbound) {
+                //$running_balance += $inbound->quantity;
+                $bincards[]  = [
+                    'type' => 'in_bound',
+                    'date' => $inbound->created_at,
+                    'invoice_no' => '',
+                    'waybill_grn' => $inbound->goods_received_note,
+                    'quantity_transacted' => $inbound->quantity,
+                    'in' => $inbound->quantity,
+                    'out' => '',
+                    'balance' => 0, // initially set to zero
+                    'packaging' => $inbound->item->package_type,
+                    'physical_quantity' => '',
+                    'sign' => '',
+                ];
+            }
         }
-        foreach ($outbounds as $outbound) {
-            //$running_balance -= $outbound->quantity_supplied;
+        if ($outbounds->isNotEmpty()) {
+            foreach ($outbounds as $outbound) {
+                //$running_balance -= $outbound->quantity_supplied;
+                $bincards[] = [
+                    'type' => 'out_bound',
+                    'date' => $outbound->created_at,
+                    'invoice_no' => $outbound->waybillItem->invoice->invoice_number,
+                    'waybill_grn' => $outbound->waybill->waybill_no,
+                    'quantity_transacted' => $outbound->quantity_supplied,
+                    'in' => '',
+                    'out' => $outbound->quantity_supplied,
+                    'balance' => 0, // initially set to zero
+                    'packaging' => $outbound->itemStock->item->package_type,
+                    'physical_quantity' => '',
+                    'sign' => '',
+                ];
+            }
+        }
+        if ($outbounds2->isNotEmpty()) {
+            foreach ($outbounds2 as $outbound) {
+                //$running_balance -= $outbound->quantity_supplied;
+                $bincards[] = [
+                    'type' => 'out_bound',
+                    'date' => $outbound->created_at,
+                    'invoice_no' => $outbound->transferWaybillItem->invoice->request_number,
+                    'waybill_grn' => $outbound->transferWaybill->transfer_request_waybill_no,
+                    'quantity_transacted' => $outbound->quantity_supplied,
+                    'in' => '',
+                    'out' => $outbound->quantity_supplied,
+                    'balance' => 0, // initially set to zero
+                    'packaging' => $outbound->itemStock->item->package_type,
+                    'physical_quantity' => '',
+                    'sign' => '',
+                ];
+            }
+        }
+        if ($expired_product) {
             $bincards[] = [
                 'type' => 'out_bound',
-                'date' => $outbound->created_at,
-                'invoice_no' => $outbound->waybillItem->invoice->invoice_number,
-                'waybill_grn' => $outbound->waybill->waybill_no,
-                'quantity_transacted' => $outbound->quantity_supplied,
+                'date' => $expired_product->expiry_date,
+                'invoice_no' => '-',
+                'waybill_grn' => $expired_product->batch_no . '(EXPIRED)',
+                'quantity_transacted' => $expired_product->quantity,
                 'in' => '',
-                'out' => $outbound->quantity_supplied,
+                'out' => $expired_product->quantity,
                 'balance' => 0, // initially set to zero
-                'packaging' => $outbound->itemStock->item->package_type,
+                'packaging' => $expired_product->item->package_type,
                 'physical_quantity' => '',
                 'sign' => '',
             ];
         }
-        foreach ($outbounds2 as $outbound) {
-            //$running_balance -= $outbound->quantity_supplied;
-            $bincards[] = [
-                'type' => 'out_bound',
-                'date' => $outbound->created_at,
-                'invoice_no' => $outbound->transferWaybillItem->invoice->request_number,
-                'waybill_grn' => $outbound->transferWaybill->transfer_request_waybill_no,
-                'quantity_transacted' => $outbound->quantity_supplied,
-                'in' => '',
-                'out' => $outbound->quantity_supplied,
-                'balance' => 0, // initially set to zero
-                'packaging' => $outbound->itemStock->item->package_type,
-                'physical_quantity' => '',
-                'sign' => '',
-            ];
-        }
+
         usort($bincards, function ($a, $b) {
             return strtotime($a['date']) - strtotime($b['date']);
         });
@@ -737,6 +761,7 @@ class ReportsController extends Controller
             ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))
             ->orderby('transfer_request_dispatched_products.created_at')->first();
+        $previous_expired_product = ExpiredProduct::groupBy(['batch_no'])->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])->where('expiry_date', '<', $date_from)->select('*', \DB::raw('SUM(quantity) as quantity'))->first();
 
         $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
@@ -761,7 +786,8 @@ class ReportsController extends Controller
             ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
 
-        return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $inbounds, $outbounds, $outbounds2);
+        $expired_product = ExpiredProduct::groupBy(['batch_no'])->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])->where('expiry_date', '>=', $date_from)->where('expiry_date', '<=', $date_to)->select('*', \DB::raw('SUM(quantity) as quantity'))->first();
+        return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_product);
     }
     public function instantBalances(Request $request)
     {
@@ -788,7 +814,7 @@ class ReportsController extends Controller
             $products = [];
             foreach ($warehouses as $warehouse) {
                 $warehouse_id = $warehouse->id;
-                list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $inbounds, $outbounds, $outbounds2) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
+                list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_product) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
 
                 // $waybill_items = WaybillItem::where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->where('created_at', '>=', $date_from)
                 //     ->where('created_at', '<=', $date_to)->get();
@@ -800,31 +826,38 @@ class ReportsController extends Controller
                 $quantity_supplied = ($previous_outbound) ? $previous_outbound->quantity_supplied : 0;
                 $transfer_item_quantity_supplied = ($previous_transfer_outbound) ? $previous_transfer_outbound->quantity_supplied : 0;
 
-                $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied;
+                $expired_quantity = ($previous_expired_product) ? $previous_expired_product->quantity : 0;
+
+                $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied - (int) $expired_quantity;
 
                 $quantity_in = 0;
                 $quantity_out = 0; //$quantity_supplied + $transfer_item_quantity_supplied;
                 $total_on_transit = 0;
                 $total_delivered = 0;
                 $total_reserved = 0;
-
-                foreach ($inbounds as $inbound) {
-                    $quantity_in += $inbound->quantity;
-                }
-                foreach ($outbounds as $outbound) {
-                    $quantity_out += $outbound->quantity_supplied;
-                    if ($outbound->status == 'on transit') {
-                        $total_on_transit += $outbound->quantity_supplied;
-                    } else {
-                        $total_delivered += $outbound->quantity_supplied;
+                if ($inbounds->isNotEmpty()) {
+                    foreach ($inbounds as $inbound) {
+                        $quantity_in += $inbound->quantity;
                     }
                 }
-                foreach ($outbounds2 as $outbound2) {
-                    $quantity_out += $outbound2->quantity_supplied;
-                    if ($outbound2->status == 'on transit') {
-                        $total_on_transit += $outbound2->quantity_supplied;
-                    } else {
-                        $total_delivered += $outbound2->quantity_supplied;
+                if ($outbounds->isNotEmpty()) {
+                    foreach ($outbounds as $outbound) {
+                        $quantity_out += $outbound->quantity_supplied;
+                        if ($outbound->status == 'on transit') {
+                            $total_on_transit += $outbound->quantity_supplied;
+                        } else {
+                            $total_delivered += $outbound->quantity_supplied;
+                        }
+                    }
+                }
+                if ($outbounds2->isNotEmpty()) {
+                    foreach ($outbounds2 as $outbound2) {
+                        $quantity_out += $outbound2->quantity_supplied;
+                        if ($outbound2->status == 'on transit') {
+                            $total_on_transit += $outbound2->quantity_supplied;
+                        } else {
+                            $total_delivered += $outbound2->quantity_supplied;
+                        }
                     }
                 }
                 // foreach ($waybill_items as $waybill_item) {
@@ -867,6 +900,7 @@ class ReportsController extends Controller
                 // $warehouse->total_reserved = $total_reserved;
                 // $warehouse->total_physical_count = $total_in - $total_out;
                 // return $item;
+                $expired_quantity = ($expired_product) ? $expired_product->quantity : 0;
                 $products[] = [
                     'product_id' => $item->id,
                     'product_name' => $item->name,
@@ -875,7 +909,8 @@ class ReportsController extends Controller
                     'brought_forward' => $brought_forward,
                     'quantity_in' => $quantity_in,
                     'quantity_out' => $quantity_out,
-                    'balance' => $brought_forward + $quantity_in - $quantity_out,
+                    'quantity_expired' => $expired_quantity,
+                    'balance' => $brought_forward + $quantity_in - $quantity_out - $expired_quantity,
                 ];
             }
             $item->products = $products;
