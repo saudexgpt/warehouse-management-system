@@ -10,6 +10,9 @@
 |
 */
 
+$router->get('hello-message', function () {
+    return response()->json(['message' => 'Hello World'], 200);
+});
 $router->post('auth/login', 'AuthController@login');
 $router->get('dispatch-product/issue', 'DebugController@solveDispatchProductIssue');
 $router->get('total-product', 'DebugController@totalDispatchedProduct');

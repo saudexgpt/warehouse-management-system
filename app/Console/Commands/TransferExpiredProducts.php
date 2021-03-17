@@ -7,6 +7,7 @@ use App\Laravue\Models\User;
 use App\Models\Stock\ExpiredProduct;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Transfers\TransferRequestDispatchedProduct;
+use App\Models\Transfers\TransferRequestItemBatch;
 
 class TransFerExpiredProducts extends Command
 {
@@ -34,17 +35,19 @@ class TransFerExpiredProducts extends Command
     {
         parent::__construct();
     }
-    private function transferExpiredProduct($expired_item_in_stock)
+    private function transferExpiredProduct($expired_item_in_stock, $quantity)
     {
         $expired_product = new ExpiredProduct();
         $expired_product->warehouse_id = $expired_item_in_stock->warehouse_id;
         $expired_product->item_id = $expired_item_in_stock->item_id;
         $expired_product->batch_no = $expired_item_in_stock->batch_no;
         $expired_product->item_stock_sub_batch_id = $expired_item_in_stock->id;
-        $expired_product->quantity = $expired_item_in_stock->balance;
+        $expired_product->quantity = $quantity;
         $expired_product->destroyed = 0;
-        $expired_product->balance = $expired_item_in_stock->balance;
+        $expired_product->balance = $quantity;
         $expired_product->expiry_date = $expired_item_in_stock->expiry_date;
+        $expired_product->created_at = $expired_item_in_stock->date;
+        $expired_product->updated_at = $expired_item_in_stock->date;
         if ($expired_product->save()) {
             return true;
         }
@@ -58,7 +61,7 @@ class TransFerExpiredProducts extends Command
         $items_in_stock = ItemStockSubBatch::where('expiry_date', '<=', $today)->where('balance', '>', 0)->get();
         if ($items_in_stock->isNotEmpty()) {
             foreach ($items_in_stock as $item_in_stock) {
-                if ($this->transferExpiredProduct($item_in_stock)) {
+                if ($this->transferExpiredProduct($item_in_stock, $item_in_stock->balance)) {
                     // make the balance zero
                     $balance = $item_in_stock->balance;
                     $item_in_stock->expired = $balance;
@@ -85,12 +88,13 @@ class TransFerExpiredProducts extends Command
     private function returnExpiredProducts()
     {
         set_time_limit(0);
-        $dispatchedProducts = TransferRequestDispatchedProduct::whereRaw('transfer_request_waybill_item_id IN (378,393,395,396,462,468,469,470,471,472,473,516,517,521,529,530,533)')->get();
+        $dispatchedProducts = TransferRequestItemBatch::whereRaw('transfer_request_item_id IN (402,421,423,424,493,499,500,501,502,503,504,505,550,551,552,556,564,565,568)')->get();
         if ($dispatchedProducts->isNotEmpty()) {
             foreach ($dispatchedProducts as $dispatchedProduct) {
-                $item_in_stock = $dispatchedProduct->itemStock;
-                $item_in_stock->balance += $dispatchedProduct->quantity_supplied;
-                $item_in_stock->supplied -= $dispatchedProduct->quantity_supplied;
+                $item_in_stock = $dispatchedProduct->itemStockBatch;
+
+                $item_in_stock->balance -= $dispatchedProduct->to_supply;
+                $item_in_stock->supplied += $dispatchedProduct->to_supply;
                 $item_in_stock->save();
 
                 // $dispatchedProduct->transferWaybill()->delete();
@@ -100,15 +104,15 @@ class TransFerExpiredProducts extends Command
                 // $invoice_item->batches()->delete();
                 // $invoice_item->delete();
                 // $waybill_item->delete();
-                $dispatchedProduct->delete();
+                // $dispatchedProduct->delete();
             }
         }
     }
     public function handle()
     {
         //
-        // $this->returnExpiredProducts();
-        $this->checkForExpiredProduct();
-        $this->checkForNegativeTransitProduct();
+        $this->returnExpiredProducts();
+        // $this->checkForExpiredProduct();
+        // $this->checkForNegativeTransitProduct();
     }
 }

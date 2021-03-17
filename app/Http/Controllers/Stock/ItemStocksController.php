@@ -265,7 +265,12 @@ class ItemStocksController extends Controller
     public function destroy(ItemStockSubBatch $item_sub_stock)
     {
         //
-        $item_sub_stock->delete();
-        return response()->json(null, 204);
+        if ($item_sub_stock->reserved_for_supply == 0 && $item_sub_stock->in_transit == 0 && $item_sub_stock->balance == 0) {
+
+            $item_sub_stock->delete();
+
+            return response()->json(null, 204);
+        }
+        return response()->json('Entry cannot be deleted. Some transactions are tied to it', 500);
     }
 }

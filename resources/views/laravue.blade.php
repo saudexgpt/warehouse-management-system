@@ -27,13 +27,13 @@
     <meta name="theme-color" content="#ffffff">
     <link href="{{ asset('css/app.css') }}" type="text/css" rel="stylesheet" />
     {{-- <link href="{{ mix('css/app.css') }}" type="text/css" rel="stylesheet" /> --}}
-    <link rel="stylesheet" href="{{ asset('AdminLTE/bower_components/bootstrap/dist/css/bootstrap.min.css') }}">    <!-- Font Awesome -->
+    <link rel="stylesheet" href="{{ asset('dist/css/bootstrap.min.css') }}">    <!-- Font Awesome -->
 
 
-    <link rel="stylesheet" href="{{ asset('AdminLTE/bower_components/font-awesome/css/font-awesome.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('dist/font-awesome/css/font-awesome.min.css') }}">
 
     <!-- Theme style -->
-    <link rel="stylesheet" href="{{ asset('AdminLTE/dist/css/AdminLTE.css') }}">
+    <link rel="stylesheet" href="{{ asset('dist/css/AdminLTE.css') }}">
     <link href="{{ URL::asset('css/style.css') }}" type="text/css" rel="stylesheet" />
     <style>
         /* blue*/

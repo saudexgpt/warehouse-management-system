@@ -86,14 +86,14 @@
                 <td>
                   <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
                     <span v-if="batch.to_supply === waybill_item.quantity">
-                      {{ batch.item_stock_batch.batch_no }}
+                      {{ (batch.item_stock_batch) ? batch.item_stock_batch.batch_no : '' }}
                     </span>
                   </div>
                 </td>
                 <td>
                   <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
                     <span v-if="batch.to_supply === waybill_item.quantity">
-                      {{ moment(batch.item_stock_batch.expiry_date).format('MMMM Do YYYY') }}
+                      {{ (batch.item_stock_batch) ? moment(batch.item_stock_batch.expiry_date).format('MMMM Do YYYY') : '' }}
                     </span>
                   </div>
                 </td>

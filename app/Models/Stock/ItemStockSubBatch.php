@@ -11,9 +11,11 @@ use App\Models\Transfers\TransferRequestItemBatch;
 use App\Models\Warehouse\Warehouse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ItemStockSubBatch extends Model
 {
+    use SoftDeletes;
     //
     // protected static function booted()
     // {
