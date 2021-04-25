@@ -9,6 +9,8 @@
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+// api to fetch all registered products for external requests
+$router->get('get-warehouse-products', 'Stock\ItemsController@index');
 
 $router->get('hello-message', function () {
     return response()->json(['message' => 'Hello World'], 200);
