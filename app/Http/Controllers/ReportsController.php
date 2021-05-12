@@ -514,7 +514,7 @@ class ReportsController extends Controller
         }
         $outbounds = [];
 
-        $invoice_items = InvoiceItem::with(['warehouse', 'invoice.customer.user', 'item', 'waybillItems.waybill.dispatcher.vehicle.vehicleDrivers.driver.user', 'batches.itemStockBatch'])->where(['warehouse_id' => $warehouse_id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
+        $invoice_items = InvoiceItem::with(['warehouse', 'invoice.customer.user', 'item', 'waybillItems.waybill.dispatcher.vehicle.vehicleDrivers.driver.user', 'batches.itemStockBatch', 'waybillItems.dispatchProduct'])->where(['warehouse_id' => $warehouse_id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
 
         foreach ($invoice_items as $invoice_item) {
             $batches = $invoice_item->batches;
@@ -523,7 +523,9 @@ class ReportsController extends Controller
                 $batch_nos .= str_replace('(Trans)', '', $batch->itemStockBatch->batch_no);
             }
             $dispatcher = '';
+            $transit_date = '';
             foreach ($invoice_item->waybillItems as $waybillItem) {
+                $transit_date = ($waybillItem->dispatchProduct) ? $waybillItem->dispatchProduct->created_at : 'Pending';
                 if ($waybillItem->waybill->dispatcher) {
                     foreach ($waybillItem->waybill->dispatcher->vehicle->vehicleDrivers as $vehicle_driver) {
                         $dispatcher .= ($vehicle_driver->driver) ? $vehicle_driver->driver->user->name : '-';
@@ -543,10 +545,11 @@ class ReportsController extends Controller
                 'balance' => $invoice_item->quantity - $invoice_item->quantity_supplied . ' ' . $invoice_item->type, // initially set to zero
                 'date' => $invoice_item->invoice->invoice_date,
                 'status' => $invoice_item->delivery_status,
+                'transit_date' => $transit_date,
                 'delivery_date' => ($invoice_item->delivery_status === 'delivered') ? $invoice_item->updated_at : 'Pending',
             ];
         }
-        $transfer_request_items = TransferRequestItem::with(['supplyWarehouse', 'requestWarehouse', 'waybillItems', 'item', 'batches.itemStockBatch'])->where(['supply_warehouse_id' => $warehouse_id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
+        $transfer_request_items = TransferRequestItem::with(['supplyWarehouse', 'requestWarehouse', 'waybillItems.dispatchProduct', 'item', 'batches.itemStockBatch'])->where(['supply_warehouse_id' => $warehouse_id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
         foreach ($transfer_request_items as $invoice_item) {
             $batches = $invoice_item->batches;
             $batch_nos = '';
@@ -554,7 +557,9 @@ class ReportsController extends Controller
                 $batch_nos = ($batch->itemStockBatch) ? $batch->itemStockBatch->batch_no : '';
             }
             $dispatcher = '';
+            $transit_date = '';
             foreach ($invoice_item->waybillItems as $waybillItem) {
+                $transit_date = ($waybillItem->dispatchProduct) ? $waybillItem->dispatchProduct->created_at : 'Pending';
                 if ($waybillItem->waybill->dispatcher) {
                     $dispatcher = $waybillItem->waybill->dispatcher->name;
                 }
@@ -571,6 +576,7 @@ class ReportsController extends Controller
                 'balance' => $invoice_item->quantity - $invoice_item->quantity_supplied . ' ' . $invoice_item->type, // initially set to zero
                 'date' => $invoice_item->created_at,
                 'status' => $invoice_item->delivery_status,
+                'transit_date' => $transit_date,
                 'delivery_date' => ($invoice_item->delivery_status === 'delivered') ? $invoice_item->updated_at : 'Pending',
             ];
         }

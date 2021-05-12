@@ -30,6 +30,11 @@ class TransferRequestWaybillItem extends Model
     {
         return $this->belongsTo(TransferRequestItem::class, 'transfer_request_item_id', 'id');
     }
+
+    public function dispatchProduct()
+    {
+        return $this->hasOne(TransferRequestDispatchedProduct::class, 'transfer_request_waybill_item_id', 'transfer_request_waybill_item_id');
+    }
     public function createTransferRequestWaybillItems($waybill_id, $warehouse_id, $transfer_request_item)
     {
         // foreach ($transfer_request_items as $transfer_request_item) {

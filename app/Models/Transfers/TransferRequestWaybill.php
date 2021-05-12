@@ -39,6 +39,6 @@ class TransferRequestWaybill extends Model
     }
     public function dispatchProducts()
     {
-        return $this->hasMany(TransferRequestDispatchedProduct::class);
+        return $this->hasMany(TransferRequestDispatchedProduct::class, 'transfer_request_waybill_id', 'id');
     }
 }

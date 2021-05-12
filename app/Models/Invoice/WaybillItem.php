@@ -25,6 +25,10 @@ class WaybillItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
+    public function dispatchProduct()
+    {
+        return $this->hasOne(DispatchedProduct::class);
+    }
     public function invoiceItem()
     {
         return $this->belongsTo(InvoiceItem::class);

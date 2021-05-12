@@ -105,6 +105,9 @@
           <div slot="date" slot-scope="props">
             {{ moment(props.row.date).format('MMM D, YYYY') }}
           </div>
+          <div slot="transit_date" slot-scope="props">
+            {{ (props.row.transit_date != 'Pending') ? moment(props.row.transit_date).format('MMM D, YYYY') : 'Pending' }}
+          </div>
           <div slot="delivery_date" slot-scope="props">
             {{ (props.row.status === 'delivered') ? moment(props.row.delivery_date).format('MMM D, YYYY') : 'Pending' }}
           </div>
@@ -136,7 +139,7 @@ export default {
       invoice_items: [],
       invoice_statuses: [],
       currency: '',
-      columns: ['dispatcher', 'invoice_no', 'customer', 'product', 'batch_nos', 'amount', 'quantity', 'supplied', 'balance', 'date', 'status', 'delivery_date'],
+      columns: ['dispatcher', 'invoice_no', 'customer', 'product', 'batch_nos', 'amount', 'quantity', 'supplied', 'balance', 'date', 'status', 'transit_date', 'delivery_date'],
 
       options: {
         headings: {
@@ -153,8 +156,8 @@ export default {
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['invoice_no', 'customer', 'date', 'created_at', 'status', 'delivery_date'],
-        filterable: ['invoice_no', 'customer', 'date', 'created_at', 'status', 'delivery_date'],
+        sortable: ['invoice_no', 'customer', 'date', 'created_at', 'status', 'transit_date', 'delivery_date'],
+        filterable: ['invoice_no', 'customer', 'date', 'created_at', 'status', 'transit_date', 'delivery_date'],
       },
       page: {
         option: 'list',
@@ -240,8 +243,8 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Dispatcher', 'Invoice No.', 'Customer', 'Product', 'Batch No.', 'Amount', 'Quantity', 'Supplied', 'Balance', 'Date', 'Status', 'Delivery Date'];
+        const multiHeader = [[this.tableTitle, '', '', '', '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Dispatcher', 'Invoice No.', 'Customer', 'Product', 'Batch No.', 'Amount', 'Quantity', 'Supplied', 'Balance', 'Date', 'Status', 'Transit Date', 'Delivery Date'];
         const filterVal = this.columns;
         const list = this.invoice_items;
         const data = this.formatJson(filterVal, list);
@@ -260,6 +263,13 @@ export default {
       return jsonData.map(v => filterVal.map(j => {
         if (j === 'date') {
           return parseTime(v['date']);
+        }
+        if (j === 'transit_date') {
+          if (v['transit_date'] !== 'Pending') {
+            return parseTime(v['transit_date']);
+          } else {
+            return 'Pending';
+          }
         }
         if (j === 'delivery_date') {
           if (v['status'] === 'delivered') {
