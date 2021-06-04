@@ -55,7 +55,7 @@
                 <legend>Expenses details</legend>
                 <v-client-table v-model="props.row.expense_details" :columns="['vehicle_part', 'service_type', 'amount']">
                   <div slot="amount" slot-scope="{row}">
-                    {{ params.currency + parseFloat(row.amount).toLocaleString().toFixed(2) }}
+                    {{ params.currency + parseFloat(row.amount).toLocaleString() }}
                   </div>
                 </v-client-table>
               </aside>
