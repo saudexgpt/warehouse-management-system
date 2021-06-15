@@ -91,6 +91,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         $router->get('backups', 'ReportsController@backUps'); //->middleware('permission:backup database');
         $router->get('bin-card', 'ReportsController@fetchBinCard');
         $router->get('instant-balances', 'ReportsController@instantBalances');
+
+        $router->get('reserved-product-transactions/{item_in_stock}', 'ReportsController@reservedProductTransactions');
     });
     ////////////////////////////////////////////////////////////////////////////////////////
     $router->group(['prefix' => 'user'], function () use ($router) {

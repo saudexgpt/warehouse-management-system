@@ -252,9 +252,7 @@ import Resource from '@/api/resource';
 const editInvoice = new Resource('invoice/general/update');
 const necessaryParams = new Resource('fetch-necessary-params');
 const getCustomers = new Resource('fetch-customers');
-const fetchProductBatches = new Resource(
-  'stock/items-in-stock/product-batches'
-);
+const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
   // name: 'AddNewInvoice',
   props: {
@@ -389,7 +387,7 @@ export default {
           detail.quantity === '' ||
           detail.rate === null ||
           detail.tax === null ||
-          detail.total === 0
+          detail.total === 0,
       );
 
       if (checkEmptyLines.length >= 1 && this.invoice_items.length > 0) {
@@ -522,7 +520,7 @@ export default {
         const quantity = app.invoice_items[index].quantity;
         const unit_rate = app.invoice_items[index].rate;
         app.invoice_items[index].amount = parseFloat(
-          quantity * unit_rate
+          quantity * unit_rate,
         ).toFixed(2); // + parseFloat(tax);
       }
 
@@ -539,7 +537,7 @@ export default {
       // app.form.tax = total_tax.toFixed(2);
       app.form.subtotal = subtotal.toFixed(2);
       app.form.discount = parseFloat(
-        (app.discount_rate / 100) * subtotal
+        (app.discount_rate / 100) * subtotal,
       ).toFixed(2);
       // subtract discount
       app.form.amount = parseFloat(subtotal - app.form.discount).toFixed(2);

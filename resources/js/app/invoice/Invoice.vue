@@ -451,7 +451,7 @@ export default {
             return parseTime(v[j]);
           }
           return v[j];
-        })
+        }),
       );
     },
   },

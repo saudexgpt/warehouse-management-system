@@ -59,8 +59,9 @@
 
               </div>
               <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
-                {{ row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
-
+                <a @click="showReservationTransactions(row.id)">
+                  {{ row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
+                </a>
               </div>
               <div slot="in_stock" slot-scope="{row}" class="alert alert-primary">
                 {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
@@ -107,7 +108,7 @@
 
           </div>
         </el-tab-pane>
-        <el-tab-pane label="EXPIRED PRODUCTS" name="expired">
+        <!-- <el-tab-pane label="EXPIRED PRODUCTS" name="expired">
           <div class="box-header">
             <h4 class="box-title">{{ expired_title }}</h4>
 
@@ -142,10 +143,14 @@
             </v-client-table>
 
           </div>
-        </el-tab-pane>
+        </el-tab-pane> -->
       </el-tabs>
     </div>
-
+    <show-item-reservation-transactions
+      :dialog-form-visible="dialogFormVisible"
+      :transactions="transactions"
+      @close="dialogFormVisible=false"
+    />
   </div>
 </template>
 <script>
@@ -156,6 +161,7 @@ import checkRole from '@/utils/role';
 
 import AddNew from './partials/AddNew';
 import EditItem from './partials/EditItem';
+import ShowItemReservationTransactions from './ShowItemReservationTransactions';
 // import ItemDetails from './partials/ItemDetails';
 import Resource from '@/api/resource';
 // import Vue from 'vue';
@@ -165,7 +171,7 @@ const itemsInStock = new Resource('stock/items-in-stock');
 const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 const confirmItemInStock = new Resource('audit/confirm/items-in-stock');
 export default {
-  components: { AddNew, EditItem },
+  components: { AddNew, EditItem, ShowItemReservationTransactions },
   data() {
     return {
       activeActivity: 'unexpired',
@@ -248,6 +254,8 @@ export default {
       filename: 'Products in Stock',
       table_title: '',
       expired_title: '',
+      dialogFormVisible: false,
+      transactions: [],
 
     };
   },
@@ -263,6 +271,14 @@ export default {
     moment,
     checkPermission,
     checkRole,
+    showReservationTransactions(item_stock_id){
+      const transactionResource = new Resource('reports/reserved-product-transactions');
+      transactionResource.get(item_stock_id)
+        .then((response) => {
+          this.transactions = response;
+        });
+      this.dialogFormVisible = true;
+    },
     showCalendar(values){
       document.getElementById('pick_date').click();
       this.setDateRange(values);
@@ -333,8 +349,8 @@ export default {
           app.items_in_stock = response.items_in_stock;
           app.expired_products = response.expired_products;
           // app.in_warehouse = 'in ' + app.warehouses[param.warehouse_index].name;
-          app.table_title = 'Unexpired Products in ' + app.warehouses[param.warehouse_index].name + ' from: ' + app.form.from + ' to: ' + app.form.to;
-          app.expired_title = 'Expired Products in ' + app.warehouses[param.warehouse_index].name + ' from: ' + app.form.from + ' to: ' + app.form.to;
+          app.table_title = 'Unexpired Products in ' + app.warehouses[param.warehouse_index].name;/* + ' from: ' + app.form.from + ' to: ' + app.form.to;*/
+          app.expired_title = 'Expired Products in ' + app.warehouses[param.warehouse_index].name;/* + ' from: ' + app.form.from + ' to: ' + app.form.to;*/
           loader.hide();
         })
         .catch(error => {
@@ -446,22 +462,46 @@ export default {
           }
         }
         if (j === 'quantity') {
-          return v['quantity'] + ' ' + v['item']['package_type'];
+          if (v['item'] != null) {
+            return v['quantity'] + ' ' + v['item']['package_type'];
+          } else {
+            return v['quantity'];
+          }
         }
         if (j === 'in_transit') {
-          return v['in_transit'] + ' ' + v['item']['package_type'];
+          if (v['item'] != null) {
+            return v['in_transit'] + ' ' + v['item']['package_type'];
+          } else {
+            return v['in_transit'];
+          }
         }
         if (j === 'reserved_for_supply') {
-          return v['reserved_for_supply'] + ' ' + v['item']['package_type'];
+          if (v['item'] != null) {
+            return v['reserved_for_supply'] + ' ' + v['item']['package_type'];
+          } else {
+            return v['reserved_for_supply'];
+          }
         }
         if (j === 'supplied') {
-          return v['supplied'] + ' ' + v['item']['package_type'];
+          if (v['item'] != null) {
+            return v['supplied'] + ' ' + v['item']['package_type'];
+          } else {
+            return v['supplied'];
+          }
         }
         if (j === 'in_stock') {
-          return v['balance'] + ' ' + v['item']['package_type'];
+          if (v['item'] != null) {
+            return v['balance'] + ' ' + v['item']['package_type'];
+          } else {
+            return v['balance'];
+          }
         }
         if (j === 'balance') {
-          return (v['balance'] - v['reserved_for_supply']) + ' ' + v['item']['package_type'];
+          if (v['item'] != null) {
+            return (v['balance'] - v['reserved_for_supply']) + ' ' + v['item']['package_type'];
+          } else {
+            return v['balance'] - v['reserved_for_supply'];
+          }
         }
         return v[j];
       }));

@@ -832,6 +832,7 @@ class InvoicesController extends Controller
     public function generateWaybill(Request $request)
     {
         //
+        set_time_limit(0);
         $user = $this->getUser();
         $invoice_ids = $request->invoice_ids;
         // $invoice = Invoice::find($request->invoice_id);
@@ -917,6 +918,7 @@ class InvoicesController extends Controller
 
     public function updateWaybill(Request $request, $waybill_id)
     {
+        set_time_limit(0);
         $user = $this->getUser();
 
         $waybill = Waybill::find($waybill_id);

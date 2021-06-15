@@ -10,6 +10,10 @@ class InvoiceItemBatch extends Model
 {
     //
     use SoftDeletes;
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
     public function invoiceItem()
     {
         return $this->belongsTo(InvoiceItem::class);

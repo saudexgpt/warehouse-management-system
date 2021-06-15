@@ -7,6 +7,7 @@ use App\Models\Invoice\Waybill;
 use App\Models\Invoice\DeliveryTripExpense;
 use App\Models\Invoice\DispatchedProduct;
 use App\Models\Invoice\InvoiceItem;
+use App\Models\Invoice\InvoiceItemBatch;
 use App\Models\Invoice\WaybillItem;
 use App\Models\Logistics\Vehicle;
 use App\Models\Logistics\VehicleCondition;
@@ -16,6 +17,7 @@ use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Transfers\TransferRequestDispatchedProduct;
 use App\Models\Transfers\TransferRequestItem;
+use App\Models\Transfers\TransferRequestItemBatch;
 use App\Models\Transfers\TransferRequestWaybillItem;
 use App\Models\Warehouse\Warehouse;
 use App\Notification;
@@ -923,5 +925,52 @@ class ReportsController extends Controller
             $items_in_stock = array_merge($items_in_stock, $products);
         }
         return response()->json(compact('items_in_stock'), 200);
+    }
+
+    public function reservedProductTransactions(ItemStockSubBatch $item_in_stock)
+    {
+        $item_stock_sub_batch_id = $item_in_stock->id;
+        $invoice_batches = InvoiceItemBatch::where('item_stock_sub_batch_id', $item_stock_sub_batch_id)->where('quantity', '>', 0)->get();
+
+        $transfer_invoice_batches = TransferRequestItemBatch::where('item_stock_sub_batch_id', $item_stock_sub_batch_id)->where('quantity', '>', 0)->get();
+        $tranactions = [];
+        if ($invoice_batches->isNotEmpty()) {
+            foreach ($invoice_batches as $invoice_batch) {
+                //$running_balance -= $outbound->quantity_supplied;
+                if ($invoice_batch->invoiceItem) {
+                    # code...
+
+                    $waybill_items = $invoice_batch->invoiceItem->waybillItems;
+                    $tranactions[] = [
+                        'invoice_no' => $invoice_batch->invoice->invoice_number,
+                        'waybill_no' => $waybill_items[0]->waybill->waybill_no,
+                        'quantity' => $invoice_batch->quantity,
+                        'mode' => 'warehouse to customer',
+                        'customer' => $invoice_batch->invoice->customer->user->name,
+                        'date' => $invoice_batch->created_at,
+                    ];
+                }
+            }
+        }
+        if ($transfer_invoice_batches->isNotEmpty()) {
+            foreach ($transfer_invoice_batches as $transfer_invoice_batch) {
+                if ($transfer_invoice_batch->transferRequestItem) {
+                    $waybill_items = $transfer_invoice_batch->transferRequestItem->waybillItems;
+                    $tranactions[] = [
+                        'invoice_no' => $transfer_invoice_batch->transferRequest->request_number,
+                        'waybill_no' => (count($waybill_items) > 0) ? $waybill_items[0]->waybill->transfer_request_waybill_no : '',
+                        'quantity' => $transfer_invoice_batch->quantity,
+                        'mode' => 'warehouse to warehouse',
+                        'customer' => $transfer_invoice_batch->transferRequest->requestWarehouse->name,
+                        'date' => $transfer_invoice_batch->created_at,
+                    ];
+                }
+            }
+        }
+        usort($tranactions, function ($a, $b) {
+            return strtotime($a['date']) - strtotime($b['date']);
+        });
+
+        return $tranactions;
     }
 }
