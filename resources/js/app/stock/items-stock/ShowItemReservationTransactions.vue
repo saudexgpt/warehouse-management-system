@@ -1,5 +1,5 @@
 <template>
-  <el-dialog :title="'Transactions'" :visible.sync="dialogFormVisible" :before-close="closeModal">
+  <el-dialog :title="title" :visible.sync="dialogFormVisible" :before-close="closeModal">
     <div class="form-container">
       <table class="table table-bordered table-striped">
         <thead>
@@ -38,6 +38,10 @@ export default {
     transactions: {
       type: Array,
       default: () => ([]),
+    },
+    title: {
+      type: String,
+      default: () => ('Transactions'),
     },
   },
   data() {

@@ -1254,8 +1254,8 @@ class InvoicesController extends Controller
 
                 $invoice->status = $status;
                 // check for partial supplies
-                $incomplete_invoice_item = $invoice->invoiceItems()->where('supply_status', '=', 'Partial')->first();
-                if ($incomplete_invoice_item) {
+                $incomplete_invoice_item = $invoice->invoiceItems()->whereIn('supply_status', ['Partial', 'Pending'])->get();
+                if ($incomplete_invoice_item->isNotEmpty()) {
                     $invoice->status = 'partially supplied';
                 }
                 $invoice->save();
@@ -1334,6 +1334,9 @@ class InvoicesController extends Controller
         $waybill_items = $waybill->waybillItems;
         foreach ($waybill_items as $waybill_item) {
             $invoice_item = $waybill_item->invoiceItem;
+            $invoice = $invoice_item->invoice;
+            $invoice->full_waybill_generated = '0';
+            $invoice->save();
             $invoice_item->quantity_supplied = 0;
             $invoice_item->save();
             $batches = $invoice_item->batches;
@@ -1346,11 +1349,6 @@ class InvoicesController extends Controller
             $invoice_item->batches()->delete();
         }
         $waybill->waybillItems()->delete();
-        $invoices = $waybill->invoices;
-        foreach ($invoices as $invoice) {
-            $invoice->full_waybill_generated = '0';
-            $invoice->save();
-        }
         $waybill->trips()->delete();
         $waybill->dispatcher()->delete();
         $waybill->delete();

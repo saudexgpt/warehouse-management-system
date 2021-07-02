@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\UserResource;
 use App\Laravue\Models\Role;
 use App\Laravue\Models\User;
+use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceStatus;
 use App\Models\Logistics\AutomobileEngineer;
 use App\Models\Logistics\VehicleType;
@@ -51,6 +52,7 @@ class Controller extends BaseController
     {
         // $this->middleware('guest')->except('logout');
         $this->checkForNegativeTransitProduct();
+        $this->resetPartialInvoices();
     }
 
     private function checkForNegativeTransitProduct()
@@ -63,6 +65,31 @@ class Controller extends BaseController
                 $item_in_stock->in_transit = 0;
                 $item_in_stock->supplied += $in_transit;
                 $item_in_stock->save();
+            }
+        }
+    }
+    private function resetPartialInvoices()
+    {
+
+        $invoices = Invoice::where(['full_waybill_generated' => '0', 'status' => 'delivered'])->get();
+        if ($invoices->isNotEmpty()) {
+            foreach ($invoices as $invoice) {
+                $invoice->status = 'partially supplied';
+                $invoice->save();
+            }
+        }
+    }
+    private function resetSuppliedInvoices()
+    {
+
+        $invoices = Invoice::where(['full_waybill_generated' => '1', 'status' => 'partially supplied'])->get();
+        if ($invoices->isNotEmpty()) {
+            foreach ($invoices as $invoice) {
+                $incomplete_invoice_item = $invoice->invoiceItems()->whereIn('supply_status', ['Partial', 'Pending'])->get();
+                if ($incomplete_invoice_item->isEmpty()) {
+                    $invoice->status = 'delivered';
+                    $invoice->save();
+                }
             }
         }
     }

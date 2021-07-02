@@ -48,30 +48,31 @@
             <v-client-table v-model="items_in_stock" :columns="columns" :options="options">
               <div slot="quantity" slot-scope="{row}" class="alert alert-info">
                 {{ row.quantity }} {{ formatPackageType(row.item.package_type) }}
-
+                <small>({{ row.quantity/row.item.quantity_per_carton }} CTN)</small>
               </div>
               <div slot="in_transit" slot-scope="{row}" class="alert alert-warning">
                 {{ row.in_transit }} {{ formatPackageType(row.item.package_type) }}
-
+                <small>({{ row.in_transit/row.item.quantity_per_carton }} CTN)</small>
               </div>
               <div slot="supplied" slot-scope="{row}" class="alert alert-danger">
                 {{ row.supplied }} {{ formatPackageType(row.item.package_type) }}
-
+                <small>({{ row.supplied/row.item.quantity_per_carton }} CTN)</small>
               </div>
               <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
-                <a @click="showReservationTransactions(row.id)">
+                <a @click="showReservationTransactions(row)">
                   {{ row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
                 </a>
+                <small>({{ row.reserved_for_supply/row.item.quantity_per_carton }} CTN)</small>
               </div>
               <div slot="in_stock" slot-scope="{row}" class="alert alert-primary">
                 {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
-
+                <small>({{ row.balance/row.item.quantity_per_carton }} CTN)</small>
               </div>
               <div slot="balance" slot-scope="{row}" class="alert alert-success">
                 {{ (row.balance - row.reserved_for_supply) }} {{ formatPackageType(row.item.package_type) }}
-
+                <small>({{ (row.balance - row.reserved_for_supply)/row.item.quantity_per_carton }} CTN)</small>
               </div>
-              <div slot="expiry_date" slot-scope="{row}" :class="'alert alert-'+ expiryFlag(moment(row.expiry_date).format('x'))">
+              <div slot="expiry_date" slot-scope="{row}" :class="expiryFlag(moment(row.expiry_date).format('x'))">
                 <span>
                   {{ moment(row.expiry_date).fromNow() }}
                 </span>
@@ -149,6 +150,7 @@
     <show-item-reservation-transactions
       :dialog-form-visible="dialogFormVisible"
       :transactions="transactions"
+      :title="transaction_title"
       @close="dialogFormVisible=false"
     />
   </div>
@@ -256,6 +258,7 @@ export default {
       expired_title: '',
       dialogFormVisible: false,
       transactions: [],
+      transaction_title: '',
 
     };
   },
@@ -271,13 +274,16 @@ export default {
     moment,
     checkPermission,
     checkRole,
-    showReservationTransactions(item_stock_id){
+    showReservationTransactions(item_stock){
       const transactionResource = new Resource('reports/reserved-product-transactions');
-      transactionResource.get(item_stock_id)
+      const loader = transactionResource.loaderShow();
+      this.transaction_title = 'Reservations of ' + item_stock.item.name + ' (' + item_stock.batch_no + ')';
+      transactionResource.get(item_stock.id)
         .then((response) => {
           this.transactions = response;
+          this.dialogFormVisible = true;
+          loader.hide();
         });
-      this.dialogFormVisible = true;
     },
     showCalendar(values){
       document.getElementById('pick_date').click();
@@ -387,11 +393,15 @@ export default {
       const product_expiry_date_alert = this.product_expiry_date_alert_in_months;
       const min_expiration = parseInt(product_expiry_date_alert * 30 * 24 * 60 * 60 * 1000); // we use 30 days for one month to calculate
       const today = parseInt(this.moment().valueOf()); // Unix Timestamp (miliseconds) 1.6.0+
+      if (parseInt(date) < today) {
+        // console.log(parseInt(date) - today);
+        return 'expired-bg'; // flag expiry date as red
+      }
       if (parseInt(date) - today <= min_expiration) {
         // console.log(parseInt(date) - today);
-        return 'danger'; // flag expiry date as red
+        return 'alert-bg'; // flag expiry date as red
       }
-      return 'success'; // flag expiry date as green
+      return 'okay-bg'; // flag expiry date as green
     },
     formatPackageType(type){
       // var formated_type = type + 's';
@@ -518,5 +528,32 @@ export default {
 td {
   padding: 0px !important;
 }
-
+.alert-bg{
+		color: #fff;
+		padding: 10px;
+		display: inline-block;
+		border-radius: 5px;
+    -webkit-animation: blinkingBackground 1s infinite;  /* Safari 4+ */
+    -moz-animation: blinkingBackground 1s infinite;  /* Fx 5+ */
+    -o-animation: blinkingBackground 1s infinite;  /* Opera 12+ */
+    animation: blinkingBackground 1s infinite;  /* IE 10+, Fx 29+ */
+	}
+	@keyframes blinkingBackground{
+		0%, 79%		{ background-color: #33d45b;}
+		80%, 100%	{ background-color: #000000;}
+	}
+  .okay-bg{
+		color: #fff;
+		padding: 10px;
+		display: inline-block;
+		border-radius: 5px;
+		background-color: #33d45b;
+	}
+  .expired-bg{
+		color: #fff;
+		padding: 10px;
+		display: inline-block;
+		border-radius: 5px;
+		background-color: #000000;
+	}
 </style>
