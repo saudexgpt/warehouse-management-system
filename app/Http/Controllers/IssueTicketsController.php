@@ -44,6 +44,13 @@ class IssueTicketsController extends Controller
         if ($ticket->save()) {
             $ticket->ticket_no = $this->getUniqueNo('#', $ticket->id);
             $ticket->save();
+
+            $title = "Issue Ticket Raised";
+            $description = $request->title . " was made by $user->name ($user->email)";
+
+            //log this activity
+            $roles = [];
+            $this->logUserActivity($title, $description, $roles);
             return 'success';
         }
         return 'failed';

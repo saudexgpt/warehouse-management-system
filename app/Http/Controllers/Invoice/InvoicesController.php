@@ -1325,6 +1325,7 @@ class InvoicesController extends Controller
     }
     public function deleteWaybill(Waybill $waybill)
     {
+        set_time_limit(0);
         // delete all relationships with waybill and the waybill itself
         $actor = $this->getUser();
         $title = "Waybill deleted";
