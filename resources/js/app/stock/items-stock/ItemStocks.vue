@@ -48,29 +48,29 @@
             <v-client-table v-model="items_in_stock" :columns="columns" :options="options">
               <div slot="quantity" slot-scope="{row}" class="alert alert-info">
                 {{ row.quantity }} {{ formatPackageType(row.item.package_type) }}
-                <small>({{ row.quantity/row.item.quantity_per_carton }} CTN)</small>
+                <br><small v-html="showItemsInCartons(row.quantity, row.item.quantity_per_carton)" />
               </div>
               <div slot="in_transit" slot-scope="{row}" class="alert alert-warning">
                 {{ row.in_transit }} {{ formatPackageType(row.item.package_type) }}
-                <small>({{ row.in_transit/row.item.quantity_per_carton }} CTN)</small>
+                <br><small v-html="showItemsInCartons(row.in_transit, row.item.quantity_per_carton)" />
               </div>
               <div slot="supplied" slot-scope="{row}" class="alert alert-danger">
                 {{ row.supplied }} {{ formatPackageType(row.item.package_type) }}
-                <small>({{ row.supplied/row.item.quantity_per_carton }} CTN)</small>
+                <br><small v-html="showItemsInCartons(row.supplied, row.item.quantity_per_carton)" />
               </div>
               <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
                 <a @click="showReservationTransactions(row)">
                   {{ row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
                 </a>
-                <small>({{ row.reserved_for_supply/row.item.quantity_per_carton }} CTN)</small>
+                <br><small v-html="showItemsInCartons(row.reserved_for_supply, row.item.quantity_per_carton)" />
               </div>
               <div slot="in_stock" slot-scope="{row}" class="alert alert-primary">
                 {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
-                <small>({{ row.balance/row.item.quantity_per_carton }} CTN)</small>
+                <br><small v-html="showItemsInCartons(row.balance, row.item.quantity_per_carton)" />
               </div>
               <div slot="balance" slot-scope="{row}" class="alert alert-success">
                 {{ (row.balance - row.reserved_for_supply) }} {{ formatPackageType(row.item.package_type) }}
-                <small>({{ (row.balance - row.reserved_for_supply)/row.item.quantity_per_carton }} CTN)</small>
+                <br><small v-html="showItemsInCartons(row.balance - row.reserved_for_supply, row.item.quantity_per_carton)" />
               </div>
               <div slot="expiry_date" slot-scope="{row}" :class="expiryFlag(moment(row.expiry_date).format('x'))">
                 <span>
@@ -94,16 +94,37 @@
                 <div v-if="props.row.is_warehouse_transfered === 0">
                   <a v-if="checkPermission(['manage item stocks', 'update item stocks'])" class="btn btn-primary" @click="itemInStock=props.row; selected_row_index=props.index; page.option = 'edit_item'"><i class="fa fa-edit" /> </a>
                   <a v-if="checkPermission(['manage item stocks', 'delete item stocks']) && props.row.reserved_for_supply == 0 && props.row.in_transit == 0 && props.row.balance == 0" class="btn btn-danger" @click="confirmDelete(props.index, props)"><i class="fa fa-trash" /> </a>
+                  <el-dropdown
+                    class="avatar-container right-menu-item hover-effect"
+                    trigger="click"
+                  >
+                    <el-tooltip content="Request for Quantity Update" placement="top">
+                      <el-button class="btn btn-warning" icon="el-icon-document" />
+                    </el-tooltip>
+                    <el-dropdown-menu slot="dropdown" style="padding: 10px;">
+                      Quantity update request for: <br> {{ props.row.item.name }} ({{ props.row.batch_no }})<br>
+                      <el-input
+                        v-model="new_stock_quantity"
+                        placeholder="Enter new stock quantity"
+                        type="number"
+                        min="0"
+                        style="width: 100%;"
+                      />
+                      <a class="btn btn-success" @click="createTicket(props.row)">Submit</a>
+                      <el-dropdown-item divided>Close</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </el-dropdown>
 
                 </div>
-                <div v-else>
+                <!-- <div v-else>
                   <a v-if="checkPermission(['manage item stocks', 'update item stocks'])" class="btn btn-dark"><i class="fa fa-edit" /> </a>
                   <a v-if="checkPermission(['manage item stocks', 'delete item stocks'])" class="btn btn-dark"><i class="fa fa-trash" /> </a>
-                </div>
+                </div> -->
 
                 <!-- <a class="btn btn-default" @click="itemInStock=props.row; page.option = 'view_details'"><i class="fa fa-eye" /> </a> -->
                 <!-- <a class="btn btn-warning" @click="itemInStock=props.row; selected_row_index=props.index; page.option = 'edit_item'"><i class="fa fa-edit" /> </a>
             <a class="btn btn-danger" @click="confirmDelete(props)"><i class="fa fa-trash" /> </a> -->
+
               </div>
             </v-client-table>
 
@@ -153,17 +174,24 @@
       :title="transaction_title"
       @close="dialogFormVisible=false"
     />
+    <!-- <create-issue-ticket
+      :ticket-form-visible="ticketFormVisible"
+      :issue-details="issue_details"
+      @close="ticketFormVisible=false"
+    /> -->
   </div>
 </template>
 <script>
 import moment from 'moment';
 import { parseTime } from '@/utils';
 import checkPermission from '@/utils/permission';
+import showItemsInCartons from '@/utils/functions';
 import checkRole from '@/utils/role';
 
 import AddNew from './partials/AddNew';
 import EditItem from './partials/EditItem';
 import ShowItemReservationTransactions from './ShowItemReservationTransactions';
+// import CreateIssueTicket from '@/app/tickets/CreateTicket';
 // import ItemDetails from './partials/ItemDetails';
 import Resource from '@/api/resource';
 // import Vue from 'vue';
@@ -173,6 +201,7 @@ const itemsInStock = new Resource('stock/items-in-stock');
 const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 const confirmItemInStock = new Resource('audit/confirm/items-in-stock');
 export default {
+  name: 'ItemStocks',
   components: { AddNew, EditItem, ShowItemReservationTransactions },
   data() {
     return {
@@ -235,7 +264,6 @@ export default {
       page: {
         option: 'list',
       },
-      params: {},
       form: {
         warehouse_id: '',
         warehouse_index: '',
@@ -257,12 +285,18 @@ export default {
       table_title: '',
       expired_title: '',
       dialogFormVisible: false,
+      ticketFormVisible: false,
       transactions: [],
       transaction_title: '',
+      new_stock_quantity: null,
 
     };
   },
-
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   created() {
     // this.getWarehouse();
     this.fetchNecessaryParams();
@@ -274,6 +308,7 @@ export default {
     moment,
     checkPermission,
     checkRole,
+    showItemsInCartons,
     showReservationTransactions(item_stock){
       const transactionResource = new Resource('reports/reserved-product-transactions');
       const loader = transactionResource.loaderShow();
@@ -284,6 +319,32 @@ export default {
           this.dialogFormVisible = true;
           loader.hide();
         });
+    },
+    createTicket(item_stock) {
+      const new_stock_quantity = this.new_stock_quantity;
+      if (new_stock_quantity > 0) {
+        const title = 'Quantity update request for ' + item_stock.item.name + ' with batch no ' + item_stock.batch_no;
+        const details = 'Please sir,  kindly update the quantity of ' + item_stock.item.name + ' with batch no ' + item_stock.batch_no + ' from ' + item_stock.quantity + ' to ' + new_stock_quantity;
+        const createTicket = new Resource('ticket/create-ticket');
+        const param = {
+          title: title,
+          details: details,
+          table_name: 'item_stock_sub_batches',
+          table_id: item_stock.id,
+          new_quantity: new_stock_quantity,
+          old_quantity: item_stock.quantity,
+        };
+        const loader = createTicket.loaderShow();
+        createTicket.store(param)
+          .then(() => {
+            loader.hide();
+            this.new_stock_quantity = null;
+          });
+      }
+      // this.issue_details.title = 'Request for Update on Product Stocked Quantity';
+      // this.issue_details.details = item_stock;
+      // console.log(item_stock);
+      // this.ticketFormVisible = true;
     },
     showCalendar(values){
       document.getElementById('pick_date').click();
@@ -314,8 +375,9 @@ export default {
       const loader = necessaryParams.loaderShow();
       necessaryParams.list()
         .then(response => {
-          app.params = response.params;
-          app.warehouses = response.params.warehouses;
+          const params = response.params;
+          app.$store.dispatch('app/setNecessaryParams', params);
+          app.warehouses = params.warehouses;
           if (app.warehouses.length > 0) {
             app.form.warehouse_id = app.warehouses[0];
             app.form.warehouse_index = 0;
@@ -328,7 +390,7 @@ export default {
             app.fetchItemStocks();
             loader.hide();
           }
-          app.product_expiry_date_alert_in_months = response.params.product_expiry_date_alert;
+          app.product_expiry_date_alert_in_months = params.product_expiry_date_alert;
         });
     },
     confirmItemStocked(stock_id) {

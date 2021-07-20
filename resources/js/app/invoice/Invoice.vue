@@ -203,6 +203,7 @@ import { parseTime } from '@/utils';
 import Resource from '@/api/resource';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
+
 import InvoiceDetails from './Details';
 import EditInvoice from './partials/EditInvoice';
 const necessaryParams = new Resource('fetch-necessary-params');
@@ -221,7 +222,7 @@ export default {
   },
   data() {
     return {
-      params: {},
+      // params: {},
       warehouses: [],
       invoices: [],
       invoice_statuses: [],
@@ -302,7 +303,11 @@ export default {
       filename: 'Invoices',
     };
   },
-
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   mounted() {
     this.fetchNecessaryParams();
   },
@@ -322,15 +327,16 @@ export default {
     fetchNecessaryParams() {
       const app = this;
       necessaryParams.list().then(response => {
-        app.params = response.params;
-        app.warehouses = response.params.warehouses;
-        app.invoice_statuses = response.params.invoice_statuses;
-        app.currency = response.params.currency;
-        if (app.warehouses.length > 0) {
-          app.form.warehouse_id = app.warehouses[0];
-          app.form.warehouse_index = 0;
-          app.getInvoices();
-        }
+        const params = response.params;
+        app.$store.dispatch('app/setNecessaryParams', params);
+        app.warehouses = app.params.warehouses;
+        app.invoice_statuses = app.params.invoice_statuses;
+        app.currency = app.params.currency;
+        // if (app.warehouses.length > 0) {
+        //   app.form.warehouse_id = app.warehouses[0];
+        //   app.form.warehouse_index = 0;
+        //   app.getInvoices();
+        // }
       });
     },
     format(date) {

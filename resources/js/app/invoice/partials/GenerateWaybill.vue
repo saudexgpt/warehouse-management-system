@@ -246,7 +246,6 @@ export default {
 
   data() {
     return {
-      params: {},
       form: {
         warehouse_id: '',
         waybill_no: '',
@@ -273,6 +272,11 @@ export default {
       loading: false,
       disabled: false,
     };
+  },
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
   },
   created() {
     this.fetchNecessaryParams();
@@ -304,8 +308,9 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list().then((response) => {
-        app.params = response.params;
+      necessaryParams.list().then(response => {
+        const params = response.params;
+        app.$store.dispatch('app/setNecessaryParams', params);
       });
     },
     displayInvoiceitems() {

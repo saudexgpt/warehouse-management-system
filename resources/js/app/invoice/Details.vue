@@ -115,17 +115,17 @@
                     <!-- <td>{{ invoice_item.item.description }}</td> -->
                     <td>
                       {{ invoice_item.quantity }} {{ invoice_item.type }}
-                      <small>({{ invoice_item.quantity/invoice_item.quantity_per_carton }} CTN)</small>
+                      <br><small v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton)" />
                     </td>
                     <td>
                       {{ invoice_item.quantity_supplied }}
                       {{ invoice_item.type }}
-                      <small>({{ invoice_item.quantity_supplied/invoice_item.quantity_per_carton }} CTN)</small>
+                      <br><small v-html="showItemsInCartons(invoice_item.quantity_supplied, invoice_item.quantity_per_carton)" />
                     </td>
                     <td>
                       {{ invoice_item.quantity - invoice_item.quantity_supplied }}
                       {{ invoice_item.type }}
-                      <small>({{ (invoice_item.quantity - invoice_item.quantity_supplied) / invoice_item.quantity_per_carton }} CTN)</small>
+                      <br><small v-html="showItemsInCartons(invoice_item.quantity - invoice_item.quantity_supplied, invoice_item.quantity_per_carton)" />
                     </td>
                     <td align="right">
                       {{
@@ -246,6 +246,7 @@ import moment from 'moment';
 import { parseTime } from '@/utils';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
+import showItemsInCartons from '@/utils/functions';
 // import NewWaybill from './partials/NewWaybill';
 import Resource from '@/api/resource';
 const confirmInvoiceDetailsResource = new Resource('audit/confirm/invoice');
@@ -291,6 +292,7 @@ export default {
   methods: {
     checkPermission,
     checkRole,
+    showItemsInCartons,
     moment,
     doPrint() {
       window.print();

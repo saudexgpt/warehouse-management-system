@@ -16,5 +16,6 @@ const getters = {
   notifications: state => state.user.notifications,
   permissionRoutes: state => state.permission.routes,
   addRoutes: state => state.permission.addRoutes,
+  params: state => state.app.params,
 };
 export default getters;

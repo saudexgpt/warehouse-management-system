@@ -104,7 +104,7 @@
                 <el-col>
                   <div style="overflow: auto">
                     <label for>Products</label>
-                    <table class="table table-binvoiceed">
+                    <table class="table table-bordered">
                       <thead>
                         <tr>
                           <th />
@@ -156,7 +156,7 @@
                               min="1"
                               @input="calculateTotal(index); calculateNoOfCartons(index)"
                             />
-                            ({{ invoice_item.no_of_cartons }} CTN)
+                            <br><small v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton)" />
                           </td>
                           <td>
                             <el-input
@@ -284,6 +284,7 @@
 import moment from 'moment';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
+import showItemsInCartons from '@/utils/functions';
 import AddNewCustomer from '@/app/users/AddNewCustomer';
 import BulkInvoiceUpload from './BulkInvoiceUpload';
 import Resource from '@/api/resource';
@@ -306,7 +307,6 @@ export default {
         },
       },
       upload_type: 'normal',
-      params: {},
       customers: [],
       customer_types: [],
       items_in_stock_dialog: false,
@@ -390,6 +390,11 @@ export default {
       discount_rate: 0,
     };
   },
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   watch: {
     invoice_items() {
       this.blockRemoval = this.invoice_items.length <= 1;
@@ -404,6 +409,7 @@ export default {
     moment,
     checkPermission,
     checkRole,
+    showItemsInCartons,
     addLine(index) {
       this.fill_fields_error = false;
 
@@ -445,8 +451,9 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list().then((response) => {
-        app.params = response.params;
+      necessaryParams.list().then(response => {
+        const params = response.params;
+        app.$store.dispatch('app/setNecessaryParams', params);
       });
     },
     fetchCustomers() {
@@ -474,9 +481,11 @@ export default {
               message: 'Invoice Created Successfully!!!',
               type: 'success',
             });
+            const warehouse_id = app.form.warehouse_id;
             app.form = app.empty_form;
+            app.form.warehouse_id = warehouse_id;
             app.invoice_items = app.form.invoice_items;
-            app.$router.push({ name: 'Invoices' });
+            // app.$router.push({ name: 'Invoices' });
             load.hide();
           })
           .catch((error) => {

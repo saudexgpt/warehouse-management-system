@@ -9,6 +9,7 @@ const state = {
   device: 'desktop',
   language: getLanguage(),
   size: Cookies.get('size') || 'medium',
+  params: {},
 };
 
 const mutations = {
@@ -37,6 +38,9 @@ const mutations = {
     state.size = size;
     Cookies.set('size', size);
   },
+  SET_PARAMS: (state, params) => {
+    state.params = params;
+  },
 };
 
 const actions = {
@@ -54,6 +58,10 @@ const actions = {
   },
   setSize({ commit }, size) {
     commit('SET_SIZE', size);
+  },
+
+  setNecessaryParams({ commit }, params) {
+    commit('SET_PARAMS', params);
   },
 };
 

@@ -59,13 +59,13 @@
                 format="yyyy/MM/dd"
                 value-format="yyyy-MM-dd"
               />
-              <label for="">Quantity</label>
+              <!-- <label for="">Quantity</label>
               <el-input
                 v-model="form.quantity"
                 placeholder="Quantity"
                 class="span"
                 @change="checkUpdatedQuantity()"
-              />
+              /> -->
             </el-col>
           </el-row>
           <el-row :gutter="2" class="padded">
@@ -132,10 +132,8 @@ export default {
     moment,
     editProduct() {
       const app = this;
-      if (
-        app.form.quantity >= app.initial_stock ||
-        itemInStock.balance === app.initial_stock
-      ) {
+      const itemInStock = app.itemInStock;
+      if (app.form.quantity >= app.initial_stock || itemInStock.balance === app.initial_stock) {
         const load = updateProduct.loaderShow();
         var form = app.form;
         form.expiry_date = app.moment(form.expiry_date).format('LLL');

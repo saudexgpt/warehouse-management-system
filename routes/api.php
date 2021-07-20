@@ -62,7 +62,15 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
     $router->get('fetch-necessary-params', 'Controller@fetchNecessayParams');
     $router->get('fetch-customers', 'Controller@fetchCustomers');
     $router->post('upload-file', 'Controller@uploadFile');
-
+    $router->group(['prefix' => 'ticket'], function () use ($router) {
+        //customer
+        $router->get('/', 'IssueTicketsController@index');
+        $router->get('pending-tickets', 'IssueTicketsController@pendingTickets');
+        $router->get('my-tickets', 'IssueTicketsController@myTickets');
+        $router->post('create-ticket', 'IssueTicketsController@createTicket');
+        $router->post('approve-ticket', 'IssueTicketsController@approveTicket');
+        $router->delete('delete-ticket/{ticket}', 'IssueTicketsController@deleteTicket');
+    });
     $router->group(['prefix' => 'dashboard'], function () use ($router) {
         //customer
         $router->group(['prefix' => 'admin'], function () use ($router) {

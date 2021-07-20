@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\UserResource;
+use App\IssueTicket;
 use App\Laravue\Models\Role;
 use App\Laravue\Models\User;
 use App\Models\Invoice\Invoice;
@@ -223,5 +224,18 @@ class Controller extends BaseController
         // $activity_log->action = $action;
         // $activity_log->user_type = $user->roles[0]->name;
         // $activity_log->save();
+    }
+    public function getUniqueNo($prefix, $next_no)
+    {
+        $no_of_digits = 5;
+
+        $digit_of_next_no = strlen($next_no);
+        $unused_digit = $no_of_digits - $digit_of_next_no;
+        $zeros = '';
+        for ($i = 1; $i <= $unused_digit; $i++) {
+            $zeros .= '0';
+        }
+
+        return $prefix . $zeros . $next_no;
     }
 }

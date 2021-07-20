@@ -190,7 +190,6 @@ export default {
       page: {
         option: 'list',
       },
-      params: {},
       form: {
         warehouse_index: '',
         warehouse_id: '',
@@ -216,7 +215,11 @@ export default {
 
     };
   },
-
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   created() {
     this.fetchNecessaryParams();
   },
@@ -232,17 +235,22 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list()
-        .then(response => {
-          app.params = response.params;
-          app.warehouses = response.params.warehouses;
-          app.currency = response.params.currency;
-          if (app.warehouses.length > 0) {
-            app.form.warehouse_id = app.warehouses[0];
-            app.form.warehouse_index = 0;
-            app.getWaybills();
-          }
-        });
+      necessaryParams.list().then(response => {
+        const params = response.params;
+        app.$store.dispatch('app/setNecessaryParams', params);
+        app.warehouses = app.params.warehouses;
+        app.currency = app.params.currency;
+        if (app.warehouses.length > 0) {
+          app.form.warehouse_id = app.warehouses[0];
+          app.form.warehouse_index = 0;
+          app.getWaybills();
+        }
+        // if (app.warehouses.length > 0) {
+        //   app.form.warehouse_id = app.warehouses[0];
+        //   app.form.warehouse_index = 0;
+        //   app.getInvoices();
+        // }
+      });
     },
     format(date) {
       var month = date.toLocaleString('en-US', { month: 'short' });

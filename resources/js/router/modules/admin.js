@@ -10,15 +10,23 @@ const adminRoutes = {
   meta: {
     title: 'administrator',
     icon: 'el-icon-setting',
-    permissions: ['view menu administrator'],
+    roles: ['admin', 'assistant admin'],
   },
   children: [
     /** User managements */
     {
+      path: 'tickets',
+      component: () => import('@/app/tickets'),
+      name: 'Tickets',
+      // meta: { title: 'userProfile', noCache: true, permissions: ['manage user'] },
+      meta: { title: 'Issue Tickets', icon: 'el-icon-document', roles: ['admin'] },
+    },
+    {
       path: 'users/edit/:id(\\d+)',
       component: () => import('@/app/users/UserProfile'),
       name: 'UserProfile',
-      meta: { title: 'userProfile', noCache: true, permissions: ['manage user'] },
+      // meta: { title: 'userProfile', noCache: true, permissions: ['manage user'] },
+      meta: { title: 'userProfile', noCache: true, roles: ['admin'] },
       hidden: true,
     },
     {
@@ -31,7 +39,8 @@ const adminRoutes = {
       path: 'users',
       component: () => import('@/app/users/List'),
       name: 'UserList',
-      meta: { title: 'users', icon: 'el-icon-user', permissions: ['manage user'] },
+      // meta: { title: 'users', icon: 'el-icon-user', permissions: ['manage user'] },
+      meta: { title: 'users', icon: 'el-icon-user', roles: ['admin'] },
     },
     /** Role and permission */
     {

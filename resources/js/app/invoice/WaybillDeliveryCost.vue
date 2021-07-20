@@ -302,7 +302,6 @@ export default {
       page: {
         option: 'list',
       },
-      params: {},
       form: {
         warehouse_index: '',
         warehouse_id: '',
@@ -330,7 +329,11 @@ export default {
       extra_waybill_id: null,
     };
   },
-
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   created() {
     this.fetchNecessaryParams();
   },
@@ -344,10 +347,11 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list().then((response) => {
-        app.params = response.params;
-        app.warehouses = response.params.warehouses;
-        app.currency = response.params.currency;
+      necessaryParams.list().then(response => {
+        const params = response.params;
+        app.$store.dispatch('app/setNecessaryParams', params);
+        app.warehouses = params.warehouses;
+        app.currency = params.currency;
         if (app.warehouses.length > 0) {
           app.form.warehouse_id = app.warehouses[0];
           app.form.warehouse_index = 0;

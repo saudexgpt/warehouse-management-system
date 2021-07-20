@@ -8,7 +8,7 @@ const permissionRoutes = {
   meta: {
     title: 'Warehouse',
     icon: 'el-icon-office-building',
-    roles: ['admin'],
+    roles: ['admin', 'assistant admin'],
     // permissions: ['manage warehouse'],
   },
   children: [
