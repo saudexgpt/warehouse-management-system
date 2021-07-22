@@ -146,6 +146,11 @@
                                 :label="item.name"
                               />
                             </el-select>
+                            <br><small>Total In Stocked: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
+
+                            <br><small>Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
+
+                            <br><small>Total Balance: {{ invoice_item.total_stocked - invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
                           </td>
                           <td>
                             <el-input
@@ -429,7 +434,6 @@ export default {
       } else {
         // if (this.invoice_items.length > 0)
         //     this.invoice_items[index].grade = '';
-
         this.invoice_items.push({
           item_index: null,
           item_id: '',
@@ -439,6 +443,8 @@ export default {
           amount: 0,
           batches: [],
           batches_of_items_in_stock: [],
+          total_stocked: null,
+          total_invoiced_quantity: null,
         });
       }
     },
@@ -576,6 +582,8 @@ export default {
         app.invoice_items[index].batches_of_items_in_stock =
           response.batches_of_items_in_stock;
         app.invoice_items[index].batches = [];
+        app.invoice_items[index].total_stocked = (response.total_balance) ? response.total_balance.total_balance : 0;
+        app.invoice_items[index].total_invoiced_quantity = (response.total_invoiced_quantity) ? response.total_invoiced_quantity.total_invoiced : 0;
       });
     },
     showItemsInStock(index) {

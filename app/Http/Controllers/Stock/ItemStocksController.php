@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Stock;
 
 use App\Http\Controllers\Controller;
+use App\Models\Invoice\InvoiceItem;
 use App\Models\Stock\ExpiredProduct;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStock;
@@ -55,7 +56,12 @@ class ItemStocksController extends Controller
         $warehouse_id = $request->warehouse_id;
         $item_id = $request->item_id;
         $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->get();
-        return response()->json(compact('batches_of_items_in_stock'));
+
+        $total_balance = ItemStockSubBatch::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->select(\DB::raw('SUM(balance) as total_balance'))->first();
+
+        $total_invoiced_quantity = InvoiceItem::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('quantity - quantity_supplied > 0')->select(\DB::raw('SUM(quantity - quantity_supplied) as total_invoiced'))->first();
+
+        return response()->json(compact('batches_of_items_in_stock', 'total_balance', 'total_invoiced_quantity'));
     }
 
     /*public function productBatches(Request $request)
