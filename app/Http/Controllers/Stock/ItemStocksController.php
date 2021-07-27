@@ -209,8 +209,8 @@ class ItemStocksController extends Controller
             $item_stock_sub_batch = new ItemStockSubBatch();
             $item_stock_sub_batch->stocked_by = $user->id;
             $item_stock_sub_batch->warehouse_id = $request->warehouse_id;
-            $item_stock_sub_batch->item_id = $request->item_id;
-            $item_stock_sub_batch->batch_no = $request->batch_no;
+            $item_stock_sub_batch->item_id = $batch['item_id'];
+            $item_stock_sub_batch->batch_no = $batch['batch_no'];
             $item_stock_sub_batch->sub_batch_no = $batch['batch_no'];
             $item_stock_sub_batch->quantity = $batch['quantity'];
             $item_stock_sub_batch->reserved_for_supply = 0;

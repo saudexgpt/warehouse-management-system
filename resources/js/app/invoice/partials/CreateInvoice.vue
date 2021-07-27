@@ -146,11 +146,11 @@
                                 :label="item.name"
                               />
                             </el-select>
-                            <br><small>Total In Stocked: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
+                            <br><small class="label label-primary">Total In Stocked: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
 
-                            <br><small>Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
+                            <br><small class="label label-danger">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
 
-                            <br><small>Total Balance: {{ invoice_item.total_stocked - invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
+                            <br><small class="label label-success">Total Balance: {{ invoice_item.total_stocked - invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
                           </td>
                           <td>
                             <el-input
@@ -265,7 +265,7 @@
                 <el-col :xs="24" :sm="6" :md="6">
                   <el-button type="success" @click="addNewInvoice">
                     <i class="el-icon-plus" />
-                    Create Invoice
+                    Submit Invoice
                   </el-button>
                 </el-col>
               </el-row>

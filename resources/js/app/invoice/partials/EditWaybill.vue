@@ -3,62 +3,10 @@
     <div>
       <div class="box">
         <div class="box-header">
-          <h4 class="box-title">Edit Waybill</h4>
+          <h4 class="box-title">Edit Waybill : {{ form.waybill_no }}</h4>
         </div>
         <div class="box-body">
           <el-form ref="form" :model="form" label-width="120px">
-            <el-row :gutter="5" class="padded">
-              <el-col :xs="24" :sm="12" :md="12">
-                <label for="">Select Warehouse</label>
-                <el-select
-                  v-model="form.warehouse_id"
-                  placeholder="Select Warehouse"
-                  filterable
-                  class="span"
-                  @change="fetchUndeliveredInvoices()"
-                >
-                  <el-option
-                    v-for="(warehouse, warehouse_index) in params.warehouses"
-                    :key="warehouse_index"
-                    :value="warehouse.id"
-                    :label="warehouse.name"
-                  />
-                </el-select>
-              </el-col>
-              <el-col :xs="24" :sm="12" :md="12">
-                <label for="">Search Invoice</label>
-                <small>(Only confirmed invoice by auditors will be displayed for waybilling)</small>
-                <el-select
-                  v-model="selected_invoice"
-                  placeholder="Select Invoice"
-                  filterable
-                  class="span"
-                  multiple
-                  collapse-tags
-                  @input="displayInvoiceitems()"
-                >
-                  <el-option
-                    v-for="(invoice, invoice_index) in invoices"
-                    :key="invoice_index"
-                    :value="invoice_index"
-                    :label="
-                      invoice.customer
-                        ? invoice.customer.user.name +
-                          '[ ' +
-                          invoice.invoice_number +
-                          '] '
-                        : invoice.invoice_number
-                    "
-                  />
-                </el-select>
-              </el-col>
-              <!-- <el-col :xs="24" :sm="2" :md="2">
-                <br>
-                <el-button type="success" @click="displayInvoiceitems()"><i class="el-icon-plus" />
-                  Generate Waybill
-                </el-button>
-              </el-col> -->
-            </el-row>
             <el-row :gutter="2" class="padded">
               <el-col>
                 <div style="overflow: auto">
@@ -68,111 +16,47 @@
                       <tr>
                         <th />
                         <th>Product</th>
-                        <th>Order</th>
+                        <th>Invoice Quantity</th>
+                        <th>Waybill Quantity</th>
                         <!-- <th>Batch(es)</th> -->
-                        <th>Specify Batch(es)</th>
-                        <th>Supplied</th>
-                        <th>Balance</th>
-                        <th>To Supply</th>
+                        <th>New Waybill Quantity</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody v-if="waybill_items.length > 0">
                       <tr>
-                        <td colspan="3" />
-                        <td><label>BN / Quantity</label></td>
-                        <td colspan="3" />
+                        <td colspan="4" />
+                        <td><small>Must NOT be more than the maximum quantity</small></td>
                       </tr>
                       <tr
-                        v-for="(invoice_item, index) in invoice_items"
+                        v-for="(waybill_item, index) in waybill_items"
                         :key="index"
                       >
                         <td>{{ index + 1 }}</td>
-                        <td>{{ invoice_item.item.name }}</td>
+                        <td>{{ waybill_item.item.name }}</td>
                         <td>
-                          {{ invoice_item.quantity }}
+                          {{ waybill_item.invoice_item.quantity }}
                           {{
-                            formatPackageType(invoice_item.item.package_type)
+                            formatPackageType(waybill_item.item.package_type)
                           }}
                         </td>
                         <td>
-                          <el-select
-                            v-model="invoice_item.batches"
-                            placeholder="Specify product batch for this supply"
-                            filterable
-                            class="span"
-                            multiple
-                            collapse-tags
-                          >
-                            <el-option
-                              v-for="(batch, batch_index) in invoice_item.item
-                                .stocks"
-                              :key="batch_index"
-                              :value="batch.id"
-                              :label="
-                                batch.batch_no + ' | ' + batch.expiry_date
-                              "
-                            >
-                              <span style="float: left">{{
-                                batch.batch_no + ' | ' + batch.expiry_date
-                              }}</span>
-                              <span
-                                style="
-                                  float: right;
-                                  color: #8492a6;
-                                  font-size: 13px;
-                                "
-                              >({{
-                                batch.balance - batch.reserved_for_supply
-                              }})</span>
-                            </el-option>
-                          </el-select>
-                        </td>
-
-                        <td>
+                          {{ waybill_item.quantity }}
                           {{
-                            invoice_item.quantity_supplied +
-                              ' (' +
-                              invoice_item.delivery_status +
-                              ')'
+                            formatPackageType(waybill_item.item.package_type)
                           }}
                         </td>
                         <td>
-                          <div class="alert alert-danger">
-                            {{
-                              invoice_item.quantity -
-                                invoice_item.quantity_supplied
-                            }}
-                          </div>
-                        </td>
-                        <td>
-                          <div v-if="invoice_item.supply_bal > 0">
-                            <input
-                              v-model="invoice_item.quantity_for_supply"
-                              class="form-control"
+                          <div>
+                            <el-input-number
+                              v-model="waybill_item.quantity"
                               placeholder="Set Quantity for Supply"
                               type="number"
-                              :max="invoice_item.supply_bal"
-                              min="0"
-                              @change="checkForOverflow(invoice_item.supply_bal, invoice_item.quantity_supplied, index)"
-                            >
-                            <!-- <el-select
-                              v-model="invoice_item.quantity_for_supply"
-                              placeholder="Set Quantity for Supply"
-                              filterable
-                              class="span"
-                            >
-                              <el-option value="0" label="0" />
-                              <el-option
-                                v-for="(quantity,
-                                quantity_index) in invoice_item.supply_bal"
-                                :key="quantity_index"
-                                :value="quantity"
-                                :label="quantity"
-                              />
-                            </el-select> -->
-                          </div>
-                          <div v-else>
-                            <el-radio v-if="invoice_item.quantity_supplied > 0" v-model="invoice_item.quantity_for_supply" :label="invoice_item.quantity_supplied" :value="invoice_item.quantity_supplied" border checked />
+                              :max="maximumQuantity(waybill_item.invoice_item, waybill_item)"
+                              :min="0"
+                              @input="checkForOverflow(waybill_item.quantity, index)"
+                            />
+                            <br>
+                            <small>Maximum modifiable quantity: {{ maximumQuantity(waybill_item.invoice_item, waybill_item) }}</small>
                           </div>
                         </td>
                       </tr>
@@ -238,7 +122,6 @@ import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 
 import Resource from '@/api/resource';
-const unDeliveredInvoices = new Resource('invoice/waybill/undelivered-invoices');
 // const availableVehicles = new Resource('invoice/waybill/fetch-available-vehicles');
 const updateWaybillResource = new Resource('invoice/waybill/update');
 const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
@@ -268,10 +151,11 @@ export default {
         dispatch_company: 'GREEN LIFE LOGISTICS',
         status: 'pending',
         invoice_ids: [],
+        waybill_items: [],
       },
       invoices: [],
       selected_invoice: [],
-      invoice_items: [],
+      waybill_items: [],
       available_vehicles: [],
       batches_of_items_in_stock: [],
       rules: {
@@ -290,8 +174,8 @@ export default {
   },
   created() {
     this.form = this.waybill;
-    // this.selected_invoice = this.waybill.invoices;
-    this.fetchUndeliveredInvoices();
+    this.waybill_items = this.waybill.waybill_items;
+    this.processInvoiceItems();
   },
   methods: {
     // moment,
@@ -307,96 +191,39 @@ export default {
         return response.batches_of_items_in_stock;
       });
     },
-    fetchUndeliveredInvoices(index) {
+    processInvoiceItems() {
       const app = this;
-      const param = {
-        warehouse_id: app.form.warehouse_id,
-      };
-      const loader = unDeliveredInvoices.loaderShow();
-      unDeliveredInvoices.list(param).then((response) => {
-        app.invoices = response.invoices;
-        app.invoices.unshift(...app.waybill.invoices);
-        loader.hide();
-        if (app.waybill.invoices.length > 0) {
-          var selected_invoices = app.waybill.invoices;
-          for (let index = 0; index < selected_invoices.length; index++) {
-            app.selected_invoice.push(index);
-          }
-          app.displayInvoiceitems();
-          // var selected_invoice = app.selected_invoice;
-          // var invoice_items = [];
-          // var invoice_ids = [];
-          // // app.loading = true;
-          // for (let index = 0; index < selected_invoice.length; index++) {
-          //   const invoice = selected_invoice[index];
-          //   invoice_items.push(...invoice.invoice_items);
-          //   invoice_ids.push(invoice.id);
-          // }
-          // app.processInvoiceItems(invoice_items, invoice_ids);
-        }
-        // app.fetchAvailableDrivers();
+      app.waybill_items.forEach((waybill_item) => {
+        waybill_item.old_quantity = waybill_item.quantity;
       });
     },
-    processInvoiceItems(invoice_items, invoice_ids) {
+    checkForOverflow(new_quantity, index) {
       const app = this;
-      invoice_items.forEach((invoice_item) => {
-        var total_batch_balance = 0;
-        var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied;
-        var stocks = invoice_item.item.stocks;
+      const waybill_item = app.waybill_items[index];
+      const product = app.waybill_items[index].item.name;
+      const package_type = app.waybill_items[index].item.package_type;
+      const max_quantity = app.maximumQuantity(waybill_item.invoice_item, waybill_item);
+      if (new_quantity > max_quantity) {
+        app.$alert('Make sure you DO NOT exceed ' + max_quantity + ' ' + package_type + ' for ' + product);
+        app.waybill_items[index].quantity = max_quantity;
+      }
+    },
+    maximumQuantity(invoice_item, waybill_item){
+      var waybill_quantity = waybill_item.old_quantity;
+      var order_quantity = invoice_item.quantity;
+      var stocks = waybill_item.item.stocks;
 
-        stocks.forEach((stock_batch) => {
-          total_batch_balance +=
+      var total_batch_balance = parseInt(waybill_quantity);
+      stocks.forEach((stock_batch) => {
+        total_batch_balance +=
             parseInt(stock_batch.balance) -
-            parseInt(stock_batch.reserved_for_supply);
-        });
-
-        invoice_item.supply_bal = supply_bal;
-        invoice_item.quantity_for_supply = supply_bal;
-        if (supply_bal > total_batch_balance) {
-          invoice_item.supply_bal = total_batch_balance;
-          invoice_item.quantity_for_supply = total_batch_balance;
-        }
-        invoice_item.total_batch_balance = total_batch_balance;
+            (parseInt(stock_batch.reserved_for_supply));
       });
-      app.invoice_items = invoice_items;
-      app.form.invoice_ids = invoice_ids;
-    },
-    displayInvoiceitems() {
-      const app = this;
-      var selected_invoice = app.selected_invoice;
-      var invoice_items = [];
-      var invoice_ids = [];
-      // app.loading = true;
-      for (let index = 0; index < selected_invoice.length; index++) {
-        const element = selected_invoice[index];
-        invoice_items.push(...app.invoices[element].invoice_items);
-        invoice_ids.push(app.invoices[element].id);
+      if (total_batch_balance > order_quantity) {
+        return order_quantity;
       }
-      app.processInvoiceItems(invoice_items, invoice_ids);
-      // console.log(invoice_items);
-
-      // app.loading = false;
+      return total_batch_balance;
     },
-    checkForOverflow(to_supply, supplied, index) {
-      const app = this;
-      const limit = parseInt(to_supply) + parseInt(supplied);
-      const value = app.invoice_items[index].quantity_for_supply;
-      const product = app.invoice_items[index].item.name;
-      const package_type = app.invoice_items[index].item.package_type;
-      if (value > limit) {
-        app.$alert('Make sure you DO NOT exceed ' + limit + ' ' + package_type + ' for ' + product);
-        app.invoice_items[index].quantity_for_supply = limit;
-      }
-    },
-    // fetchAvailableDrivers(){
-    //   const app = this;
-    //   var form = app.form;
-    //   availableVehicles
-    //     .list(form)
-    //     .then(response => {
-    //       app.available_vehicles = response.available_vehicles;
-    //     });
-    // },
     updateWaybill() {
       this.$refs['form'].validate((valid) => {
         if (valid) {
@@ -411,7 +238,7 @@ export default {
           )
             .then(() => {
               const loader = updateWaybillResource.loaderShow();
-              this.form.invoice_items = this.invoice_items;
+              this.form.waybill_items = this.waybill_items;
               this.disabled = true;
               updateWaybillResource
                 .update(this.form.id, this.form)

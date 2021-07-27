@@ -23,19 +23,19 @@
 
                 </el-select>
 
-                <label for="">Select Product</label>
+                <!-- <label for="">Select Product</label>
                 <el-select v-model="form.item_id" placeholder="Select Product" filterable class="span">
                   <el-option v-for="(item, index) in params.items" :key="index" :value="item.id" :label="item.name" />
 
-                </el-select>
+                </el-select> -->
               </el-col>
-              <el-col :xs="24" :sm="12" :md="12">
+              <!-- <el-col :xs="24" :sm="12" :md="12">
                 <label for="">Batch No.</label>
                 <el-input v-model="form.batch_no" placeholder="Batch No." class="span" />
                 <label for="">Goods Received Number (GRN)</label>
                 <el-input v-model="form.goods_received_note" placeholder="GRN" class="span" />
 
-              </el-col>
+              </el-col> -->
             </el-row>
           </el-form>
         </aside>
@@ -47,10 +47,11 @@
                 <thead>
                   <tr>
                     <th />
-                    <th>Sub Batch No.</th>
+                    <th>Product</th>
+                    <th>Batch No.</th>
+                    <th>GRN</th>
                     <th>Quantity</th>
                     <th>Expiry Date</th>
-                    <th>GRN</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -62,16 +63,22 @@
                       </span>
                     </td>
                     <td>
+                      <el-select v-model="sub_batch.item_id" placeholder="Select Product" filterable class="span">
+                        <el-option v-for="(item, item_index) in params.items" :key="item_index" :value="item.id" :label="item.name" />
+
+                      </el-select>
+                    </td>
+                    <td>
                       <el-input v-model="sub_batch.batch_no" type="text" outline placeholder="Batch No." />
+                    </td>
+                    <td>
+                      <el-input v-model="sub_batch.goods_received_note" type="text" outline placeholder="GRN" />
                     </td>
                     <td>
                       <el-input v-model="sub_batch.quantity" type="number" outline placeholder="Quantity" min="1" />
                     </td>
                     <td>
                       <el-date-picker v-model="sub_batch.expiry_date" type="date" outline format="yyyy/MM/dd" value-format="yyyy-MM-dd" />
-                    </td>
-                    <td>
-                      <el-input v-model="sub_batch.goods_received_note" type="text" outline placeholder="GRN" />
                     </td>
                   </tr>
                   <tr v-if="fill_fields_error">
@@ -84,8 +91,8 @@
         </el-row>
         <el-row :gutter="2" class="padded">
           <el-col :xs="24" :sm="6" :md="6">
-            <el-button type="success" @click="addProductToStock"><i class="el-icon-plus" />
-              Add
+            <el-button type="success" @click="addProductToStock"><i class="el-icon-upload" />
+              Submit
             </el-button>
           </el-col>
         </el-row>
@@ -135,6 +142,7 @@ export default {
           {
             quantity: '',
             batch_no: '',
+            item_id: '',
             expiry_date: '',
             goods_received_note: null,
           },
@@ -151,6 +159,7 @@ export default {
           {
             quantity: '',
             batch_no: '',
+            item_id: '',
             expiry_date: '',
             goods_received_note: null,
           },
@@ -175,7 +184,7 @@ export default {
     addLine(index) {
       this.fill_fields_error = false;
 
-      const checkEmptyLines = this.sub_batches.filter(detail => detail.quantity === '' || detail.batch_no === '' || detail.expiry_date === '');
+      const checkEmptyLines = this.sub_batches.filter(detail => detail.quantity === '' || detail.batch_no === '' || detail.expiry_date === '' || detail.item_id === '');
 
       if (checkEmptyLines.length >= 1 && this.sub_batches.length > 0) {
         this.fill_fields_error = true;
@@ -186,6 +195,7 @@ export default {
         //     this.sub_batches[index].grade = '';
 
         this.sub_batches.push({
+          item_id: '',
           quantity: '',
           batch_no: '',
           expiry_date: '',

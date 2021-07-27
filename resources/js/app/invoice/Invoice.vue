@@ -17,7 +17,7 @@
             @input="getInvoices"
           >
             <el-option
-              v-for="(warehouse, index) in warehouses"
+              v-for="(warehouse, index) in params.warehouses"
               :key="index"
               :value="index"
               :label="warehouse.name"

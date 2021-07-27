@@ -7,7 +7,7 @@
         <el-col :xs="24" :sm="8" :md="8">
           <label for="">Select Warehouse</label>
           <el-select v-model="form.warehouse_index" placeholder="Select Warehouse" class="span" filterable @input="getWaybills">
-            <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="index" :label="warehouse.name" />
+            <el-option v-for="(warehouse, index) in params.warehouses" :key="index" :value="index" :label="warehouse.name" />
 
           </el-select>
 

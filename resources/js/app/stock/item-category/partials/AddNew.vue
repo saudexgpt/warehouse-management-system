@@ -20,7 +20,7 @@
           <el-row :gutter="2" class="padded">
             <el-col :xs="24" :sm="2" :md="2" class="el-col-xs-offset-1 el-col-sm-offset-2 el-col-md-offset-6">
               <el-button type="success" @click="addCategory">
-                Add
+                Submit
               </el-button>
             </el-col>
           </el-row>

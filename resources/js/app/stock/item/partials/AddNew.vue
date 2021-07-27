@@ -76,8 +76,8 @@
           </el-row>
           <el-row :gutter="2" class="padded">
             <el-col :xs="24" :sm="6" :md="6">
-              <el-button type="success" @click="addProduct"><i class="el-icon-plus" />
-                Add
+              <el-button type="success" @click="addProduct"><i class="el-icon-upload" />
+                Submit
               </el-button>
             </el-col>
           </el-row>

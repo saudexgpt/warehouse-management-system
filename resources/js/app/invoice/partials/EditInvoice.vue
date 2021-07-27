@@ -3,7 +3,7 @@
     <div>
       <div v-if="params" class="box">
         <div class="box-header">
-          <h4 class="box-title">Create New Invoice</h4>
+          <h4 class="box-title">Edit Invoice</h4>
         </div>
         <div class="box-body">
           <el-form ref="form" :model="form" label-width="120px">
