@@ -124,7 +124,7 @@ class Controller extends BaseController
         $items = Item::with(['taxes', 'price'])->orderBy('name')->get();
         $currencies = Currency::get();
         $taxes = Tax::get();
-        $order_statuses = OrderStatus::get();
+        //$order_statuses = OrderStatus::get();
         $invoice_statuses = InvoiceStatus::get();
         $company_name = $this->settingValue('company_name');
         $company_contact = $this->settingValue('company_contact');
@@ -142,7 +142,7 @@ class Controller extends BaseController
         $default_roles = Role::where('role_type', 'default')->orderBy('name')->select('name')->get();
 
         return response()->json([
-            'params' => compact('company_name', 'company_contact', 'all_warehouses', 'warehouses', 'items', 'currencies', 'taxes', 'order_statuses', 'invoice_statuses', 'currency', 'vehicle_types', 'engine_types', 'expense_types', 'package_types', 'automobile_engineers', 'all_roles', 'default_roles', 'product_return_reasons', 'product_expiry_date_alert', 'teams', 'dispatch_companies')
+            'params' => compact('company_name', 'company_contact', 'all_warehouses', 'warehouses', 'items', 'currencies', 'taxes', /*'order_statuses',*/ 'invoice_statuses', 'currency', 'vehicle_types', 'engine_types', 'expense_types', 'package_types', 'automobile_engineers', 'all_roles', 'default_roles', 'product_return_reasons', 'product_expiry_date_alert', 'teams', 'dispatch_companies')
         ]);
     }
     public function settingValue($key)

@@ -197,6 +197,26 @@
                 </div>
 
               </div>
+              <div slot="vehicle_no" slot-scope="props">
+                {{ props.row.vehicle_no }}
+
+                <el-select
+                  v-if="props.row.dispatch_company === 'GREENLIFE LOGISTICS'"
+                  v-model="props.row.vehicle_no"
+                  placeholder="Select Vehicle"
+                  class="span"
+                  filterable
+                  @input="changeVehicle(props.index, props.row, $event)"
+                >
+                  <el-option
+                    v-for="(vehicle, vehicle_index) in vehicles"
+                    :key="vehicle_index"
+                    :value="vehicle.id"
+                    :label="vehicle.plate_no"
+                  />
+                </el-select>
+
+              </div>
               <div slot="dispatchers" slot-scope="props">
                 <div v-if="props.row.dispatchers == null">
                   <div v-for="(vehicle_driver, index) in props.row.vehicle.vehicle_drivers" :key="index">
@@ -258,6 +278,7 @@ const fetchWaybillExpenses = new Resource('invoice/waybill/expenses');
 const addWaybillExpenses = new Resource('invoice/waybill/add-waybill-expenses');
 const detachWaybillFromTrip = new Resource('invoice/waybill/detach-waybill-from-trip');
 const addWaybillToTripResource = new Resource('invoice/waybill/add-waybill-to-trip');
+const changeTripVehicleResource = new Resource('invoice/waybill/change-trip-vehicle');
 const confirmDeliveryCostResource = new Resource('audit/confirm/delivery-cost');
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 export default {
@@ -327,6 +348,7 @@ export default {
       downloadLoading: false,
       filename: 'Delivery Cost',
       extra_waybill_id: null,
+      changed_vehicle: '',
     };
   },
   computed: {
@@ -507,6 +529,16 @@ export default {
             message: 'Action canceled',
           });
         });
+    },
+    changeVehicle(index, delivery_trip, event) {
+      const app = this;
+      const param = {
+        vehicle_id: event,
+        delivery_trip_id: delivery_trip.id,
+      };
+      changeTripVehicleResource.store(param).then((response) => {
+        app.delivery_trips[index - 1] = response.delivery_trip;
+      });
     },
     resetForm() {
       this.new_waybill_expense = {

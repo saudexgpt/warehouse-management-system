@@ -1105,6 +1105,27 @@ class InvoicesController extends Controller
         $this->logUserActivity($title, $description, $roles);
         return $this->showDeliveryTrip($delivery_trip->id, $delivery_trip->warehouse_id);
     }
+    public function changeTripVehicle(Request $request)
+    {
+        $actor = $this->getUser();
+        $vehicle_id = $request->vehicle_id;
+        $vehicle = Vehicle::find($vehicle_id);
+        $delivery_trip_id = $request->delivery_trip_id;
+        $delivery_trip = DeliveryTrip::find($delivery_trip_id);
+        $old_number = $delivery_trip->vehicle_no;
+        $delivery_trip->vehicle_id = $vehicle_id;
+        $delivery_trip->vehicle_no = $vehicle->plate_no;
+        $delivery_trip->save();
+
+        $title = "Trip vehicle changed";
+        $description = "Vehicle no.: $old_number was changed to " . $vehicle->plate_no . " for trip no.: " . $delivery_trip->trip_no . " by $actor->name ($actor->phone)";
+        //log this activity
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+
+        $this->logUserActivity($title, $description, $roles);
+        $delivery_trip = $delivery_trip->with('cost.confirmer', 'waybills', 'vehicle.vehicleDrivers.driver.user')->find($delivery_trip->id);
+        return response()->json(compact('delivery_trip'), 200);
+    }
     public function detachWaybillFromTrip(Request $request)
     {
         $waybill_id = $request->waybill_id;

@@ -491,7 +491,7 @@ export default {
             app.form = app.empty_form;
             app.form.warehouse_id = warehouse_id;
             app.invoice_items = app.form.invoice_items;
-            // app.$router.push({ name: 'Invoices' });
+            app.$router.push({ name: 'Invoices' });
             load.hide();
           })
           .catch((error) => {

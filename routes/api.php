@@ -163,6 +163,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
             $router->post('add-waybill-to-trip', 'InvoicesController@addWaybillToTrip')->middleware('permission:manage waybill cost');
 
+            $router->post('change-trip-vehicle', 'InvoicesController@changeTripVehicle')->middleware('permission:manage waybill cost');
+
             $router->delete('delete/{waybill}', 'InvoicesController@deleteWaybill')->middleware('permission:delete pending waybill');
 
             $router->group(['middleware' => 'permission:manage waybill|generate waybill'], function () use ($router) {
