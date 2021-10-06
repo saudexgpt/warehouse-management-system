@@ -9,7 +9,7 @@ const state = {
   device: 'desktop',
   language: getLanguage(),
   size: Cookies.get('size') || 'medium',
-  params: {},
+  params: null,
 };
 
 const mutations = {

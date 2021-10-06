@@ -461,6 +461,12 @@ export default {
         const params = response.params;
         app.$store.dispatch('app/setNecessaryParams', params);
       });
+      if (app.params === null) {
+        necessaryParams.list().then(response => {
+          const params = response.params;
+          app.$store.dispatch('app/setNecessaryParams', params);
+        });
+      }
     },
     fetchCustomers() {
       const app = this;

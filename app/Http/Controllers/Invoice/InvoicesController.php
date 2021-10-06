@@ -403,7 +403,7 @@ class InvoicesController extends Controller
             $q->where('supply_status', '!=', 'Complete');
         }, 'invoiceItems.item.stocks' => function ($p) use ($warehouse_id) {
             $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id)->where('confirmed_by', '!=', null);
-        }])->where('warehouse_id', $warehouse_id)->where('full_waybill_generated', '0')->where('confirmed_by', '!=', null)->orderBy('id', 'DESC')->get();
+        }])->where('warehouse_id', $warehouse_id)->where('status', '!=', 'delivered')/*->where('full_waybill_generated', '0')*/->where('confirmed_by', '!=', null)->orderBy('id', 'DESC')->get();
         return response()->json(compact('invoices', 'waybill_no'), 200);
     }
 
@@ -625,37 +625,36 @@ class InvoicesController extends Controller
                     $quantity -= $real_balance;
                 }
             }
-        } else {
-            if ($quantity > 0) {
-                // If a specific batch was NOT set when raising the invoice, we make it automatic here using FIFO (First In First Out) principle
-                $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $invoice_item->invoice->warehouse_id, 'item_id' => $invoice_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->get();
+        }
+        if ($quantity > 0) {
+            // If a specific batch was NOT set when raising the invoice, we make it automatic here using FIFO (First In First Out) principle
+            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $invoice_item->invoice->warehouse_id, 'item_id' => $invoice_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->get();
 
-                foreach ($batches_of_items_in_stock as $item_sub_batch) {
-                    $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
-                    if ($quantity <= $real_balance) {
-                        $invoice_item_batch = new InvoiceItemBatch();
-                        $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
-                        $invoice_item_batch->invoice_item_id = $invoice_item->id;
-                        $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
-                        $invoice_item_batch->to_supply = $quantity;
-                        $invoice_item_batch->quantity = $quantity;
-                        $invoice_item_batch->save();
-                        $item_sub_batch->reserved_for_supply += $quantity;
-                        $item_sub_batch->save();
-                        $quantity = 0;
-                        break;
-                    } else {
-                        $invoice_item_batch = new InvoiceItemBatch();
-                        $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
-                        $invoice_item_batch->invoice_item_id = $invoice_item->id;
-                        $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
-                        $invoice_item_batch->to_supply = $real_balance;
-                        $invoice_item_batch->quantity = $real_balance;
-                        $invoice_item_batch->save();
-                        $item_sub_batch->reserved_for_supply += $real_balance;
-                        $item_sub_batch->save();
-                        $quantity -= $real_balance;
-                    }
+            foreach ($batches_of_items_in_stock as $item_sub_batch) {
+                $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
+                if ($quantity <= $real_balance) {
+                    $invoice_item_batch = new InvoiceItemBatch();
+                    $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
+                    $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                    $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
+                    $invoice_item_batch->to_supply = $quantity;
+                    $invoice_item_batch->quantity = $quantity;
+                    $invoice_item_batch->save();
+                    $item_sub_batch->reserved_for_supply += $quantity;
+                    $item_sub_batch->save();
+                    $quantity = 0;
+                    break;
+                } else {
+                    $invoice_item_batch = new InvoiceItemBatch();
+                    $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
+                    $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                    $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
+                    $invoice_item_batch->to_supply = $real_balance;
+                    $invoice_item_batch->quantity = $real_balance;
+                    $invoice_item_batch->save();
+                    $item_sub_batch->reserved_for_supply += $real_balance;
+                    $item_sub_batch->save();
+                    $quantity -= $real_balance;
                 }
             }
         }

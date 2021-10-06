@@ -85,16 +85,18 @@
                 </td>
                 <td>
                   <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
-                    <span v-if="batch.to_supply === waybill_item.quantity">
+                    {{ (batch.item_stock_batch) ? batch.item_stock_batch.batch_no : '' }},<br>
+                    <!-- <span v-if="batch.to_supply === waybill_item.quantity">
                       {{ (batch.item_stock_batch) ? batch.item_stock_batch.batch_no : '' }}
-                    </span>
+                    </span> -->
                   </div>
                 </td>
                 <td>
                   <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
-                    <span v-if="batch.to_supply === waybill_item.quantity">
+                    <!-- <span v-if="batch.to_supply === waybill_item.quantity">
                       {{ (batch.item_stock_batch) ? moment(batch.item_stock_batch.expiry_date).format('MMMM Do YYYY') : '' }}
-                    </span>
+                    </span> -->
+                    {{ (batch.item_stock_batch) ? moment(batch.item_stock_batch.expiry_date).format('MMMM Do YYYY') : '' }},<br>
                   </div>
                 </td>
                 <!-- <td align="right">{{ currency + Number(waybill_item.rate).toLocaleString() }}</td>

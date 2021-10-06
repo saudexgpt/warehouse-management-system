@@ -14,8 +14,11 @@ use App\Http\Resources\UserResource;
 use App\IssueTicket;
 use App\Laravue\Models\Role;
 use App\Laravue\Models\User;
+use App\Models\Invoice\DispatchedProduct;
 use App\Models\Invoice\Invoice;
+use App\Models\Invoice\InvoiceItemBatch;
 use App\Models\Invoice\InvoiceStatus;
+use App\Models\Invoice\WaybillItem;
 use App\Models\Logistics\AutomobileEngineer;
 use App\Models\Logistics\VehicleType;
 use App\Models\Order\OrderStatus;
@@ -55,7 +58,128 @@ class Controller extends BaseController
         $this->checkForNegativeTransitProduct();
         $this->resetPartialInvoices();
     }
+    public function resolveIncompleteSupplies()
+    {
+        $dispatch_products = DispatchedProduct::groupBy('waybill_item_id')->select('*',  \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->where('created_at', '>=', '2021-05-01')->get();
 
+        foreach ($dispatch_products as $dispatch_product) {
+            if ((int) $dispatch_product->total_quantity_supplied < $dispatch_product->waybillItem->quantity) {
+
+                $waybill_item = $dispatch_product->waybillItem;
+                $item_id = $waybill_item->invoiceItem->item_id;
+                $invoice_item = $waybill_item->invoiceItem;
+                $balance = $dispatch_product->waybillItem->quantity - (int) $dispatch_product->total_quantity_supplied;
+                echo $dispatch_product;
+                // $stock = ItemStockSubBatch::where(['warehouse_id' => $dispatch_product->warehouse_id, 'item_id' => $item_id])->where('balance', '>=', $balance)->first();
+                // if ($stock) {
+                //     $invoice_item_batch = new InvoiceItemBatch();
+                //     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
+                //     $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                //     $invoice_item_batch->item_stock_sub_batch_id = $stock->id;
+                //     $invoice_item_batch->to_supply = $balance;
+                //     $invoice_item_batch->quantity = 0;
+                //     $invoice_item_batch->save();
+
+                //     if ($dispatch_product->status === 'on transit') {
+                //         $stock->in_transit += $balance;
+                //     } else {
+                //         $stock->supplied += $balance;
+                //     }
+                //     $stock->balance -= $balance;
+                //     $stock->save();
+
+                //     $new_dispatch_product = new DispatchedProduct();
+                //     $new_dispatch_product->warehouse_id = $dispatch_product->warehouse_id;
+                //     $new_dispatch_product->item_stock_sub_batch_id = $stock->id;
+                //     $new_dispatch_product->waybill_id = $waybill_item->waybill_id;
+                //     $new_dispatch_product->waybill_item_id = $waybill_item->id;
+                //     $new_dispatch_product->quantity_supplied = $balance;
+                //     $new_dispatch_product->remitted = 1;
+                //     $new_dispatch_product->instant_balance = $stock->balance;
+                //     $new_dispatch_product->status = $dispatch_product->status;
+                //     $new_dispatch_product->save();
+
+                //     echo 'done';
+                // } else {
+                //     $stocks = ItemStockSubBatch::where(['warehouse_id' => $dispatch_product->warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->get();
+                //     $quantity = $balance;
+                //     foreach ($stocks as $stock) {
+
+                //         $real_balance = $stock->balance - $stock->reserved_for_supply;
+                //         if ($quantity > 0) {
+                //             # code...
+
+                //             if ($quantity >= $real_balance) {
+                //                 $invoice_item_batch = new InvoiceItemBatch();
+                //                 $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
+                //                 $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                //                 $invoice_item_batch->item_stock_sub_batch_id = $stock->id;
+                //                 $invoice_item_batch->to_supply = $real_balance;
+                //                 $invoice_item_batch->quantity = 0;
+                //                 $invoice_item_batch->save();
+
+                //                 if ($dispatch_product->status === 'on transit') {
+                //                     $stock->in_transit += $real_balance;
+                //                 } else {
+                //                     $stock->supplied += $real_balance;
+                //                 }
+                //                 $stock->balance -= $real_balance;
+                //                 $stock->save();
+
+                //                 $new_dispatch_product = new DispatchedProduct();
+                //                 $new_dispatch_product->warehouse_id = $dispatch_product->warehouse_id;
+                //                 $new_dispatch_product->item_stock_sub_batch_id = $stock->id;
+                //                 $new_dispatch_product->waybill_id = $waybill_item->waybill_id;
+                //                 $new_dispatch_product->waybill_item_id = $waybill_item->id;
+                //                 $new_dispatch_product->quantity_supplied = $real_balance;
+                //                 $new_dispatch_product->remitted = 1;
+                //                 $new_dispatch_product->instant_balance = $stock->balance;
+                //                 $new_dispatch_product->status = $dispatch_product->status;
+                //                 $new_dispatch_product->save();
+
+                //                 $quantity -= $real_balance;
+                //             } else {
+                //                 $invoice_item_batch = new InvoiceItemBatch();
+                //                 $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
+                //                 $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                //                 $invoice_item_batch->item_stock_sub_batch_id = $stock->id;
+                //                 $invoice_item_batch->to_supply = $quantity;
+                //                 $invoice_item_batch->quantity = 0;
+                //                 $invoice_item_batch->save();
+
+                //                 if ($dispatch_product->status === 'on transit') {
+                //                     $stock->in_transit += $quantity;
+                //                 } else {
+                //                     $stock->supplied += $quantity;
+                //                 }
+                //                 $stock->balance -= $quantity;
+                //                 $stock->save();
+
+                //                 $new_dispatch_product = new DispatchedProduct();
+                //                 $new_dispatch_product->warehouse_id = $dispatch_product->warehouse_id;
+                //                 $new_dispatch_product->item_stock_sub_batch_id = $stock->id;
+                //                 $new_dispatch_product->waybill_id = $waybill_item->waybill_id;
+                //                 $new_dispatch_product->waybill_item_id = $waybill_item->id;
+                //                 $new_dispatch_product->quantity_supplied = $quantity;
+                //                 $new_dispatch_product->remitted = 1;
+                //                 $new_dispatch_product->instant_balance = $stock->balance;
+                //                 $new_dispatch_product->status = $dispatch_product->status;
+                //                 $new_dispatch_product->save();
+
+                //                 $quantity -= $quantity;
+                //             }
+                //         }
+                //     }
+                // }
+            }
+        }
+        // WaybillItem::chunk(200, function ($waybill_items) {
+        //     foreach ($waybill_items as $waybill_item) {
+        //         $dispatch_products = DispatchedProduct::groupBy('waybill_item_id')->where('waybill_item_id', $waybill_item->id)->select('*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->get();
+        //         print_r($dispatch_products);
+        //     }
+        // });
+    }
     private function checkForNegativeTransitProduct()
     {
 

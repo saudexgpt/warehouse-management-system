@@ -213,6 +213,7 @@ const fetchInvoices = new Resource('invoice/general');
 const cancelInvoiceResource = new Resource('invoice/general/cancel');
 const deleteInvoiceResource = new Resource('invoice/general/delete');
 export default {
+  name: 'Invoices',
   components: { InvoiceDetails, EditInvoice, Pagination },
   props: {
     canCreateNewInvoice: {
@@ -326,18 +327,25 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list().then(response => {
-        const params = response.params;
-        app.$store.dispatch('app/setNecessaryParams', params);
-        app.warehouses = app.params.warehouses;
-        app.invoice_statuses = app.params.invoice_statuses;
-        app.currency = app.params.currency;
+      if (app.params === null) {
+        necessaryParams.list().then(response => {
+          const params = response.params;
+          app.$store.dispatch('app/setNecessaryParams', params);
+          app.warehouses = app.params.warehouses;
+          app.invoice_statuses = app.params.invoice_statuses;
+          app.currency = app.params.currency;
         // if (app.warehouses.length > 0) {
         //   app.form.warehouse_id = app.warehouses[0];
         //   app.form.warehouse_index = 0;
         //   app.getInvoices();
         // }
-      });
+        });
+      } else {
+        const params = app.params;
+        app.warehouses = params.warehouses;
+        app.invoice_statuses = params.invoice_statuses;
+        app.currency = params.currency;
+      }
     },
     format(date) {
       var month = date.toLocaleString('en-US', { month: 'short' });

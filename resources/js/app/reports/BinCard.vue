@@ -107,9 +107,6 @@ export default {
       items: [],
       bincards: [],
       currency: '',
-      params: {
-        company_name: '',
-      },
       columns: ['date', 'invoice_no', 'waybill_grn', 'in', 'out', 'balance', 'physical_quantity', 'sign'],
 
       product_name: '',
@@ -138,7 +135,11 @@ export default {
       packaging: '',
     };
   },
-
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   mounted() {
     this.fetchNecessaryParams();
   },
@@ -167,7 +168,7 @@ export default {
       const app = this;
       necessaryParams.list().then((response) => {
         const params = response.params;
-        app.params = params;
+        app.$store.dispatch('app/setNecessaryParams', params);
         app.warehouses = params.warehouses;
         app.form.warehouse_id = params.warehouses[0].id;
         app.form.warehouse_index = 0;
