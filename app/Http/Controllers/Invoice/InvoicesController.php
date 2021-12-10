@@ -896,10 +896,12 @@ class InvoicesController extends Controller
         $invoice_nos = [];
         foreach ($invoice_ids as $invoice_id) {
             $invoice = Invoice::find($invoice_id);
-            if (!in_array($invoice_id, $partial_waybill_generated)) {
+            if (in_array($invoice_id, $partial_waybill_generated)) {
+                $invoice->full_waybill_generated = '0';
+            } else {
                 $invoice->full_waybill_generated = '1';
-                $invoice->save();
             }
+            $invoice->save();
             $title = "Waybill Generated";
             $description = "Waybill ($waybill->waybill_no) generated for invoice ($invoice->invoice_number) by $user->name ($user->email)";
             //log this action to invoice history
@@ -920,8 +922,10 @@ class InvoicesController extends Controller
         set_time_limit(0);
         $user = $this->getUser();
         $waybill = Waybill::find($waybill_id);
+        $invoices = $waybill->invoices;
         // we fetch previous waybill items
         $waybill_items = json_decode(json_encode($request->waybill_items));
+        $partial_waybill_generated = [];
         foreach ($waybill_items as $waybill_item) {
             // we want to get all invoice item for this waybill item and deduct what was reserved
             $old_quantity = $waybill_item->old_quantity;
@@ -933,13 +937,13 @@ class InvoicesController extends Controller
             $invoice_item->quantity_supplied += $diff; // add the differnce between the new and former quantity
             $invoice_item->save();
 
-            $invoice = Invoice::find($invoice_item->invoice_id);
+            // $invoice = Invoice::find($invoice_item->invoice_id);
             if ($invoice_item->quantity > $invoice_item->quantity_supplied) {
-                $invoice->full_waybill_generated = '0';
-            } else {
-                $invoice->full_waybill_generated = '1';
+                $partial_waybill_generated[] = $invoice_item->invoice_id;
+                // $invoice->full_waybill_generated = '0';
             }
-            $invoice->save();
+
+            // $invoice->save();
             // we wanna get and remove all reserved products
 
             $waybill_quantity = $waybill_item->quantity;
@@ -957,7 +961,14 @@ class InvoicesController extends Controller
             // delete the waybill item
             // $waybill_item->delete();
         }
-
+        foreach ($invoices as $invoice) {
+            if (in_array($invoices->id, $partial_waybill_generated)) {
+                $invoice->full_waybill_generated = '0';
+            } else {
+                $invoice->full_waybill_generated = '1';
+            }
+            $invoice->save();
+        }
         return response()->json(compact('waybill'), 200);
     }
     private function createDispatchedWaybill($waybill_id, $vehicle_id)
@@ -1295,5 +1306,22 @@ class InvoicesController extends Controller
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
         $this->logUserActivity($title, $description, $roles);
         return response()->json(null, 204);
+    }
+
+    public function sendRepStock(Request $request)
+    {
+        $customer_id = $request->rep;
+        $date_from = '2021-12-01 00:00:00';
+        $items = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
+            ->join('waybill_items', 'dispatched_products.waybill_item_id', '=', 'waybill_items.id')
+            ->join('invoices', 'waybill_items.invoice_id', '=', 'invoices.id')
+            ->groupBy('waybill_item_id')
+            ->where('invoices.customer_id', $customer_id)
+            // ->where('dispatched_products.created_at', '>', $date_from)
+            // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
+            ->select('*', \DB::raw('SUM(dispatched_products.quantity_supplied) as total_quantity_supplied'))
+            ->orderby('dispatched_products.created_at')->get();
+        return response()->json(compact('items'));
+        // $invoice_item_stock = InvoiceItemBatch::join
     }
 }
