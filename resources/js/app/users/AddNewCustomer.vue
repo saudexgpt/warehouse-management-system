@@ -11,9 +11,15 @@
         <el-form-item label="Phone" prop="phone">
           <el-input v-model="newCustomer.phone" required />
         </el-form-item>
-        <el-form-item label="Team" prop="customer_type">
-          <el-select v-model="newCustomer.customer_type" placeholder="Customer Type" filterable class="span">
-            <el-option v-for="(customer_type, index) in params.teams" :key="index" :value="customer_type" :label="customer_type.toUpperCase()" />
+        <el-form-item label="Team" prop="team">
+          <el-select v-model="newCustomer.team" placeholder="Team" filterable class="span">
+            <el-option v-for="(team, index) in params.teams" :key="index" :value="team" :label="team.toUpperCase()" />
+
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Type" prop="type">
+          <el-select v-model="newCustomer.type" placeholder="Customer Type" filterable class="span">
+            <el-option v-for="(type, index) in params.customer_types" :key="index" :value="type.name" :label="type.name.toUpperCase()" />
 
           </el-select>
         </el-form-item>
@@ -56,12 +62,14 @@ export default {
         phone: null,
         address: '',
         role: 'customer',
-        customer_type: '',
+        type: '',
+        team: '',
         password: '',
         confirmPassword: '',
       },
       rules: {
-        customer_type: [{ required: true, message: 'Customer Type is required', trigger: 'change' }],
+        team: [{ required: true, message: 'Customer Team is required', trigger: 'change' }],
+        type: [{ required: true, message: 'Customer Type is required', trigger: 'change' }],
         name: [{ required: true, message: 'Name is required', trigger: 'blur' }],
         // email: [
         //   { required: true, message: 'Email is required', trigger: 'blur' },

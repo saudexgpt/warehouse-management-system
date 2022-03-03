@@ -48,6 +48,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
     $router->put('users/{user}', 'UserController@update');
     $router->put('users/assign-role/{user}', 'UserController@assignRole');
 
+    $router->put('users/change-customer-details/{customer}', 'UserController@changeCustomerDetails');
     $router->put('users/update-password/{user}', 'UserController@updatePassword');
     $router->put('users/reset-password/{user}', 'UserController@adminResetUserPassword')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
 

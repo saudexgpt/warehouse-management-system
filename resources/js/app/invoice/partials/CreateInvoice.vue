@@ -263,7 +263,7 @@
               </el-row>
               <el-row :gutter="2" class="padded">
                 <el-col :xs="24" :sm="6" :md="6">
-                  <el-button type="success" @click="addNewInvoice">
+                  <el-button type="success" :disabled="disable_submit" @click="addNewInvoice">
                     <i class="el-icon-plus" />
                     Submit Invoice
                   </el-button>
@@ -296,7 +296,6 @@ import Resource from '@/api/resource';
 const createInvoice = new Resource('invoice/general/store');
 const necessaryParams = new Resource('fetch-necessary-params');
 const getCustomers = new Resource('fetch-customers');
-const customerResource = new Resource('user/customer/store');
 const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
   name: 'AddNewInvoice',
@@ -320,6 +319,7 @@ export default {
       fill_fields_error: false,
       show_product_list: false,
       batches_of_items_in_stock: [],
+      disable_submit: false,
       form: {
         warehouse_id: '',
         customer_id: '',
@@ -486,6 +486,7 @@ export default {
       if (!checkEmptyFielads) {
         const load = createInvoice.loaderShow();
         form.invoice_items = app.invoice_items;
+        app.disable_submit = true;
         createInvoice
           .store(form)
           .then((response) => {
@@ -497,6 +498,7 @@ export default {
             app.form = app.empty_form;
             app.form.warehouse_id = warehouse_id;
             app.invoice_items = app.form.invoice_items;
+            app.disable_submit = false;
             app.$router.push({ name: 'Invoices' });
             load.hide();
           })
@@ -512,54 +514,6 @@ export default {
     onCreateUpdate(created_row) {
       const app = this;
       app.customers.push(created_row);
-    },
-    createCustomer() {
-      this.$refs['newCustomer'].validate((valid) => {
-        if (valid) {
-          this.newCustomer.roles = [this.newCustomer.role];
-          this.newCustomer.password = this.newCustomer.phone; // set password as phone
-          this.newCustomer.confirmPassword = this.newCustomer.phone;
-          this.userCreating = true;
-          customerResource
-            .store(this.newCustomer)
-            .then((response) => {
-              this.$message({
-                message:
-                  'New user ' +
-                  this.newCustomer.name +
-                  '(' +
-                  this.newCustomer.email +
-                  ') has been created successfully.',
-                type: 'success',
-                duration: 5 * 1000,
-              });
-              this.customers.push(response.customer);
-              this.resetNewCustomer();
-              this.dialogFormVisible = false;
-            })
-            .catch((error) => {
-              console.log(error);
-            })
-            .finally(() => {
-              this.userCreating = false;
-            });
-        } else {
-          console.log('error submit!!');
-          return false;
-        }
-      });
-    },
-    resetNewCustomer() {
-      this.newCustomer = {
-        name: '',
-        email: null,
-        phone: null,
-        address: '',
-        role: 'customer',
-        customer_type_id: '',
-        password: '',
-        confirmPassword: '',
-      };
     },
     fetchItemDetails(index) {
       const app = this;

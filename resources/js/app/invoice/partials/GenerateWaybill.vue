@@ -368,6 +368,13 @@ export default {
     //     });
     // },
     generateWaybill() {
+      const invoice_items = this.invoice_items;
+      invoice_items.forEach(element => {
+        if (element.supply_bal < element.quantity_for_supply) {
+          this.$alert('To continue, kindly reduce ' + element.item.name + ' quantity to ' + element.supply_bal);
+          return false;
+        }
+      });
       this.$refs['form'].validate((valid) => {
         if (valid) {
           this.$confirm(
@@ -381,7 +388,7 @@ export default {
           )
             .then(() => {
               const loader = storeWaybillResource.loaderShow();
-              this.form.invoice_items = this.invoice_items;
+              this.form.invoice_items = invoice_items;
               this.disabled = true;
               storeWaybillResource
                 .store(this.form)

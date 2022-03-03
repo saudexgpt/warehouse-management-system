@@ -50,15 +50,25 @@ class UserController extends Controller
     {
         $searchParams = $request->all();
         $userQuery = User::query();
+        $customerQuery = Customer::query();
         $limit = Arr::get($searchParams, 'limit', static::ITEM_PER_PAGE);
         $role = Arr::get($searchParams, 'role', '');
         $keyword = Arr::get($searchParams, 'keyword', '');
+
+        if ($request->role === 'customer') {
+            $userQuery->with('customer');
+        }
         if (!empty($keyword)) {
             $userQuery->where(function ($q) use ($keyword) {
                 $q->where('name', 'LIKE', '%' . $keyword . '%');
                 $q->orWhere('email', 'LIKE', '%' . $keyword . '%');
                 $q->orWhere('phone', 'LIKE', '%' . $keyword . '%');
                 $q->orWhere('address', 'LIKE', '%' . $keyword . '%');
+                $q->orWhereIn('id', function ($query) use ($keyword) {
+                    $query->select('user_id')->from('customers');
+                    $query->where('type', 'LIKE', '%' . $keyword . '%');
+                    $query->orWhere('team', 'LIKE', '%' . $keyword . '%');
+                });
             });
         }
         if (!empty($role)) {
@@ -110,7 +120,8 @@ class UserController extends Controller
             $new_user =  new UserResource($user);
             $customer = new Customer();
             $customer->user_id = $new_user->id;
-            // $customer->customer_type = $request->customer_type;
+            $customer->team = strtolower($request->team);
+            $customer->type = strtolower($request->type);
             $customer->save();
             $count++;
         }
@@ -151,7 +162,8 @@ class UserController extends Controller
 
         $customer = new Customer();
         $customer->user_id = $new_user->id;
-        $customer->customer_type = $request->customer_type;
+        $customer->team = $request->team;
+        $customer->type = $request->customer_type;
         $customer->save();
         $customer->user = $customer->user;
         // log this activity
@@ -167,6 +179,14 @@ class UserController extends Controller
 
 
 
+    }
+    public function changeCustomerDetails(Customer $customer, Request $request)
+    {
+        $field = $request->field;
+        $value = $request->value;
+        $customer->$field = $value;
+        $customer->save();
+        return 'success';
     }
     public function addDriver(Request $request)
     {

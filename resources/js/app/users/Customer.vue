@@ -39,8 +39,37 @@
     </div>
     <div v-else>
       <v-client-table v-model="list" v-loading="loading" :columns="columns" :options="options">
-        <template slot="role" slot-scope="scope">
-          <span>{{ scope.row.roles.join(', ') | uppercaseFirst }}</span>
+        <template slot="type" slot-scope="props">
+          <el-select
+            v-if="!props.row.roles.includes('admin')"
+            v-model="props.row.customer.type"
+            class="filter-item"
+            placeholder="Change Customer Type"
+            @change="changeCustomerDetails(props.index, props.row, $event, 'type')"
+          >
+            <el-option
+              v-for="type in params.customer_types"
+              :key="type.id"
+              :label="type.name | uppercaseFirst"
+              :value="type.name"
+            />
+          </el-select>
+        </template>
+        <template slot="team" slot-scope="props">
+          <el-select
+            v-if="!props.row.roles.includes('admin')"
+            v-model="props.row.customer.team"
+            class="filter-item"
+            placeholder="Change Customer Team"
+            @change="changeCustomerDetails(props.index, props.row, $event, 'team')"
+          >
+            <el-option
+              v-for="team in params.teams"
+              :key="team"
+              :label="team | uppercaseFirst"
+              :value="team"
+            />
+          </el-select>
         </template>
         <template slot="action" slot-scope="scope">
           <router-link v-if="!scope.row.roles.includes('admin')" :to="'/administrator/users/edit/'+scope.row.id">
@@ -106,7 +135,7 @@ export default {
       tableData: [],
       tableHeader: [],
       list: [],
-      columns: ['name', 'email', 'phone', 'address', 'role', 'action'],
+      columns: ['name', 'email', 'phone', 'address', 'type', 'team', 'action'],
 
       options: {
         headings: {
@@ -121,7 +150,7 @@ export default {
           filter: 'Search:',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['name', 'email', 'phone'],
+        sortable: ['name', 'email', 'phone', 'type', 'team'],
         filterable: false, // ['name', 'email', 'phone', 'address'],
       },
       total: 0,
@@ -359,6 +388,24 @@ export default {
     onCreateUpdate(created_row) {
       const app = this;
       app.list.push(created_row);
+    },
+    changeCustomerDetails(index, row, value, field) {
+      const app = this;
+      const param = { value: value, field: field };
+      const changeDetailResource = new Resource('users/change-customer-details');
+      changeDetailResource.update(row.customer.id, param).then(() => {
+        if (field === 'team') {
+          app.list[index - 1].customer.team = value;
+        } else {
+          app.list[index - 1].customer.type = value;
+        }
+        app.$message({
+          type: 'success',
+          message: 'Action Successful',
+        });
+      }).catch(error => {
+        console.log(error);
+      });
     },
     handleDownload(){
       // fetch all data for export

@@ -3,6 +3,7 @@
 namespace App\Laravue\Models;
 
 use App\ActivityLog;
+use App\Customer;
 use App\Models\Warehouse\Warehouse;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -24,6 +25,10 @@ class User extends Authenticatable
 {
     use Notifiable, HasRoles, HasApiTokens;
 
+    public function customer()
+    {
+        return $this->hasOne(Customer::class, 'user_id', 'id');
+    }
     public function warehouses()
     {
         return $this->belongsToMany(Warehouse::class);
@@ -106,7 +111,6 @@ class User extends Authenticatable
             if ($role->isAdmin()) {
                 return true;
             }
-
         }
 
         return false;

@@ -31,6 +31,11 @@ class UserResource extends JsonResource
         // foreach ($db_notifications as $db_notification) {
         //     # code...
         // }
+        $customer = null;
+
+        if ($this->user_type == 'customer') {
+            $customer = $this->customer;
+        }
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -53,6 +58,7 @@ class UserResource extends JsonResource
             'avatar' => '/' . $this->photo, //'https://i.pravatar.cc',
             'can_edit' => $can_edit,
             'p_status' => $this->password_status,
+            'customer' => $customer,
         ];
     }
 }

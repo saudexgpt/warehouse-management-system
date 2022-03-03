@@ -10,7 +10,8 @@
             <el-row :gutter="5" class="padded">
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>Invoice Number</label>
-                <el-input v-model="form.invoice_number" type="text" />
+                <p>{{ form.invoice_number }}</p>
+                <!-- <el-input v-model="form.invoice_number" type="text" /> -->
                 <label for>Warehouse</label>
                 <p v-if="form.warehouse">{{ form.warehouse.name }}</p>
               </el-col>
