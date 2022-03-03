@@ -27,7 +27,7 @@
                 <br>
                 {{
                   invoice.customer.type
-                    ? invoice.customer.type.name.toUpperCase()
+                    ? invoice.customer.type.toUpperCase()
                     : ''
                 }}
                 <br>

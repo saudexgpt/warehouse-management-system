@@ -535,4 +535,10 @@ class UserController extends Controller
             ],
         ];
     }
+
+    public function fetchRepsForTransferToSalesApp()
+    {
+        $reps = Customer::with('user')->where('type', 'reps')->get();
+        return response()->json(compact('reps'), 200);
+    }
 }
