@@ -25,12 +25,12 @@
               <address>
                 <label>{{ invoice.customer.user.name.toUpperCase() }}</label>
                 <br>
-                {{
-                  invoice.customer.type
+                <!-- {{
+                  (invoice.customer.type)
                     ? invoice.customer.type.toUpperCase()
                     : ''
                 }}
-                <br>
+                <br> -->
                 Phone: {{ invoice.customer.user.phone }}
                 <!-- <br>
                 Email: {{ invoice.customer.user.email }}-->

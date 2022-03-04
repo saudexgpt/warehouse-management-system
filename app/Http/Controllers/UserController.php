@@ -138,7 +138,7 @@ class UserController extends Controller
         $email = $request->email;
         $phone = $request->phone;
         $password = $request->password;
-        if ($email == null) {
+        if ($email == null || $email == '') {
             $email = 'default' . time() . '@gmail.com';
         }
         if ($phone == null) {

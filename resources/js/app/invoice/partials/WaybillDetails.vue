@@ -36,7 +36,7 @@
           <label>Customer Details</label>
           <address>
             <label>{{ waybill.invoices[0].customer.user.name.toUpperCase() }}</label><br>
-            {{ (waybill.invoices[0].customer.type) ? waybill.invoices[0].customer.type.toUpperCase() : '' }}<br>
+            <!-- {{ (waybill.invoices[0].customer.type) ? waybill.invoices[0].customer.type.toUpperCase() : '' }}<br> -->
             Phone: {{ waybill.invoices[0].customer.user.phone }}<br>
             Email: {{ waybill.invoices[0].customer.user.email }}<br>
             {{ waybill.invoices[0].customer.user.address }}

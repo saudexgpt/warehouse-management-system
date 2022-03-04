@@ -24,6 +24,7 @@ use App\Models\Stock\ItemStock;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Warehouse\Warehouse;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 
@@ -1310,18 +1311,31 @@ class InvoicesController extends Controller
 
     public function sendRepStock(Request $request)
     {
-        $customer_id = $request->rep;
+        $customer_ids = $request->rep_ids;
+        $customer_ids_array = explode('~', $customer_ids);
         $date_from = '2021-12-01 00:00:00';
-        $items = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
-            ->join('waybill_items', 'dispatched_products.waybill_item_id', '=', 'waybill_items.id')
-            ->join('invoices', 'waybill_items.invoice_id', '=', 'invoices.id')
-            ->groupBy('waybill_item_id')
-            ->where('invoices.customer_id', $customer_id)
-            // ->where('dispatched_products.created_at', '>', $date_from)
-            // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('*', \DB::raw('SUM(dispatched_products.quantity_supplied) as total_quantity_supplied'))
-            ->orderby('dispatched_products.created_at')->get();
-        return response()->json(compact('items'));
+        $items = new Collection();
+        foreach ($customer_ids_array as $customer_id) {
+            $customer_items = DispatchedProduct::with('itemStock.item')
+                ->groupBy('waybill_item_id')
+                ->where('customer_id', $customer_id)
+                ->where('sent_to_rep', 0)
+                // ->where('dispatched_products.created_at', '>', $date_from)
+                // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
+                ->select('*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
+
+                ->orderby('created_at')->get();
+
+
+            // update each as sent
+            foreach ($customer_items as $customer_item) {
+                $customer_item->sent_to_rep = 1;
+                $customer_item->save();
+            }
+            $items = $items->merge($customer_items);
+        }
+
+        return response()->json(['items' => $items], 200);
         // $invoice_item_stock = InvoiceItemBatch::join
     }
 }

@@ -61,6 +61,7 @@ class ItemStockSubBatch extends Model
     {
         $dispatched_product = new DispatchedProduct();
         $dispatched_product->warehouse_id = $warehouse_id;
+        $dispatched_product->customer_id = $waybill_item->invoice->customer_id;
         $dispatched_product->item_stock_sub_batch_id = $item_stock_batch->id;
         $dispatched_product->waybill_id = $waybill_item->waybill_id;
         $dispatched_product->waybill_item_id = $waybill_item->id;

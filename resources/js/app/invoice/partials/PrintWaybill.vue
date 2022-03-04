@@ -26,7 +26,7 @@
         <label>Customer Details</label>
         <address>
           <label>{{ waybill.waybill_items[0].invoice.customer.user.name.toUpperCase() }}</label><br>
-          {{ (waybill.waybill_items[0].invoice.customer.type) ? waybill.waybill_items[0].invoice.customer.type.toUpperCase() : '' }}<br>
+          <!-- {{ (waybill.waybill_items[0].invoice.customer.type) ? waybill.waybill_items[0].invoice.customer.type.toUpperCase() : '' }}<br> -->
           Phone: {{ waybill.waybill_items[0].invoice.customer.user.phone }}<br>
           Email: {{ waybill.waybill_items[0].invoice.customer.user.email }}<br>
           {{ waybill.waybill_items[0].invoice.customer.user.address }}
