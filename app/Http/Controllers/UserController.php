@@ -331,10 +331,10 @@ class UserController extends Controller
             $email = $request->get('email');
             $phone = $request->get('phone');
             $address = $request->get('address');
-            $found = User::where('email', $email)->first();
-            if ($found && $found->id !== $user->id) {
-                return response()->json(['error' => 'Email has been taken'], 403);
-            }
+            // $found = User::where('email', $email)->first();
+            // if ($found && $found->id !== $user->id) {
+            //     return response()->json(['error' => 'Email has been taken'], 403);
+            // }
 
             $user->name = $request->get('name');
             $user->email = $email;
@@ -528,7 +528,7 @@ class UserController extends Controller
     {
         return [
             'name' => 'required',
-            'email' => $isNew ? 'required|email|unique:users' : 'required|email',
+            // 'email' => $isNew ? 'required|email|unique:users' : 'required|email',
             'roles' => [
                 'required',
                 'array'
