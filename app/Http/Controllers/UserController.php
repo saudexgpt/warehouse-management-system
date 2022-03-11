@@ -163,7 +163,7 @@ class UserController extends Controller
         $customer = new Customer();
         $customer->user_id = $new_user->id;
         $customer->team = $request->team;
-        $customer->type = $request->customer_type;
+        $customer->type = $request->type;
         $customer->save();
         $customer->user = $customer->user;
         // log this activity
