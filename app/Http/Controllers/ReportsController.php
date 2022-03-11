@@ -673,7 +673,7 @@ class ReportsController extends Controller
                     'type' => 'in_bound',
                     'date' => $inbound->created_at,
                     'invoice_no' => '',
-                    'waybill_grn' => $inbound->batch_no . ($inbound->goods_received_note) ? '/' . $inbound->goods_received_note : '',
+                    'waybill_grn' => $inbound->batch_no . '/' . $inbound->goods_received_note,
                     'quantity_transacted' => $inbound->quantity,
                     'in' => $inbound->quantity,
                     'out' => '',
