@@ -316,30 +316,30 @@ class Controller extends BaseController
             $query->where('name', '=', 'admin'); // this is the role id inside of this callback
         })->get();
 
-        if (in_array('assistant admin', $roles)) {
-            $assistant_admin = User::whereHas('roles', function ($query) {
-                $query->where('name', '=', 'assistant admin'); // this is the role id inside of this callback
-            })->get();
-            $users = $users->merge($assistant_admin);
-        }
-        if (in_array('warehouse manager', $roles)) {
-            $warehouse_managers = User::whereHas('roles', function ($query) {
-                $query->where('name', '=', 'warehouse manager'); // this is the role id inside of this callback
-            })->get();
-            $users = $users->merge($warehouse_managers);
-        }
-        if (in_array('stock officer', $roles)) {
-            $stock_officers = User::whereHas('roles', function ($query) {
-                $query->where('name', '=', 'stock officer'); // this is the role id inside of this callback
-            })->get();
-            $users = $users->merge($stock_officers);
-        }
-        if (in_array('warehouse auditor', $roles)) {
-            $auditors = User::whereHas('roles', function ($query) {
-                $query->where('name', '=', 'warehouse auditor'); // this is the role id inside of this callback
-            })->get();
-            $users = $users->merge($auditors);
-        }
+        // if (in_array('assistant admin', $roles)) {
+        //     $assistant_admin = User::whereHas('roles', function ($query) {
+        //         $query->where('name', '=', 'assistant admin'); // this is the role id inside of this callback
+        //     })->get();
+        //     $users = $users->merge($assistant_admin);
+        // }
+        // if (in_array('warehouse manager', $roles)) {
+        //     $warehouse_managers = User::whereHas('roles', function ($query) {
+        //         $query->where('name', '=', 'warehouse manager'); // this is the role id inside of this callback
+        //     })->get();
+        //     $users = $users->merge($warehouse_managers);
+        // }
+        // if (in_array('stock officer', $roles)) {
+        //     $stock_officers = User::whereHas('roles', function ($query) {
+        //         $query->where('name', '=', 'stock officer'); // this is the role id inside of this callback
+        //     })->get();
+        //     $users = $users->merge($stock_officers);
+        // }
+        // if (in_array('warehouse auditor', $roles)) {
+        //     $auditors = User::whereHas('roles', function ($query) {
+        //         $query->where('name', '=', 'warehouse auditor'); // this is the role id inside of this callback
+        //     })->get();
+        //     $users = $users->merge($auditors);
+        // }
         // var_dump($users);
         $notification = new AuditTrail($title, $description);
         return Notification::send($users->unique(), $notification);
