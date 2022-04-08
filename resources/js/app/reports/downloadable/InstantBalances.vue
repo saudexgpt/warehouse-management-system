@@ -80,7 +80,7 @@ import Resource from '@/api/resource';
 // const fetchWarehouse = new Resource('warehouse/fetch-warehouse');
 const itemsInStock = new Resource('reports/instant-balances');
 export default {
-  name: 'DownloadReports',
+  // name: 'InstantBalances',
   props: {
     params: {
       type: Object,

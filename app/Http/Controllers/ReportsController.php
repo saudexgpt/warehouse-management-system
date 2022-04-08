@@ -830,11 +830,11 @@ class ReportsController extends Controller
                 // $transfer_waybill_items = TransferRequestWaybillItem::where(['supply_warehouse_id' => $warehouse_id, 'item_id' => $item_id])->where('created_at', '>=', $date_from)
                 //     ->where('created_at', '<=', $date_to)->get();
 
-                $quantity_in_stock = ($total_stock_till_date) ? $total_stock_till_date->quantity : 0;
-                $quantity_supplied = ($previous_outbound) ? $previous_outbound->quantity_supplied : 0;
-                $transfer_item_quantity_supplied = ($previous_transfer_outbound) ? $previous_transfer_outbound->quantity_supplied : 0;
+                $quantity_in_stock = ($total_stock_till_date) ? $total_stock_till_date->total_quantity : 0;
+                $quantity_supplied = ($previous_outbound) ? $previous_outbound->total_quantity_supplied : 0;
+                $transfer_item_quantity_supplied = ($previous_transfer_outbound) ? $previous_transfer_outbound->total_quantity_supplied : 0;
 
-                $expired_quantity = ($previous_expired_product) ? $previous_expired_product->quantity : 0;
+                $expired_quantity = ($previous_expired_product) ? $previous_expired_product->total_quantity : 0;
 
                 $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied - (int) $expired_quantity;
 
@@ -850,21 +850,21 @@ class ReportsController extends Controller
                 }
                 if ($outbounds->isNotEmpty()) {
                     foreach ($outbounds as $outbound) {
-                        $quantity_out += $outbound->quantity_supplied;
+                        $quantity_out += $outbound->total_quantity_supplied;
                         if ($outbound->status == 'on transit') {
-                            $total_on_transit += $outbound->quantity_supplied;
+                            $total_on_transit += $outbound->total_quantity_supplied;
                         } else {
-                            $total_delivered += $outbound->quantity_supplied;
+                            $total_delivered += $outbound->total_quantity_supplied;
                         }
                     }
                 }
                 if ($outbounds2->isNotEmpty()) {
                     foreach ($outbounds2 as $outbound2) {
-                        $quantity_out += $outbound2->quantity_supplied;
+                        $quantity_out += $outbound2->total_quantity_supplied;
                         if ($outbound2->status == 'on transit') {
-                            $total_on_transit += $outbound2->quantity_supplied;
+                            $total_on_transit += $outbound2->total_quantity_supplied;
                         } else {
-                            $total_delivered += $outbound2->quantity_supplied;
+                            $total_delivered += $outbound2->total_quantity_supplied;
                         }
                     }
                 }

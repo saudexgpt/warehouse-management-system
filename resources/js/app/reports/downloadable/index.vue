@@ -3,34 +3,34 @@
     <el-card>
       <el-tabs v-model="activeActivity">
         <el-tab-pane label="Instant Balances" name="InstantBalances">
-          <keep-alive>
-            <instant-balances v-if="params != null && activeActivity=='InstantBalances'" :params="params" />
-          </keep-alive>
+          <!-- <keep-alive> -->
+          <instant-balances v-if="params != null && activeActivity=='InstantBalances'" :params="params" />
+          <!-- </keep-alive> -->
         </el-tab-pane>
         <el-tab-pane label="Inbounds" name="Inbounds">
-          <keep-alive>
-            <inbounds v-if="params != null && activeActivity=='Inbounds'" :params="params" />
-          </keep-alive>
+          <!-- <keep-alive> -->
+          <inbounds v-if="params != null && activeActivity=='Inbounds'" :params="params" />
+          <!-- </keep-alive> -->
         </el-tab-pane>
         <el-tab-pane label="Outbounds" name="Outbounds">
-          <keep-alive>
-            <outbounds v-if="params != null && activeActivity=='Outbounds'" :params="params" />
-          </keep-alive>
+          <!-- <keep-alive> -->
+          <outbounds v-if="params != null && activeActivity=='Outbounds'" :params="params" />
+          <!-- </keep-alive> -->
         </el-tab-pane>
         <el-tab-pane label="Products" name="Products">
-          <keep-alive>
-            <products v-if="activeActivity=='Products'" :can-create-new-product="false" />
-          </keep-alive>
+          <!-- <keep-alive> -->
+          <products v-if="activeActivity=='Products'" :can-create-new-product="false" />
+          <!-- </keep-alive> -->
         </el-tab-pane>
         <el-tab-pane label="Fleet" name="Fleet">
-          <keep-alive>
-            <fleets v-if="activeActivity=='Fleet'" :can-add-new="false" />
-          </keep-alive>
+          <!-- <keep-alive> -->
+          <fleets v-if="activeActivity=='Fleet'" :can-add-new="false" />
+          <!-- </keep-alive> -->
         </el-tab-pane>
         <el-tab-pane label="Users" name="Users">
-          <keep-alive>
-            <users v-if="activeActivity=='Users'" :can-add-new="false" />
-          </keep-alive>
+          <!-- <keep-alive> -->
+          <users v-if="activeActivity=='Users'" :can-add-new="false" />
+          <!-- </keep-alive> -->
         </el-tab-pane>
       </el-tabs>
     </el-card>
