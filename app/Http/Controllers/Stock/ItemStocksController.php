@@ -55,11 +55,14 @@ class ItemStocksController extends Controller
         //
         $warehouse_id = $request->warehouse_id;
         $item_id = $request->item_id;
-        $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->get();
+        $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->where('confirmed_by', '!=', null)->orderBy('expiry_date')->get();
 
-        $total_balance = ItemStockSubBatch::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->select(\DB::raw('SUM(balance) as total_balance'))->first();
+        $total_balance = ItemStockSubBatch::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->where('confirmed_by', '!=', null)->select(\DB::raw('SUM(balance) as total_balance'))->first();
 
-        $total_invoiced_quantity = InvoiceItem::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('quantity - quantity_supplied > 0')->select(\DB::raw('SUM(quantity - quantity_supplied) as total_invoiced'))->first();
+        // this is the quantity of products reserved for supply at the point of waybill generation
+        $total_invoiced_quantity = ItemStockSubBatch::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->where('confirmed_by', '!=', null)->select(\DB::raw('SUM(reserved_for_supply) as total_invoiced'))->first();
+
+        // $total_invoiced_quantity = InvoiceItem::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('quantity - quantity_supplied > 0')->select(\DB::raw('SUM(quantity - quantity_supplied) as total_invoiced'))->first();
 
         return response()->json(compact('batches_of_items_in_stock', 'total_balance', 'total_invoiced_quantity'));
     }

@@ -87,7 +87,7 @@
                     <tbody>
                       <tr>
                         <td colspan="3" />
-                        <td><label>BN / Quantity</label></td>
+                        <td><label>BN | Exp Date (Quantity)</label></td>
                         <td colspan="3" />
                       </tr>
                       <tr
@@ -95,7 +95,17 @@
                         :key="index"
                       >
                         <td>{{ index + 1 }}</td>
-                        <td>{{ invoice_item.item.name }}</td>
+                        <td>
+                          {{ invoice_item.item.name }}
+                          <div>
+                            <br><small class="label label-primary">Physical Stock: {{ invoice_item.physical_stock }} {{ invoice_item.item.package_type }}</small>
+
+                            <br><small class="label label-danger">Total Reserved: {{ invoice_item.reserved_for_supply }} {{ invoice_item.item.package_type }}</small>
+
+                            <br><small class="label label-success">Total Available: {{ invoice_item.total_batch_balance }} {{ invoice_item.item.package_type }}</small>
+                          </div>
+
+                        </td>
                         <td>
                           {{ invoice_item.quantity }}
                           {{
@@ -129,7 +139,7 @@
                                   color: #8492a6;
                                   font-size: 13px;
                                 "
-                              >({{
+                              >&nbsp;({{
                                 batch.balance - batch.reserved_for_supply
                               }})</span>
                             </el-option>
@@ -161,7 +171,7 @@
                               type="number"
                               :max="invoice_item.supply_bal"
                               min="0"
-                              @change="checkForOverflow(invoice_item.supply_bal, index)"
+                              @blur="checkForOverflow(invoice_item.supply_bal, index)"
                             >
                             <!-- <el-select
                               v-model="invoice_item.quantity_for_supply"
@@ -327,6 +337,9 @@ export default {
       // console.log(invoice_items);
       invoice_items.forEach((invoice_item) => {
         var total_batch_balance = 0;
+        var reserved_for_supply = 0;
+        var physical_stock = 0;
+
         var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied;
         var stocks = invoice_item.item.stocks;
 
@@ -334,6 +347,9 @@ export default {
           total_batch_balance +=
             parseInt(stock_batch.balance) -
             parseInt(stock_batch.reserved_for_supply);
+          reserved_for_supply += parseInt(stock_batch.reserved_for_supply);
+
+          physical_stock += parseInt(stock_batch.balance);
         });
 
         invoice_item.supply_bal = supply_bal;
@@ -343,6 +359,8 @@ export default {
           invoice_item.quantity_for_supply = total_batch_balance;
         }
         invoice_item.total_batch_balance = total_batch_balance;
+        invoice_item.reserved_for_supply = reserved_for_supply;
+        invoice_item.physical_stock = physical_stock;
       });
       app.invoice_items = invoice_items;
       app.form.invoice_ids = invoice_ids;
