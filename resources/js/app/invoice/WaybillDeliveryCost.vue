@@ -317,8 +317,8 @@ export default {
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['trip_no', 'amount', 'created_at', 'updated_at'],
-        filterable: ['trip_no', 'amount', 'created_at', 'updated_at'],
+        sortable: ['trip_no', 'waybills', 'amount', 'created_at', 'updated_at'],
+        filterable: ['trip_no', 'waybills', 'amount', 'created_at', 'updated_at'],
       },
       page: {
         option: 'list',

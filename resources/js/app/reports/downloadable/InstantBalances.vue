@@ -42,7 +42,7 @@
         <el-button :loading="downloadLoading" style="margin:0 0 20px 20px;" type="primary" icon="document" @click="handleDownload">
           Export Excel
         </el-button>
-        <v-client-table v-model="items_in_stock" :columns="columns" :options="options">
+        <v-client-table ref="myTable" v-model="items_in_stock" :columns="columns" :options="options">
           <div slot="brought_forward" slot-scope="{row}" class="alert alert-info">
             {{ row['brought_forward'] }} {{ formatPackageType(row['package_type']) }}
 
@@ -203,12 +203,13 @@ export default {
         });
     },
     handleDownload() {
+      const filtered_string = this.$refs.myTable.$refs.table.query;
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '', '', '']];
-        const tHeader = ['PRODUCT', 'WAREHOUSE', 'BROUGHT FORWARD', 'QUANTITY IN', 'QUANTITY OUT', 'BALANCE'];
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '']];
+        const tHeader = ['PRODUCT', 'WAREHOUSE', 'BROUGHT FORWARD', 'QUANTITY IN', 'QUANTITY OUT', 'QUANTITY EXPIRED', 'BALANCE'];
         const filterVal = this.columns;
-        const list = this.items_in_stock;
+        const list = (filtered_string === '') ? this.items_in_stock : this.$refs.myTable.filteredData;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({
           multiHeader,

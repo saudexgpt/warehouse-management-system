@@ -51,7 +51,7 @@
               <td>{{ waybill_item.item.name }}</td>
               <!-- <td>{{ waybill_item.item.description }}</td> -->
               <td>{{ waybill_item.quantity+' '+waybill_item.type }}<br>
-                <small>({{ waybill_item.invoice_item.no_of_cartons }} CTN)</small>
+                <code v-html="showItemsInCartons(waybill_item.quantity, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
               </td>
               <td>
                 <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
@@ -132,6 +132,7 @@
 import moment from 'moment';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
+import showItemsInCartons from '@/utils/functions';
 // import Watermark from '@/watermark';
 export default {
   props: {
@@ -171,6 +172,7 @@ export default {
     checkPermission,
     checkRole,
     moment,
+    showItemsInCartons,
     doPrint() {
       window.print();
     },

@@ -100,6 +100,7 @@
               </el-col>
             </el-row>
             <div v-if="show_product_list">
+              <div class="alert alert-warning">Please ensure you raise invoice only for products available in the warehouse. </div>
               <el-row :gutter="2" class="padded">
                 <el-col>
                   <div style="overflow: auto">
@@ -146,11 +147,13 @@
                                 :label="item.name"
                               />
                             </el-select>
-                            <br><small class="label label-primary">Total In Stocked: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
+                            <div v-loading="invoice_item.load">
+                              <br><small class="label label-primary">Physical Stock: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
 
-                            <br><small class="label label-danger">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
+                              <br><small class="label label-danger">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
 
-                            <br><small class="label label-success">Total Balance: {{ invoice_item.total_stocked - invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
+                              <br><small class="label label-success">Available for Order: {{ invoice_item.stock_balance }} {{ invoice_item.type }}</small>
+                            </div>
                           </td>
                           <td>
                             <el-input
@@ -158,10 +161,13 @@
                               type="number"
                               outline
                               placeholder="Quantity"
-                              min="1"
-                              @input="calculateTotal(index); calculateNoOfCartons(index)"
+                              min="0"
+                              :disabled="invoice_item.stock_balance < 1"
+                              @input="calculateTotal(index); calculateNoOfCartons(index); checkStockBalance(index)"
                             />
-                            <br><small v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton)" />
+                            <br>
+                            <div v-if="invoice_item.stock_balance < 1" class="label label-danger">You cannot raise invoice for this product due to insufficient stock</div>
+                            <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                           </td>
                           <td>
                             <el-input
@@ -263,7 +269,7 @@
               </el-row>
               <el-row :gutter="2" class="padded">
                 <el-col :xs="24" :sm="6" :md="6">
-                  <el-button type="success" :disabled="disable_submit" @click="addNewInvoice">
+                  <el-button type="success" :disabled="disable_submit" @click="submitNewInvoice">
                     <i class="el-icon-plus" />
                     Submit Invoice
                   </el-button>
@@ -298,7 +304,7 @@ const necessaryParams = new Resource('fetch-necessary-params');
 const getCustomers = new Resource('fetch-customers');
 const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
-  name: 'AddNewInvoice',
+  name: 'CreateInvoice',
   components: { AddNewCustomer, BulkInvoiceUpload },
 
   data() {
@@ -357,7 +363,7 @@ export default {
           {
             item_index: '',
             item_id: '',
-            quantity: 1,
+            quantity: 0,
             type: '',
             rate: null,
             amount: 0,
@@ -436,8 +442,9 @@ export default {
         //     this.invoice_items[index].grade = '';
         this.invoice_items.push({
           item_index: null,
+          load: false,
           item_id: '',
-          quantity: 1,
+          quantity: 0,
           type: '',
           rate: null,
           amount: 0,
@@ -475,7 +482,7 @@ export default {
         app.customer_types = response.customer_types;
       });
     },
-    addNewInvoice() {
+    submitNewInvoice() {
       const app = this;
       var form = app.form;
       const checkEmptyFielads =
@@ -538,12 +545,15 @@ export default {
         warehouse_id: warehouse_id,
         item_id: item_id,
       };
+      app.invoice_items[index].load = true;
       fetchProductBatches.list(param).then((response) => {
+        app.invoice_items[index].load = false;
         app.invoice_items[index].batches_of_items_in_stock =
           response.batches_of_items_in_stock;
         app.invoice_items[index].batches = [];
         app.invoice_items[index].total_stocked = (response.total_balance) ? response.total_balance.total_balance : 0;
         app.invoice_items[index].total_invoiced_quantity = (response.total_invoiced_quantity) ? response.total_invoiced_quantity.total_invoiced : 0;
+        app.invoice_items[index].stock_balance = app.invoice_items[index].total_stocked - app.invoice_items[index].total_invoiced_quantity;
       });
     },
     showItemsInStock(index) {
@@ -593,6 +603,23 @@ export default {
       // subtract discount
       app.form.amount = parseFloat(subtotal - app.form.discount).toFixed(2);
     },
+    checkStockBalance(index) {
+      const app = this;
+      // Get total amount for this item without tax
+      if (index !== null) {
+        const invoice_item = app.invoice_items[index];
+        const item = app.params.items[invoice_item.item_index].name;
+        const quantity = invoice_item.quantity;
+        const available_stock = invoice_item.total_stocked - invoice_item.total_invoiced_quantity;
+
+        if (quantity > available_stock) {
+          app.$alert(`${item} stock balance is less than ${quantity}. Please enter a value within range`);
+          app.invoice_items[index].quantity = 0;
+          app.calculateTotal(index);
+        }
+      }
+    },
+
   },
 };
 </script>

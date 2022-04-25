@@ -115,17 +115,17 @@
                     <!-- <td>{{ invoice_item.item.description }}</td> -->
                     <td>
                       {{ invoice_item.quantity }} {{ invoice_item.type }}
-                      <br><small v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton)" />
+                      <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                     </td>
                     <td>
                       {{ invoice_item.quantity_supplied }}
                       {{ invoice_item.type }}
-                      <br><small v-html="showItemsInCartons(invoice_item.quantity_supplied, invoice_item.quantity_per_carton)" />
+                      <br><code v-html="showItemsInCartons(invoice_item.quantity_supplied, invoice_item.quantity_per_carton, invoice_item.type)" />
                     </td>
                     <td>
                       {{ invoice_item.quantity - invoice_item.quantity_supplied }}
                       {{ invoice_item.type }}
-                      <br><small v-html="showItemsInCartons(invoice_item.quantity - invoice_item.quantity_supplied, invoice_item.quantity_per_carton)" />
+                      <br><code v-html="showItemsInCartons(invoice_item.quantity - invoice_item.quantity_supplied, invoice_item.quantity_per_carton, invoice_item.type)" />
                     </td>
                     <td align="right">
                       {{

@@ -81,7 +81,7 @@
                 <td>{{ waybill_item.item.name }}</td>
                 <!-- <td>{{ waybill_item.item.description }}</td> -->
                 <td>{{ waybill_item.quantity+' '+formatPackageType(waybill_item.type) }}<br>
-                  <small>({{ waybill_item.quantity / waybill_item.invoice_item.quantity_per_carton }} CTN)</small>
+                  <code v-html="showItemsInCartons(waybill_item.quantity, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
                 </td>
                 <td>
                   <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
@@ -265,6 +265,7 @@ import Resource from '@/api/resource';
 const confirmWaybillDetailsResource = new Resource('audit/confirm/waybill');
 const changeWaybillStatusResource = new Resource('invoice/waybill/change-status');
 import PrintWaybill from './PrintWaybill';
+import showItemsInCartons from '@/utils/functions';
 export default {
   components: { PrintWaybill },
   props: {
@@ -309,6 +310,7 @@ export default {
     checkPermission,
     checkRole,
     moment,
+    showItemsInCartons,
     changeWaybillStatus(){
       const app = this;
       var param = app.waybill;
