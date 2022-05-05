@@ -304,7 +304,7 @@ const necessaryParams = new Resource('fetch-necessary-params');
 const getCustomers = new Resource('fetch-customers');
 const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
-  name: 'CreateInvoice',
+  // name: 'CreateInvoice',
   components: { AddNewCustomer, BulkInvoiceUpload },
 
   data() {

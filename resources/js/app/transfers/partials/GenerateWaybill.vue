@@ -56,7 +56,16 @@
                       </tr>
                       <tr v-for="(invoice_item, index) in form.invoice_items" :key="index">
                         <td>{{ index + 1 }}</td>
-                        <td>{{ invoice_item.item.name }}</td>
+                        <td>
+                          {{ invoice_item.item.name }}
+                          <div>
+                            <br><small class="label label-primary">Physical Stock: {{ invoice_item.physical_stock }} {{ invoice_item.item.package_type }}</small>
+
+                            <br><small class="label label-danger">Total Reserved: {{ invoice_item.reserved_for_supply }} {{ invoice_item.item.package_type }}</small>
+
+                            <br><small class="label label-success">Total Available: {{ invoice_item.total_batch_balance }} {{ invoice_item.item.package_type }}</small>
+                          </div>
+                        </td>
                         <td>{{ invoice_item.quantity }} {{ formatPackageType(invoice_item.item.package_type) }}</td>
                         <td>
                           <el-select
@@ -272,9 +281,14 @@ export default {
       }
       invoice_items.forEach(invoice_item => {
         var total_batch_balance = 0;
+        var reserved_for_supply = 0;
+        var physical_stock = 0;
+
         var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied;
         invoice_item.item.stocks.forEach(batch => {
           total_batch_balance += parseInt(batch.balance - batch.reserved_for_supply);
+          reserved_for_supply += parseInt(batch.reserved_for_supply);
+          physical_stock += parseInt(batch.balance);
         });
 
         invoice_item.supply_bal = supply_bal;
@@ -284,6 +298,8 @@ export default {
           invoice_item.quantity_for_supply = total_batch_balance;
         }
         invoice_item.total_batch_balance = total_batch_balance;
+        invoice_item.reserved_for_supply = reserved_for_supply;
+        invoice_item.physical_stock = physical_stock;
       });
       app.form.invoice_items = invoice_items;
       app.form.invoice_ids = invoice_ids;

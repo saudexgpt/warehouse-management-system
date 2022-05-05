@@ -751,7 +751,13 @@ class ReportsController extends Controller
             ->where('warehouse_id', $warehouse_id)
             ->where('item_id', $item_id)
             ->where('created_at', '<', $date_from)
-            ->where('confirmed_by', '!=', null)
+            ->where(function ($q) {
+                $q->where('confirmed_by', '!=', null);
+                $q->orWhere(function ($p) {
+                    $p->where('confirmed_by', null);
+                    $p->where('supplied', '>', 0);
+                });
+            })
             ->select('*', \DB::raw('SUM(quantity) as total_quantity'))
             ->first();
         $previous_outbound = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
@@ -774,7 +780,13 @@ class ReportsController extends Controller
         $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
-            ->where('confirmed_by', '!=', null)
+            ->where(function ($q) {
+                $q->where('confirmed_by', '!=', null);
+                $q->orWhere(function ($p) {
+                    $p->where('confirmed_by', null);
+                    $p->where('supplied', '>', 0);
+                });
+            })
             ->orderby('created_at')
             ->get();
         $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
