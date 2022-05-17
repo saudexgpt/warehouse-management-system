@@ -154,7 +154,7 @@ import checkRole from '@/utils/role';
 import { parseTime } from '@/utils';
 import Resource from '@/api/resource';
 import WaybillDetails from './partials/WaybillDetails';
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 const fetchWaybills = new Resource('transfers/waybill');
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 export default {
@@ -197,7 +197,7 @@ export default {
       page: {
         option: 'list',
       },
-      params: {},
+      // params: {},
       form: {
         warehouse_index: '',
         warehouse_id: '',
@@ -220,7 +220,11 @@ export default {
 
     };
   },
-
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   created() {
     this.fetchNecessaryParams();
   },
@@ -236,18 +240,30 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list()
-        .then(response => {
-          app.params = response.params;
-          app.warehouses = response.params.warehouses;
-          app.currency = response.params.currency;
-          if (app.warehouses.length > 0) {
-            app.form.warehouse_id = app.warehouses[0];
-            app.form.warehouse_index = 0;
-            app.getWaybills();
-          }
-        });
+      app.$store.dispatch('app/setNecessaryParams');
+      const params = app.params;
+      app.warehouses = params.warehouses;
+      app.currency = params.currency;
+      if (app.warehouses.length > 0) {
+        app.form.warehouse_id = app.warehouses[0];
+        app.form.warehouse_index = 0;
+        app.getWaybills();
+      }
     },
+    // fetchNecessaryParams() {
+    //   const app = this;
+    //   necessaryParams.list()
+    //     .then(response => {
+    //       app.params = response.params;
+    //       app.warehouses = response.params.warehouses;
+    //       app.currency = response.params.currency;
+    //       if (app.warehouses.length > 0) {
+    //         app.form.warehouse_id = app.warehouses[0];
+    //         app.form.warehouse_index = 0;
+    //         app.getWaybills();
+    //       }
+    //     });
+    // },
     format(date) {
       var month = date.toLocaleString('en-US', { month: 'short' });
       return month + ' ' + date.getDate() + ', ' + date.getFullYear();

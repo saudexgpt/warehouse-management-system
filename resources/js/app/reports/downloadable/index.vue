@@ -38,14 +38,14 @@
 </template>
 
 <script>
-import Resource from '@/api/resource';
+// import Resource from '@/api/resource';
 import Inbounds from './inbounds';
 import Outbounds from './outbounds';
 import InstantBalances from './InstantBalances';
 import Products from '@/app/stock/item/ManageItem';
 import Fleets from './fleets';
 import Users from './users/List';
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 export default {
   name: 'DownloadReports',
   components: {
@@ -55,8 +55,12 @@ export default {
     return {
       activeActivity: 'InstantBalances',
       data_summary: '',
-      params: null,
     };
+  },
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
   },
   created() {
     this.fetchNecessaryParams();
@@ -68,11 +72,15 @@ export default {
   methods: {
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list()
-        .then(response => {
-          app.params = response.params;
-        });
+      app.$store.dispatch('app/setNecessaryParams');
     },
+    // fetchNecessaryParams() {
+    //   const app = this;
+    //   necessaryParams.list()
+    //     .then(response => {
+    //       app.params = response.params;
+    //     });
+    // },
   },
 };
 </script>

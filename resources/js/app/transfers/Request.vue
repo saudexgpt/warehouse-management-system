@@ -250,7 +250,7 @@ import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 import TransferRequestDetails from './Details';
 import EditTransferRequest from './partials/EditTransferRequest';
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 const fetchTransferRequests = new Resource('transfers/general');
 // const approveTransferRequestResource = new Resource('transfer_request/general/approve');
 // const deliverTransferRequestResource = new Resource('transfer_request/general/deliver');
@@ -267,7 +267,7 @@ export default {
   },
   data() {
     return {
-      params: {},
+      // params: {},
       warehouses: [],
       incoming_transfer_requests: [],
       sent_requests: [],
@@ -326,7 +326,11 @@ export default {
       filename: 'TransferRequests',
     };
   },
-
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   mounted() {
     this.fetchNecessaryParams();
   },
@@ -345,18 +349,31 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list().then((response) => {
-        app.params = response.params;
-        app.warehouses = response.params.warehouses;
-        app.invoice_statuses = response.params.invoice_statuses;
-        app.currency = response.params.currency;
-        if (app.warehouses.length > 0) {
-          app.form.warehouse_id = app.warehouses[0];
-          app.form.warehouse_index = 0;
-          app.getTransferRequests();
-        }
-      });
+      app.$store.dispatch('app/setNecessaryParams');
+      const params = app.params;
+      app.warehouses = params.warehouses;
+      app.invoice_statuses = params.invoice_statuses;
+      app.currency = params.currency;
+      if (app.warehouses.length > 0) {
+        app.form.warehouse_id = app.warehouses[0];
+        app.form.warehouse_index = 0;
+        app.getTransferRequests();
+      }
     },
+    // fetchNecessaryParams() {
+    //   const app = this;
+    //   necessaryParams.list().then((response) => {
+    //     app.params = response.params;
+    //     app.warehouses = response.params.warehouses;
+    //     app.invoice_statuses = response.params.invoice_statuses;
+    //     app.currency = response.params.currency;
+    //     if (app.warehouses.length > 0) {
+    //       app.form.warehouse_id = app.warehouses[0];
+    //       app.form.warehouse_index = 0;
+    //       app.getTransferRequests();
+    //     }
+    //   });
+    // },
     format(date) {
       var month = date.toLocaleString('en-US', { month: 'short' });
       return month + ' ' + date.getDate() + ', ' + date.getFullYear();

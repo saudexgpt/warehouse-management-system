@@ -1,6 +1,6 @@
 import Cookies from 'js-cookie';
 import { getLanguage } from '@/lang/index';
-
+import Resource from '@/api/resource';
 const state = {
   sidebar: {
     opened: Cookies.get('sidebarStatus') ? !!+Cookies.get('sidebarStatus') : true,
@@ -60,8 +60,12 @@ const actions = {
     commit('SET_SIZE', size);
   },
 
-  setNecessaryParams({ commit }, params) {
-    commit('SET_PARAMS', params);
+  setNecessaryParams({ commit }) {
+    const necessaryParams = new Resource('fetch-necessary-params');
+    necessaryParams.list().then(response => {
+      const params = response.params;
+      commit('SET_PARAMS', params);
+    });
   },
 };
 

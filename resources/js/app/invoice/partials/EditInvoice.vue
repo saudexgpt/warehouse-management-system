@@ -84,6 +84,13 @@
                                 :label="item.name"
                               />
                             </el-select>
+                            <div v-if="invoice_item.total_stocked">
+                              <br><small class="label label-primary">Physical Stock: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
+
+                              <br><small class="label label-danger">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
+
+                              <br><small class="label label-success">Available for Order: {{ invoice_item.stock_balance }} {{ invoice_item.type }}</small>
+                            </div>
                           </td>
                           <td>
                             <el-input
@@ -92,9 +99,11 @@
                               outline
                               placeholder="Quantity"
                               min="1"
-                              @input="calculateTotal(index); calculateNoOfCartons(index)"
+                              @input="calculateTotal(index); calculateNoOfCartons(index); checkStockBalance(index)"
                             />
-                            ({{ invoice_item.no_of_cartons }} CTN)
+                            <br>
+                            <div v-if="invoice_item.stock_balance < 1" class="label label-danger">You cannot raise invoice for this product due to insufficient stock</div>
+                            <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                           </td>
                           <td>
                             <el-input
@@ -248,7 +257,7 @@
 import moment from 'moment';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
-
+import showItemsInCartons from '@/utils/functions';
 import Resource from '@/api/resource';
 const editInvoice = new Resource('invoice/general/update');
 const necessaryParams = new Resource('fetch-necessary-params');
@@ -379,6 +388,7 @@ export default {
     moment,
     checkPermission,
     checkRole,
+    showItemsInCartons,
     addLine(index) {
       this.fill_fields_error = false;
 
@@ -402,12 +412,15 @@ export default {
         this.invoice_items.push({
           item_index: null,
           item_id: '',
+          load: false,
           quantity: 1,
           type: '',
           rate: null,
           amount: 0,
           batches: [],
           batches_of_items_in_stock: [],
+          total_stocked: null,
+          total_invoiced_quantity: null,
         });
       }
     },
@@ -488,10 +501,15 @@ export default {
         warehouse_id: warehouse_id,
         item_id: item_id,
       };
+      app.invoice_items[index].load = true;
       fetchProductBatches.list(param).then((response) => {
+        app.invoice_items[index].load = false;
         app.invoice_items[index].batches_of_items_in_stock =
           response.batches_of_items_in_stock;
         app.invoice_items[index].batches = [];
+        app.invoice_items[index].total_stocked = (response.total_balance) ? response.total_balance.total_balance : 0;
+        app.invoice_items[index].total_invoiced_quantity = (response.total_invoiced_quantity) ? response.total_invoiced_quantity.total_invoiced : 0;
+        app.invoice_items[index].stock_balance = app.invoice_items[index].total_stocked - app.invoice_items[index].total_invoiced_quantity;
       });
     },
     showItemsInStock(index) {
@@ -542,6 +560,22 @@ export default {
       ).toFixed(2);
       // subtract discount
       app.form.amount = parseFloat(subtotal - app.form.discount).toFixed(2);
+    },
+    checkStockBalance(index) {
+      const app = this;
+      // Get total amount for this item without tax
+      if (index !== null) {
+        const invoice_item = app.invoice_items[index];
+        const item = app.params.items[invoice_item.item_index].name;
+        const quantity = invoice_item.quantity;
+        const available_stock = invoice_item.total_stocked - invoice_item.total_invoiced_quantity;
+
+        if (quantity > available_stock) {
+          app.$alert(`${item} stock balance is less than ${quantity}. Please enter a value within range`);
+          app.invoice_items[index].quantity = 0;
+          app.calculateTotal(index);
+        }
+      }
     },
   },
 };

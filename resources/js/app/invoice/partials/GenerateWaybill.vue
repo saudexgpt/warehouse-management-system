@@ -246,7 +246,7 @@ import checkRole from '@/utils/role';
 
 import Resource from '@/api/resource';
 // const createInvoice = new Resource('invoice/general/store');
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 const unDeliveredInvoices = new Resource('invoice/waybill/undelivered-invoices');
 // const availableVehicles = new Resource('invoice/waybill/fetch-available-vehicles');
 const storeWaybillResource = new Resource('invoice/waybill/store');
@@ -318,10 +318,7 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list().then(response => {
-        const params = response.params;
-        app.$store.dispatch('app/setNecessaryParams', params);
-      });
+      app.$store.dispatch('app/setNecessaryParams');
     },
     displayInvoiceitems() {
       const app = this;
@@ -387,6 +384,11 @@ export default {
     // },
     generateWaybill() {
       const invoice_items = this.invoice_items;
+
+      if (invoice_items.length < 1) {
+        this.$alert('Please select at least one invoice to generate a waybill');
+        return false;
+      }
       invoice_items.forEach(element => {
         if (element.supply_bal < element.quantity_for_supply) {
           this.$alert('To continue, kindly reduce ' + element.item.name + ' quantity to ' + element.supply_bal);

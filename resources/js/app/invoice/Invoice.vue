@@ -206,7 +206,7 @@ import checkRole from '@/utils/role';
 
 import InvoiceDetails from './Details';
 import EditInvoice from './partials/EditInvoice';
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 const fetchInvoices = new Resource('invoice/general');
 // const approveInvoiceResource = new Resource('invoice/general/approve');
 // const deliverInvoiceResource = new Resource('invoice/general/deliver');
@@ -327,26 +327,34 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      if (app.params === null) {
-        necessaryParams.list().then(response => {
-          const params = response.params;
-          app.$store.dispatch('app/setNecessaryParams', params);
-          app.warehouses = app.params.warehouses;
-          app.invoice_statuses = app.params.invoice_statuses;
-          app.currency = app.params.currency;
-        // if (app.warehouses.length > 0) {
-        //   app.form.warehouse_id = app.warehouses[0];
-        //   app.form.warehouse_index = 0;
-        //   app.getInvoices();
-        // }
-        });
-      } else {
-        const params = app.params;
-        app.warehouses = params.warehouses;
-        app.invoice_statuses = params.invoice_statuses;
-        app.currency = params.currency;
-      }
+      app.$store.dispatch('app/setNecessaryParams');
+      const params = app.params;
+      app.warehouses = params.warehouses;
+      app.invoice_statuses = params.invoice_statuses;
+      app.currency = params.currency;
     },
+    // fetchNecessaryParams() {
+    //   const app = this;
+    //   if (app.params === null) {
+    //     necessaryParams.list().then(response => {
+    //       const params = response.params;
+    //       app.$store.dispatch('app/setNecessaryParams', params);
+    //       app.warehouses = app.params.warehouses;
+    //       app.invoice_statuses = app.params.invoice_statuses;
+    //       app.currency = app.params.currency;
+    //     // if (app.warehouses.length > 0) {
+    //     //   app.form.warehouse_id = app.warehouses[0];
+    //     //   app.form.warehouse_index = 0;
+    //     //   app.getInvoices();
+    //     // }
+    //     });
+    //   } else {
+    //     const params = app.params;
+    //     app.warehouses = params.warehouses;
+    //     app.invoice_statuses = params.invoice_statuses;
+    //     app.currency = params.currency;
+    //   }
+    // },
     format(date) {
       var month = date.toLocaleString('en-US', { month: 'short' });
       return month + ' ' + date.getDate() + ', ' + date.getFullYear();

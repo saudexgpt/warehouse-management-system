@@ -95,7 +95,7 @@
 import moment from 'moment';
 import Resource from '@/api/resource';
 const bincardReport = new Resource('reports/bin-card');
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 export default {
   name: 'BinCard',
@@ -166,15 +166,13 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list().then((response) => {
-        const params = response.params;
-        app.$store.dispatch('app/setNecessaryParams', params);
-        app.warehouses = params.warehouses;
-        app.form.warehouse_id = params.warehouses[0].id;
-        app.form.warehouse_index = 0;
-        app.items = params.items;
-        app.currency = params.currency;
-      });
+      app.$store.dispatch('app/setNecessaryParams');
+      const params = app.params;
+      app.warehouses = params.warehouses;
+      app.form.warehouse_id = params.warehouses[0].id;
+      app.form.warehouse_index = 0;
+      app.items = params.items;
+      app.currency = params.currency;
     },
     format(date) {
       var month = date.toLocaleString('en-US', { month: 'short' });

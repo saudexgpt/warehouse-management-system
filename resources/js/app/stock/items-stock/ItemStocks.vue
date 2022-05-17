@@ -195,7 +195,7 @@ import ShowItemReservationTransactions from './ShowItemReservationTransactions';
 // import ItemDetails from './partials/ItemDetails';
 import Resource from '@/api/resource';
 // import Vue from 'vue';
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 // const fetchWarehouse = new Resource('warehouse/fetch-warehouse');
 const itemsInStock = new Resource('stock/items-in-stock');
 const deleteItemInStock = new Resource('stock/items-in-stock/delete');
@@ -372,27 +372,45 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      const loader = necessaryParams.loaderShow();
-      necessaryParams.list()
-        .then(response => {
-          const params = response.params;
-          app.$store.dispatch('app/setNecessaryParams', params);
-          app.warehouses = params.warehouses;
-          if (app.warehouses.length > 0) {
-            app.form.warehouse_id = app.warehouses[0];
-            app.form.warehouse_index = 0;
+      app.$store.dispatch('app/setNecessaryParams');
+      const params = app.params;
+      app.warehouses = params.warehouses;
+      if (app.warehouses.length > 0) {
+        app.form.warehouse_id = app.warehouses[0];
+        app.form.warehouse_index = 0;
 
-            const from = app.format(new Date(app.moment().clone().startOf('month').format('YYYY-MM-DD hh:mm')));
-            const to = app.format(new Date(app.moment().clone().endOf('month').format('YYYY-MM-DD hh:mm')));
+        const from = app.format(new Date(app.moment().clone().startOf('month').format('YYYY-MM-DD hh:mm')));
+        const to = app.format(new Date(app.moment().clone().endOf('month').format('YYYY-MM-DD hh:mm')));
 
-            app.form.from = from;
-            app.form.to = to;
-            app.fetchItemStocks();
-            loader.hide();
-          }
-          app.product_expiry_date_alert_in_months = params.product_expiry_date_alert;
-        });
+        app.form.from = from;
+        app.form.to = to;
+        app.fetchItemStocks();
+      }
+      app.product_expiry_date_alert_in_months = params.product_expiry_date_alert;
     },
+    // fetchNecessaryParams() {
+    //   const app = this;
+    //   const loader = necessaryParams.loaderShow();
+    //   necessaryParams.list()
+    //     .then(response => {
+    //       const params = response.params;
+    //       app.$store.dispatch('app/setNecessaryParams', params);
+    //       app.warehouses = params.warehouses;
+    //       if (app.warehouses.length > 0) {
+    //         app.form.warehouse_id = app.warehouses[0];
+    //         app.form.warehouse_index = 0;
+
+    //         const from = app.format(new Date(app.moment().clone().startOf('month').format('YYYY-MM-DD hh:mm')));
+    //         const to = app.format(new Date(app.moment().clone().endOf('month').format('YYYY-MM-DD hh:mm')));
+
+    //         app.form.from = from;
+    //         app.form.to = to;
+    //         app.fetchItemStocks();
+    //         loader.hide();
+    //       }
+    //       app.product_expiry_date_alert_in_months = params.product_expiry_date_alert;
+    //     });
+    // },
     confirmItemStocked(stock_id) {
       // const app = this;
       const form = { id: stock_id };

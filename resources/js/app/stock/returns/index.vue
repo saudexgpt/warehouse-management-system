@@ -90,7 +90,7 @@ import AddNewReturns from './partials/AddNewReturns';
 import EditReturns from './partials/EditReturns';
 import Resource from '@/api/resource';
 // import Vue from 'vue';
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 // const fetchWarehouse = new Resource('warehouse/fetch-warehouse');
 const returnedProducts = new Resource('stock/returns');
 const approveReturnedProducts = new Resource('stock/returns/approve-products');
@@ -132,7 +132,7 @@ export default {
       page: {
         option: 'list',
       },
-      params: {},
+      // params: {},
       form: {
         warehouse_index: '',
         warehouse_id: '',
@@ -149,6 +149,9 @@ export default {
     };
   },
   computed: {
+    params() {
+      return this.$store.getters.params;
+    },
     ...mapGetters([
       'userId',
     ]),
@@ -166,16 +169,24 @@ export default {
     checkRole,
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list()
-        .then(response => {
-          app.params = response.params;
-          app.warehouses = response.params.warehouses;
-          if (app.warehouses.length > 0) {
-            app.form.warehouse_id = app.warehouses[0];
-            app.form.warehouse_index = 0;
-            app.fetchItemStocks();
-          }
-        });
+      app.$store.dispatch('app/setNecessaryParams');
+      const params = app.params;
+      app.warehouses = params.warehouses;
+      if (app.warehouses.length > 0) {
+        app.form.warehouse_id = app.warehouses[0];
+        app.form.warehouse_index = 0;
+        app.fetchItemStocks();
+      }
+      // necessaryParams.list()
+      //   .then(response => {
+      //     app.params = response.params;
+      //     app.warehouses = response.params.warehouses;
+      //     if (app.warehouses.length > 0) {
+      //       app.form.warehouse_id = app.warehouses[0];
+      //       app.form.warehouse_index = 0;
+      //       app.fetchItemStocks();
+      //     }
+      //   });
     },
     confirmReturnedItem(id) {
       // const app = this;

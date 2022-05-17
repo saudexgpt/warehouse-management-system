@@ -103,7 +103,7 @@
                               type="number"
                               :max="invoice_item.supply_bal"
                               min="0"
-                              @change="checkForOverflow(invoice_item.supply_bal, index)"
+                              @blur="checkForOverflow(invoice_item.supply_bal, index)"
                             >
                           </div>
                         </td>
@@ -154,7 +154,7 @@ import checkRole from '@/utils/role';
 
 import Resource from '@/api/resource';
 // const createInvoice = new Resource('invoice/general/store');
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 const unDeliveredInvoices = new Resource('transfers/waybill/undelivered-invoices');
 // const availableVehicles = new Resource('invoice/waybill/fetch-available-vehicles');
 const storeWaybillResource = new Resource('transfers/waybill/store');
@@ -164,7 +164,7 @@ export default {
 
   data() {
     return {
-      params: {},
+      // params: {},
       form: {
         warehouse_id: '',
         waybill_no: '',
@@ -187,6 +187,11 @@ export default {
       disabled: false,
     };
   },
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   mounted() {
     this.fetchNecessaryParams();
   },
@@ -206,12 +211,12 @@ export default {
     },
     checkForOverflow(limit, index) {
       const app = this;
-      const value = app.invoice_items[index].quantity_for_supply;
-      const product = app.invoice_items[index].item.name;
-      const package_type = app.invoice_items[index].item.package_type;
+      const value = app.form.invoice_items[index].quantity_for_supply;
+      const product = app.form.invoice_items[index].item.name;
+      const package_type = app.form.invoice_items[index].item.package_type;
       if (value > limit) {
+        app.form.invoice_items[index].quantity_for_supply = limit;
         app.$alert('Make sure you DO NOT exceed ' + limit + ' ' + package_type + ' for ' + product);
-        app.invoice_items[index].quantity_for_supply = limit;
       }
     },
     fetchUndeliveredInvoices(index) {
@@ -228,11 +233,15 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list()
-        .then(response => {
-          app.params = response.params;
-        });
+      app.$store.dispatch('app/setNecessaryParams');
     },
+    // fetchNecessaryParams() {
+    //   const app = this;
+    //   necessaryParams.list()
+    //     .then(response => {
+    //       app.params = response.params;
+    //     });
+    // },
     // displayInvoiceitems() {
     //   const app = this;
     //   var selected_invoice = app.selected_invoice;
@@ -315,11 +324,18 @@ export default {
     //     });
     // },
     generateWaybill() {
-      // this.form.invoice_items = this.invoice_items;
-      if (this.form.invoice_items.length < 1) {
+      const invoice_items = this.form.invoice_items;
+
+      if (invoice_items.length < 1) {
         this.$alert('Please select at least one invoice request to generate a waybill');
         return false;
       }
+      invoice_items.forEach(element => {
+        if (element.supply_bal < element.quantity_for_supply) {
+          this.$alert('To continue, kindly reduce ' + element.item.name + ' quantity to ' + element.supply_bal);
+          return false;
+        }
+      });
       this.$refs['form'].validate((valid) => {
         if (valid) {
           this.$confirm('Cross check your selection before submitting. Continue?', 'Warning', {

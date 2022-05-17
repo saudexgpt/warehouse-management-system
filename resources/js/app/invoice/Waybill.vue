@@ -140,7 +140,7 @@ import { parseTime } from '@/utils';
 import Resource from '@/api/resource';
 import WaybillDetails from './partials/WaybillDetails';
 import EditWaybill from './partials/EditWaybill';
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 const fetchWaybills = new Resource('invoice/waybill');
 const deleteWaybill = new Resource('invoice/waybill/delete');
 export default {
@@ -233,29 +233,36 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      if (app.params === null) {
-        necessaryParams.list().then(response => {
-          const params = response.params;
-          app.$store.dispatch('app/setNecessaryParams', params);
-          app.warehouses = app.params.warehouses;
-          app.currency = app.params.currency;
-          // if (app.warehouses.length > 0) {
-          //   app.form.warehouse_id = app.warehouses[0];
-          //   app.form.warehouse_index = 0;
-          //   app.getWaybills();
-          // }
-        // if (app.warehouses.length > 0) {
-        //   app.form.warehouse_id = app.warehouses[0];
-        //   app.form.warehouse_index = 0;
-        //   app.getInvoices();
-        // }
-        });
-      } else {
-        const params = app.params;
-        app.warehouses = params.warehouses;
-        app.currency = params.currency;
-      }
+      app.$store.dispatch('app/setNecessaryParams');
+      const params = app.params;
+      app.warehouses = params.warehouses;
+      app.currency = params.currency;
     },
+    // fetchNecessaryParams() {
+    //   const app = this;
+    //   if (app.params === null) {
+    //     necessaryParams.list().then(response => {
+    //       const params = response.params;
+    //       app.$store.dispatch('app/setNecessaryParams', params);
+    //       app.warehouses = app.params.warehouses;
+    //       app.currency = app.params.currency;
+    //       // if (app.warehouses.length > 0) {
+    //       //   app.form.warehouse_id = app.warehouses[0];
+    //       //   app.form.warehouse_index = 0;
+    //       //   app.getWaybills();
+    //       // }
+    //     // if (app.warehouses.length > 0) {
+    //     //   app.form.warehouse_id = app.warehouses[0];
+    //     //   app.form.warehouse_index = 0;
+    //     //   app.getInvoices();
+    //     // }
+    //     });
+    //   } else {
+    //     const params = app.params;
+    //     app.warehouses = params.warehouses;
+    //     app.currency = params.currency;
+    //   }
+    // },
     format(date) {
       var month = date.toLocaleString('en-US', { month: 'short' });
       return month + ' ' + date.getDate() + ', ' + date.getFullYear();

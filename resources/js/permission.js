@@ -34,6 +34,7 @@ router.beforeEach(async(to, from, next) => {
             next();
           } else {
             try {
+              store.dispatch('app/setNecessaryParams');
               // get user info
               // note: roles must be a object array! such as: ['admin'] or ,['manager','editor']
               const { roles, permissions } = await store.dispatch('user/getInfo');

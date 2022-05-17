@@ -169,13 +169,13 @@ import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 import Resource from '@/api/resource';
 const createTransferRequest = new Resource('transfers/general/store');
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 export default {
   name: 'CreateTransferRequest',
 
   data() {
     return {
-      params: {},
+      // params: {},
       customer_types: [],
       items_in_stock_dialog: false,
       dialogFormVisible: false,
@@ -242,6 +242,11 @@ export default {
       discount_rate: 0,
     };
   },
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   watch: {
     request_items() {
       this.blockRemoval = this.request_items.length <= 1;
@@ -288,10 +293,14 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list().then((response) => {
-        app.params = response.params;
-      });
+      app.$store.dispatch('app/setNecessaryParams');
     },
+    // fetchNecessaryParams() {
+    //   const app = this;
+    //   necessaryParams.list().then((response) => {
+    //     app.params = response.params;
+    //   });
+    // },
     addNewTransferRequest() {
       const app = this;
       var form = app.form;

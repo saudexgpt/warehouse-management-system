@@ -1319,7 +1319,7 @@ class InvoicesController extends Controller
         $date_from = '2021-12-01 00:00:00';
         $items = new Collection();
         foreach ($customer_ids_array as $customer_id) {
-            $customer_items = DispatchedProduct::with('itemStock.item')
+            $customer_items = DispatchedProduct::with('waybillItem.waybill', 'waybillItem.invoice', 'itemStock.item')
                 ->groupBy('waybill_item_id')
                 ->where('customer_id', $customer_id)
                 ->where('sent_to_rep', 0)

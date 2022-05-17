@@ -70,6 +70,7 @@
                 <label for>
                   Select Customer (
                   <a
+                    v-if="checkRole(['admin'])"
                     style="color: brown"
                     @click="dialogFormVisible = true"
                   >Click to Add New Customer</a>)
@@ -300,7 +301,7 @@ import AddNewCustomer from '@/app/users/AddNewCustomer';
 import BulkInvoiceUpload from './BulkInvoiceUpload';
 import Resource from '@/api/resource';
 const createInvoice = new Resource('invoice/general/store');
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 const getCustomers = new Resource('fetch-customers');
 const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
@@ -464,16 +465,7 @@ export default {
     },
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list().then(response => {
-        const params = response.params;
-        app.$store.dispatch('app/setNecessaryParams', params);
-      });
-      if (app.params === null) {
-        necessaryParams.list().then(response => {
-          const params = response.params;
-          app.$store.dispatch('app/setNecessaryParams', params);
-        });
-      }
+      app.$store.dispatch('app/setNecessaryParams');
     },
     fetchCustomers() {
       const app = this;
