@@ -403,8 +403,8 @@ class InvoicesController extends Controller
         $invoices = Invoice::with(['customer.user', 'confirmer', 'invoiceItems' => function ($q) {
             $q->where('supply_status', '!=', 'Complete');
         }, 'invoiceItems.item.stocks' => function ($p) use ($warehouse_id) {
-            $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id)->where('confirmed_by', '!=', null);
-        }])->where('warehouse_id', $warehouse_id)->where('status', '!=', 'delivered')->where('full_waybill_generated', '0')->where('confirmed_by', '!=', null)->orderBy('id', 'DESC')->get();
+            $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id)->whereRaw('confirmed_by IS NOT NULL');
+        }])->where('warehouse_id', $warehouse_id)->where('status', '!=', 'delivered')->where('full_waybill_generated', '0')->whereRaw('confirmed_by IS NOT NULL')->orderBy('id', 'DESC')->get();
         return response()->json(compact('invoices', 'waybill_no'), 200);
     }
 
@@ -760,15 +760,19 @@ class InvoicesController extends Controller
         //$quantity = $invoice_item->quantity;
         // $quantity = $invoice_item->quantity_supplied;
         // If a specific batch was set when raising the invoice, we set it here
-        if (!empty($batches)) {
-            foreach ($batches as $batch) {
-                $item_sub_batch = ItemStockSubBatch::find($batch);
+
+        $batches_of_items_in_stock = ItemStockSubBatch::whereIn('id', $batches)->whereRaw('balance - reserved_for_supply > 0')->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
+        if ($batches_of_items_in_stock->isNotEmpty()) {
+            # code...
+
+            foreach ($batches_of_items_in_stock as $item_sub_batch) {
+                // $item_sub_batch = ItemStockSubBatch::find($batch);
                 $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
                 if ($quantity <= $real_balance) {
                     $invoice_item_batch = new InvoiceItemBatch();
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
-                    $invoice_item_batch->item_stock_sub_batch_id = $batch;
+                    $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
                     $invoice_item_batch->to_supply = $quantity;
                     $invoice_item_batch->quantity = $quantity;
                     $invoice_item_batch->save();
@@ -780,7 +784,7 @@ class InvoicesController extends Controller
                     $invoice_item_batch = new InvoiceItemBatch();
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
-                    $invoice_item_batch->item_stock_sub_batch_id = $batch;
+                    $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
                     $invoice_item_batch->to_supply = $real_balance;
                     $invoice_item_batch->quantity = $real_balance;
                     $invoice_item_batch->save();
@@ -792,7 +796,7 @@ class InvoicesController extends Controller
         }
         if ($quantity > 0) {
             // If a specific batch was NOT set when raising the invoice, we make it automatic here using FIFO (First In First Out) principle
-            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $invoice_item->invoice->warehouse_id, 'item_id' => $invoice_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->where('confirmed_by', '!=', null)->orderBy('expiry_date')->get();
+            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $invoice_item->invoice->warehouse_id, 'item_id' => $invoice_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
 
             foreach ($batches_of_items_in_stock as $item_sub_batch) {
                 $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
@@ -835,7 +839,6 @@ class InvoicesController extends Controller
         //
         set_time_limit(0);
         $user = $this->getUser();
-        $invoice_ids = $request->invoice_ids;
         // $invoice = Invoice::find($request->invoice_id);
         $warehouse_id = $request->warehouse_id;
         $warehouse_id = $request->warehouse_id;
@@ -851,8 +854,6 @@ class InvoicesController extends Controller
         $waybill->save();
 
         $this->incrementReceiptNo('waybill');
-
-        $waybill->invoices()->sync($invoice_ids);
         // create way bill items
         $waybill_item_obj = new WaybillItem();
         // $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_items);
@@ -862,6 +863,8 @@ class InvoicesController extends Controller
         // }
         // check if there are items in stock for this waybil to be generated
         $partial_waybill_generated = [];
+
+        $invoice_ids = [];
         foreach ($invoice_items as $invoice_item) {
             $batches = $invoice_item->batches;
 
@@ -873,19 +876,23 @@ class InvoicesController extends Controller
                 if ($original_quantity > $quantity_supplied) {
                     if (($original_quantity - $quantity_supplied)  >= $for_supply) {
 
+
                         $balance = $this->createInvoiceItemBatches($invoice_item_update, $batches, $for_supply);
                         $actual_supply_quantity = $for_supply - $balance;
                         $invoice_item_update->quantity_supplied += $actual_supply_quantity;
                         $invoice_item_update->save();
+
+                        if ($original_quantity > $invoice_item_update->quantity_supplied) {
+                            $partial_waybill_generated[] = $invoice_item->invoice_id;
+                        }
+                        $invoice_ids[] = $invoice_item_update->invoice_id;
 
                         $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_item, $actual_supply_quantity);
                     }
                 }
             }
 
-            if ($original_quantity > $invoice_item_update->quantity_supplied) {
-                $partial_waybill_generated[] = $invoice_item->invoice_id;
-            }
+
 
             // $item_in_stock_obj = new ItemStockSubBatch();
             // $item_balance = $item_in_stock_obj->fetchBalanceOfItemsInStock($warehouse_id, $invoice_item->item_id);
@@ -897,7 +904,7 @@ class InvoicesController extends Controller
             // }
         }
 
-        $invoice_nos = [];
+        $invoice_ids = array_unique($invoice_ids);
         foreach ($invoice_ids as $invoice_id) {
             $invoice = Invoice::find($invoice_id);
             if (in_array($invoice_id, $partial_waybill_generated)) {
@@ -915,6 +922,9 @@ class InvoicesController extends Controller
             $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
             $this->logUserActivity($title, $description, $roles);
         }
+
+
+        $waybill->invoices()->sync($invoice_ids);
         // }
         // $this->createDispatchedWaybill($waybill, $request);
 

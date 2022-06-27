@@ -252,7 +252,7 @@ const unDeliveredInvoices = new Resource('invoice/waybill/undelivered-invoices')
 const storeWaybillResource = new Resource('invoice/waybill/store');
 const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
-  name: 'GenerateWaybill',
+  // name: 'GenerateWaybill',
 
   data() {
     return {

@@ -239,11 +239,11 @@ class Controller extends BaseController
     public function fetchNecessayParams()
     {
         $user = $this->getUser();
-        $all_warehouses = Warehouse::with(['itemStocks.item.taxes', 'itemStocks.item.price', 'vehicles'])->where('enabled', 1)->get();
+        $all_warehouses = Warehouse::with([/*'itemStocks.item.taxes', 'itemStocks.item.price','vehicles'*/])->where('enabled', 1)->get();
         if ($user->isAdmin() || $user->isAssistantAdmin()) {
             $warehouses = $all_warehouses;
         } else {
-            $warehouses = $user->warehouses()->with(['itemStocks.item.taxes', 'itemStocks.item.price', 'vehicles'])->where('enabled', 1)->get();
+            $warehouses = $user->warehouses()->with([/*'itemStocks.item.taxes', 'itemStocks.item.price', 'vehicles'*/])->where('enabled', 1)->get();
         }
         $items = Item::with(['taxes', 'price'])->orderBy('name')->get();
         $currencies = Currency::get();

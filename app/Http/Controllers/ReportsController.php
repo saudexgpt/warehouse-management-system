@@ -505,6 +505,114 @@ class ReportsController extends Controller
     }
     public function outbounds(Request $request)
     {
+        set_time_limit(0);
+        $warehouse_id = $request->warehouse_id;
+        $date_from = Carbon::now()->startOfMonth();
+        $date_to = Carbon::now()->endOfMonth();
+        $panel = 'month';
+        if (isset($request->from, $request->to, $request->panel)) {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $panel = $request->panel;
+        }
+        $outbounds = [];
+
+        $dispatched_products = DispatchedProduct::where(['warehouse_id' => $warehouse_id])
+            ->where('created_at', '>=', $date_from)
+            ->where('created_at', '<=', $date_to)
+            ->orderBy('id', 'DESC')
+            ->get();
+        // $invoice_items = InvoiceItem::with(['warehouse', 'invoice.customer.user', 'item', 'waybillItems.waybill.dispatcher.vehicle.vehicleDrivers.driver.user', 'batches.itemStockBatch', 'waybillItems.dispatchProduct'])->where(['warehouse_id' => $warehouse_id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
+        $quantity_supplied = [];
+        foreach ($dispatched_products as $dispatched_product) {
+
+
+            $batch_nos = $dispatched_product->itemStock->batch_no;
+
+            $dispatcher = '';
+            $transit_date = $dispatched_product->created_at;
+            if ($dispatched_product->waybill->dispatcher) {
+                foreach ($dispatched_product->waybill->dispatcher->vehicle->vehicleDrivers as $vehicle_driver) {
+                    $dispatcher .= ($vehicle_driver->driver) ? $vehicle_driver->driver->user->name : '-';
+                }
+            }
+
+            $invoice_item = $dispatched_product->waybillItem->invoiceItem;
+            if (!isset($quantity_supplied[$invoice_item->id])) {
+
+                $quantity_supplied[$invoice_item->id] = 0;
+            }
+            $quantity = $invoice_item->quantity;
+            $supplied = $dispatched_product->quantity_supplied;
+
+
+            $total_supplied = $quantity_supplied[$invoice_item->id] + $supplied;
+            $outbounds[]  = [
+                'dispatcher' => $dispatcher,
+                'invoice_no' => $invoice_item->invoice->invoice_number,
+                'customer' => $invoice_item->invoice->customer->user->name,
+                'product' => $invoice_item->item->name,
+                'batch_nos' => $batch_nos,
+                'amount' => $invoice_item->amount,
+                'quantity' => $quantity . ' ' . $invoice_item->type,
+                'supplied' => $supplied . ' ' . $invoice_item->type,
+                'balance' => $quantity - $total_supplied . ' ' . $invoice_item->type, // initially set to zero
+                'date' => $dispatched_product->waybillItem->created_at,
+                'status' => $dispatched_product->status,
+                'transit_date' => $transit_date,
+                'delivery_date' => ($dispatched_product->status === 'delivered') ? $dispatched_product->updated_at : 'Pending',
+            ];
+            $quantity_supplied[$invoice_item->id] = $total_supplied;
+        }
+        $transfer_dispatched_products = TransferRequestDispatchedProduct::where(['supply_warehouse_id' => $warehouse_id])
+            ->where('created_at', '>=', $date_from)
+            ->where('created_at', '<=', $date_to)
+            ->orderBy('id', 'DESC')
+            ->get();
+        $transfered_quantity_supplied = [];
+        foreach ($transfer_dispatched_products as $transfer_dispatched_product) {
+            $batch_nos = $transfer_dispatched_product->itemStock->batch_no;
+
+            $dispatcher = '';
+            $transit_date = $transfer_dispatched_product->created_at;
+            if ($transfer_dispatched_product->transferWaybill->dispatcher) {
+                $dispatcher = $transfer_dispatched_product->transferWaybill->dispatcher->name;
+            }
+
+            $invoice_item = $transfer_dispatched_product->transferWaybillItem->invoiceItem;
+            $quantity = $invoice_item->quantity;
+            $supplied = $transfer_dispatched_product->quantity_supplied;
+
+            if (!isset($transfered_quantity_supplied[$invoice_item->id])) {
+
+                $transfered_quantity_supplied[$invoice_item->id] = 0;;
+            }
+            $total_supplied = $transfered_quantity_supplied[$invoice_item->id] + $supplied;
+            $outbounds[]  = [
+                'dispatcher' => $dispatcher,
+                'invoice_no' => $invoice_item->transferRequest->request_number,
+                'customer' => $invoice_item->requestWarehouse->name,
+                'product' => $invoice_item->item->name,
+                'batch_nos' => $batch_nos,
+                'amount' => $invoice_item->amount,
+                'quantity' => $quantity . ' ' . $invoice_item->type,
+                'supplied' => $supplied . ' ' . $invoice_item->type,
+                'balance' => $quantity - $total_supplied . ' ' . $invoice_item->type,
+                'date' => $transfer_dispatched_product->transferWaybillItem->created_at,
+                'status' => $transfer_dispatched_product->status,
+                'transit_date' => $transit_date,
+                'delivery_date' => ($transfer_dispatched_product->status === 'delivered') ? $transfer_dispatched_product->updated_at : 'Pending',
+            ];
+            $transfered_quantity_supplied[$invoice_item->id] = $total_supplied;
+        }
+        usort($outbounds, function ($a, $b) {
+            return strtotime($a['date']) - strtotime($b['date']);
+        });
+
+        return response()->json(compact('outbounds'));
+    }
+    public function outboundsIsolatedOn24062022(Request $request)
+    {
         $warehouse_id = $request->warehouse_id;
         $date_from = Carbon::now()->startOfMonth();
         $date_to = Carbon::now()->endOfMonth();

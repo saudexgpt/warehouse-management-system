@@ -33,7 +33,7 @@
             @input="getInvoices"
           >
             <el-option
-              v-for="(status, index) in invoice_statuses"
+              v-for="(status, index) in params.invoice_statuses"
               :key="index"
               :value="status.code"
               :label="status.name"
@@ -328,10 +328,10 @@ export default {
     fetchNecessaryParams() {
       const app = this;
       app.$store.dispatch('app/setNecessaryParams');
-      const params = app.params;
-      app.warehouses = params.warehouses;
-      app.invoice_statuses = params.invoice_statuses;
-      app.currency = params.currency;
+      // const params = app.params;
+      app.warehouses = app.params.warehouses;
+      app.invoice_statuses = app.params.invoice_statuses;
+      app.currency = app.params.currency;
     },
     // fetchNecessaryParams() {
     //   const app = this;
