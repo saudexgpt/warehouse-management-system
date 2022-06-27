@@ -18,7 +18,7 @@
         <v-client-table v-model="items" :columns="columns" :options="options">
 
           <div slot="category.name" slot-scope="{row}">
-            {{ row.category.name }}
+            {{ (row.category) ? row.category.name : '' }}
           </div>
           <div slot="price.sale_price" slot-scope="{row}">
             <span align="right">{{ '₦' + Number(row.price.sale_price).toLocaleString() }}</span>
@@ -173,7 +173,11 @@ export default {
     formatJson(filterVal, jsonData) {
       return jsonData.map(v => filterVal.map(j => {
         if (j === 'category.name') {
-          return v['category']['name'];
+          if (v['category']){
+            return v['category']['name'];
+          } else {
+            return '-';
+          }
         } else {
           if (j === 'price.sale_price') {
             if (v['price']){

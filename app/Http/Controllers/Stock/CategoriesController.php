@@ -16,7 +16,7 @@ class CategoriesController extends Controller
     public function index()
     {
         //
-        $categories = Category::with(['items'])->get();
+        $categories = Category::/*with(['items'])->*/get();
         return response()->json(compact('categories'));
     }
 

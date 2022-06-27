@@ -18,7 +18,7 @@ class ItemsController extends Controller
     public function index()
     {
         //
-        $items = Item::with(['category', 'stocks', 'taxes', 'price'])->orderBy('name')->get();
+        $items = Item::with(['category', /*'stocks',*/ 'taxes', 'price'])->orderBy('name')->get();
 
         return response()->json(compact('items'));
     }
@@ -33,7 +33,7 @@ class ItemsController extends Controller
     public function show(Item $item)
     {
 
-        $item = $item->with(['category', 'stocks', 'taxes', 'price'])->find($item->id);
+        $item = $item->with(['category', /*'stocks',*/ 'taxes', 'price'])->find($item->id);
         // $item->currency_id = $item->price->currency_id;
         // $item->purchase_price = $item->price->purchase_price;
         // $item->sale_price = $item->price->sale_price;
