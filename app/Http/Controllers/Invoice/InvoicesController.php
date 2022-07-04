@@ -907,9 +907,9 @@ class InvoicesController extends Controller
         $invoice_ids = array_unique($invoice_ids);
         foreach ($invoice_ids as $invoice_id) {
             $invoice = Invoice::find($invoice_id);
-            if (in_array($invoice_id, $partial_waybill_generated)) {
-                $invoice->full_waybill_generated = '0';
-            } else {
+            $invoice->full_waybill_generated = '0';
+            if (!in_array($invoice_id, $partial_waybill_generated)) {
+
                 $invoice->full_waybill_generated = '1';
             }
             $invoice->save();
