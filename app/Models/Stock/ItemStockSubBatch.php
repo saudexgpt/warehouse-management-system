@@ -73,23 +73,25 @@ class ItemStockSubBatch extends Model
     }
     private function performFirstInFirstOutDelivery($warehouse_id, $waybill_item, $item_id, $quantity_to_supply)
     {
-        $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('expiry_date')->get();
+        $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
         foreach ($next_item_stock_batches as $next_item_stock_batch) {
             if ($quantity_to_supply <= $next_item_stock_batch->balance) {
                 $next_item_stock_batch->in_transit += $quantity_to_supply;
+                $next_item_stock_batch->reserved_for_supply -=  $quantity_to_supply;
                 $next_item_stock_batch->balance -=  $quantity_to_supply;
                 $next_item_stock_batch->save();
 
                 $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $quantity_to_supply);
 
-                $waybill_quantity = 0;
-                break;
+                // $waybill_quantity = 0;
+                // break;
             } else {
 
                 $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance);
 
                 $quantity_to_supply -= $next_item_stock_batch->balance;
                 $next_item_stock_batch->in_transit += $next_item_stock_batch->balance;
+                $next_item_stock_batch->reserved_for_supply =  0;
                 $next_item_stock_batch->balance =  0;
                 $next_item_stock_batch->save();
             }
@@ -110,7 +112,7 @@ class ItemStockSubBatch extends Model
     }
     private function performFirstInFirstOutTransferDelivery($warehouse_id, $waybill_item, $item_id, $quantity_to_supply)
     {
-        $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->orderBy('expiry_date')->get();
+        $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
         foreach ($next_item_stock_batches as $next_item_stock_batch) {
             if ($quantity_to_supply <= $next_item_stock_batch->balance) {
                 $next_item_stock_batch->in_transit += $quantity_to_supply;
@@ -119,8 +121,8 @@ class ItemStockSubBatch extends Model
 
                 $this->dispatchTransferProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $quantity_to_supply);
 
-                $waybill_quantity = 0;
-                break;
+                // $waybill_quantity = 0;
+                // break;
             } else {
 
                 $this->dispatchTransferProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance);

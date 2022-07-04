@@ -98,6 +98,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         $router->group(['prefix' => 'tabular'], function () use ($router) {
             $router->get('products-in-stock', 'ReportsController@productsInStockTabular')->middleware('permission:view reports');
             $router->get('outbounds', 'ReportsController@outbounds')->middleware('permission:view reports');
+            $router->get('unsupplied', 'ReportsController@unsuppliedInvoices')->middleware('permission:view reports');
         });
         $router->get('audit-trails', 'ReportsController@auditTrails')->middleware('permission:view reports');
         $router->get('notification/mark-as-read', 'ReportsController@markAsRead');

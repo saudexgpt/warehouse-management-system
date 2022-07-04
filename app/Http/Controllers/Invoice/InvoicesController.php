@@ -1003,7 +1003,7 @@ class InvoicesController extends Controller
         $vehicles = Vehicle::with('vehicleDrivers.driver.user')/*->where('warehouse_id', $warehouse_id)*/->get();
         $delivery_trips = DeliveryTrip::with('cost.confirmer', 'waybills', 'vehicle.vehicleDrivers.driver.user')->orderBy('id', 'DESC')->where(['warehouse_id' => $warehouse_id])->get();
 
-        $waybills_with_pending_wayfare = Waybill::where(['warehouse_id' => $warehouse_id, 'waybill_wayfare_status' => 'pending'])->where('confirmed_by', '!=', null)->get();
+        $waybills_with_pending_wayfare = Waybill::where(['warehouse_id' => $warehouse_id, 'waybill_wayfare_status' => 'pending'])->whereRaw('confirmed_by IS NOT NULL')->get();
 
         return response()->json(compact('delivery_trips', 'waybills_with_pending_wayfare', 'trip_no', 'vehicles'), 200);
     }

@@ -17,6 +17,11 @@
           <outbounds v-if="params != null && activeActivity=='Outbounds'" :params="params" />
           <!-- </keep-alive> -->
         </el-tab-pane>
+        <el-tab-pane label="Unsupplied Invoices" name="Unsupplied">
+          <!-- <keep-alive> -->
+          <unsupplied-invoices v-if="params != null && activeActivity=='Unsupplied'" :params="params" />
+          <!-- </keep-alive> -->
+        </el-tab-pane>
         <el-tab-pane label="Products" name="Products">
           <!-- <keep-alive> -->
           <products v-if="activeActivity=='Products'" :can-create-new-product="false" />
@@ -41,6 +46,7 @@
 // import Resource from '@/api/resource';
 import Inbounds from './inbounds';
 import Outbounds from './outbounds';
+import UnsuppliedInvoices from './UnsuppliedInvoices';
 import InstantBalances from './InstantBalances';
 import Products from '@/app/stock/item/ManageItem';
 import Fleets from './fleets';
@@ -49,7 +55,7 @@ import Users from './users/List';
 export default {
   name: 'DownloadReports',
   components: {
-    Inbounds, Outbounds, InstantBalances, Products, Fleets, Users,
+    Inbounds, Outbounds, InstantBalances, UnsuppliedInvoices, Products, Fleets, Users,
   },
   data() {
     return {

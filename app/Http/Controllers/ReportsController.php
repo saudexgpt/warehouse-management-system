@@ -503,6 +503,29 @@ class ReportsController extends Controller
 
         ];
     }
+
+    public function unsuppliedInvoices(Request $request)
+    {
+        set_time_limit(0);
+        $warehouse_id = $request->warehouse_id;
+        $date_from = Carbon::now()->startOfMonth();
+        $date_to = Carbon::now()->endOfMonth();
+        $panel = 'month';
+        if (isset($request->from, $request->to, $request->panel)) {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $panel = $request->panel;
+        }
+
+        $invoice_items = InvoiceItem::with('invoice.customer.user', 'item')
+            ->where('warehouse_id', $warehouse_id)
+            ->whereRaw('quantity - quantity_supplied > 0')
+            ->where('created_at', '>=', $date_from)
+            ->where('created_at', '<=', $date_to)
+            ->get();
+
+        return response()->json(compact('invoice_items'), 200);
+    }
     public function outbounds(Request $request)
     {
         set_time_limit(0);
