@@ -155,9 +155,10 @@ export default {
 
           // id: 'S/N',
         },
+        filterByColumn: true,
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['invoice_no', 'customer', 'date', 'created_at', 'status', 'transit_date', 'delivery_date'],
-        filterable: ['invoice_no', 'customer', 'date', 'created_at', 'status', 'transit_date', 'delivery_date'],
+        sortable: ['invoice_no', 'customer', 'product', 'date', 'created_at', 'status', 'transit_date', 'delivery_date'],
+        filterable: ['invoice_no', 'customer', 'product', 'date', 'created_at', 'status', 'transit_date', 'delivery_date'],
       },
       page: {
         option: 'list',

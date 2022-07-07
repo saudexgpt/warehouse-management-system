@@ -62,6 +62,7 @@ export default {
 
           // id: 'S/N',
         },
+        filterByColumn: true,
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: ['warehouse.name', 'item.name', 'batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'balance', 'updated_at'],
         filterable: ['warehouse.name', 'item.name', 'batch_no', 'expiry_date', 'updated_at'],

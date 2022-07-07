@@ -132,6 +132,7 @@ import Resource from '@/api/resource';
 const outboundReport = new Resource('reports/tabular/unsupplied');
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 export default {
+  name: 'UnsuppliedInvoices',
   props: {
     params: {
       type: Object,
@@ -165,6 +166,7 @@ export default {
 
           // id: 'S/N',
         },
+        filterByColumn: true,
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'quantity', 'quantity_supplied', 'balance', 'created_at'],
         filterable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'quantity', 'quantity_supplied', 'balance', 'created_at'],

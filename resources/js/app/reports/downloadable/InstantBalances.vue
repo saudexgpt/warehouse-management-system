@@ -105,6 +105,12 @@ export default {
           quantity_expired: 'QTY EXPIRED',
           balance: 'BALANCE',
         },
+        filterByColumn: true,
+        pagination: {
+          dropdown: true,
+          chunk: 200,
+        },
+        perPage: 200,
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
         filterable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
@@ -203,13 +209,13 @@ export default {
         });
     },
     handleDownload() {
-      const filtered_string = this.$refs.myTable.$refs.table.query;
+      // const filtered_string = this.$refs.myTable.$refs.table.query;
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [[this.table_title, '', '', '', '', '', '', '']];
         const tHeader = ['PRODUCT', 'WAREHOUSE', 'BROUGHT FORWARD', 'QUANTITY IN', 'QUANTITY OUT', 'QUANTITY EXPIRED', 'BALANCE'];
         const filterVal = this.columns;
-        const list = (filtered_string === '') ? this.items_in_stock : this.$refs.myTable.filteredData;
+        const list = this.items_in_stock; // (filtered_string === '') ? this.items_in_stock : this.$refs.myTable.filteredData;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({
           multiHeader,

@@ -761,7 +761,7 @@ class InvoicesController extends Controller
         // $quantity = $invoice_item->quantity_supplied;
         // If a specific batch was set when raising the invoice, we set it here
 
-        $batches_of_items_in_stock = ItemStockSubBatch::whereIn('id', $batches)->whereRaw('balance - reserved_for_supply > 0')->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
+        $batches_of_items_in_stock = ItemStockSubBatch::where('warehouse_id', $invoice_item->invoice->warehouse_id)->whereIn('id', $batches)->whereRaw('balance - reserved_for_supply > 0')->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
         if ($batches_of_items_in_stock->isNotEmpty()) {
             # code...
 

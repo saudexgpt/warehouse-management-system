@@ -540,7 +540,7 @@ class ReportsController extends Controller
         }
         $outbounds = [];
 
-        $dispatched_products = DispatchedProduct::where(['warehouse_id' => $warehouse_id])
+        $dispatched_products = DispatchedProduct::with(['itemStock', 'waybill.dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItem.invoiceItem'])->where(['warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
             ->orderBy('id', 'DESC')
@@ -587,10 +587,10 @@ class ReportsController extends Controller
             ];
             $quantity_supplied[$invoice_item->id] = $total_supplied;
         }
-        $transfer_dispatched_products = TransferRequestDispatchedProduct::where(['supply_warehouse_id' => $warehouse_id])
+        $transfer_dispatched_products = TransferRequestDispatchedProduct::with(['itemStock', 'transferWaybill.dispatcher', 'transferWaybillItem.invoiceItem'])
+            ->where(['supply_warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
-            ->orderBy('id', 'DESC')
             ->get();
         $transfered_quantity_supplied = [];
         foreach ($transfer_dispatched_products as $transfer_dispatched_product) {
