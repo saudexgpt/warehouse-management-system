@@ -3,8 +3,9 @@
     <el-row :gutter="10">
       <el-col :xs="24" :sm="8" :md="8">
         <label for="">Select Warehouse</label>
-        <el-select v-model="form.warehouse_index" placeholder="Select Warehouse" class="span" filterable>
-          <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="index" :label="warehouse.name" />
+        <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" class="span" filterable @input="getInvoices">
+          <el-option value="all" label="All Warehouses" />
+          <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="warehouse.id" :label="warehouse.name" />
 
         </el-select>
 
@@ -16,7 +17,7 @@
           trigger="click"
         >
           <date-range-picker :from="$route.query.from" :to="$route.query.to" :panel="panel" :panels="panels" :submit-title="submitTitle" :future="future" @update="setDateRange" />
-          <el-button id="pick_outbound_date" slot="reference" type="success">
+          <el-button id="pick_outbound_date2" slot="reference" type="success">
             <i class="el-icon-date" /> Pick Date Range
           </el-button>
         </el-popover>
@@ -128,7 +129,6 @@
         :limit.sync="form.limit"
         @pagination="getInvoices"
       />
-
     </div>
   </div>
 </template>
@@ -137,7 +137,7 @@ import moment from 'moment';
 import Pagination from '@/components/Pagination';
 import { parseTime } from '@/utils';
 import Resource from '@/api/resource';
-const outboundReport = new Resource('reports/tabular/unsupplied');
+const outboundReport = new Resource('reports/tabular/all-invoice-raised');
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 export default {
   name: 'UnsuppliedInvoices',
@@ -155,14 +155,13 @@ export default {
       invoice_items: [],
       invoice_statuses: [],
       currency: '',
-      columns: ['item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'warehouse.name', 'quantity', 'quantity_supplied', 'balance', 'rate', 'amount', 'created_at'],
+      columns: ['item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'warehouse.name', 'quantity', 'rate', 'amount', 'created_at'],
 
       options: {
         headings: {
           'item.name': 'Product',
           'invoice.invoice_number': 'Invoice No.',
           'invoice.customer.user.name': 'Customer Name',
-          balance: 'Unsupplied',
           'warehouse.name': 'Concerned Warehouse',
           // 'invoice.customer.user.name': 'Customer',
           // 'invoice.invoice_number': 'Invoice',
@@ -183,8 +182,8 @@ export default {
         perPage: 100,
         filterByColumn: true,
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'quantity', 'quantity_supplied', 'balance', 'created_at'],
-        filterable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'warehouse.name', 'quantity', 'quantity_supplied', 'balance', 'created_at'],
+        sortable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'quantity', 'created_at'],
+        filterable: ['invoice.invoice_number', 'item.name', 'warehouse.name', 'invoice.customer.user.name', 'quantity', 'created_at'],
       },
       page: {
         option: 'list',
@@ -198,6 +197,7 @@ export default {
         page: 1,
         limit: 100,
         keyword: '',
+        role: '',
       },
       total: 0,
       submitTitle: 'Fetch Report',
@@ -210,7 +210,7 @@ export default {
       invoice: {},
       selected_row_index: '',
       downloadLoading: false,
-      filename: 'Unsupplied Invoices',
+      filename: 'Invoices Raised',
 
     };
   },
@@ -229,8 +229,8 @@ export default {
     fetchNecessaryParams() {
       const app = this;
       app.warehouses = app.params.warehouses;
-      app.form.warehouse_index = 0;
-      app.form.warehouse_id = app.warehouses[0].id;
+      // app.form.warehouse_index = 0;
+      // app.form.warehouse_id = app.warehouses[0].id;
       app.invoice_statuses = app.params.invoice_statuses;
       app.currency = app.params.currency;
     },
@@ -240,7 +240,7 @@ export default {
     },
     setDateRange(values){
       const app = this;
-      document.getElementById('pick_outbound_date').click();
+      document.getElementById('pick_outbound_date2').click();
       let panel = app.panel;
       let from = app.week_start;
       let to = app.week_end;
@@ -266,7 +266,7 @@ export default {
             element['index'] = (page - 1) * limit + index + 1;
           });
           this.total = response.invoice_items.total;
-          app.table_title = 'Unsupplied Invoices from: ' + app.form.from + ' to: ' + app.form.to;
+          app.table_title = 'Invoices Raised from: ' + app.form.from + ' to: ' + app.form.to;
           loader.hide();
         })
         .catch(error => {
@@ -274,14 +274,15 @@ export default {
           console.log(error.message);
         });
     },
+
     async handleDownload() {
       this.downloadLoading = true;
       const param = this.form;
       param.is_download = 'yes';
       const { invoice_items } = await outboundReport.list(param);
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Quantity Supplied', 'Unsupplied', 'Rate', 'Amount', 'Created At'];
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '']];
+        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Rate', 'Amount', 'Created At'];
         const filterVal = this.columns;
         const list = invoice_items;
         const data = this.formatJson(filterVal, list);
@@ -313,11 +314,8 @@ export default {
         if (j === 'quantity') {
           return v['quantity'] + ' ' + v['type'];
         }
-        if (j === 'quantity_supplied') {
-          return v['quantity_supplied'] + ' ' + v['type'];
-        }
-        if (j === 'balance') {
-          return parseInt(v['quantity'] - v['quantity_supplied']) + ' ' + v['type'];
+        if (j === 'warehouse.name') {
+          return v['warehouse']['name'];
         }
         if (j === 'rate') {
           return this.currency + Number(v['rate']).toLocaleString();
