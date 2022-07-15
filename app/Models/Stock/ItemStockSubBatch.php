@@ -138,12 +138,12 @@ class ItemStockSubBatch extends Model
     }
     public function sendItemInStockForDelivery($waybill_items)
     {
-        foreach ($waybill_items as $waybill_item) {
+        foreach ($waybill_items as $waybill_item) :
 
             $warehouse_id = $waybill_item->warehouse_id;
             $waybill_quantity = $waybill_item->quantity;
             $invoice_item_id = $waybill_item->invoice_item_id;
-            $invoice_item_batches = InvoiceItemBatch::with('itemStockBatch')->where('invoice_item_id', $invoice_item_id)->where('quantity', '>', '0')->get();
+            $invoice_item_batches = InvoiceItemBatch::where('invoice_item_id', $invoice_item_id)->where('quantity', '>', 0)->get();
             // $items_in_stock= ItemStock::where(['warehouse_id' => $warehouse_id, 'item_id' => $waybill_item->item_id])
             //     ->where('balance', '>', '0')->orderBy('id')->get();
             // $item_stock_sub_batches = ItemStockSubBatch::where(['warehouse_id' => $warehouse_id, 'item_id' => $waybill_item->item_id])->where('balance', '>', '0')->orderBy('expiry_date')->get();
@@ -181,11 +181,6 @@ class ItemStockSubBatch extends Model
                         } else {
                             $waybill_quantity = $this->performFirstInFirstOutDelivery($warehouse_id, $waybill_item, $item_id, $waybill_quantity);
                         }
-
-                        // $waybill_quantity = 0; //we have sent all items for delivery
-                        if ($waybill_quantity == 0) {
-                            break;
-                        }
                     } else {
                         $invoice_item_batch->quantity = 0;
                         $invoice_item_batch->save();
@@ -214,9 +209,13 @@ class ItemStockSubBatch extends Model
 
                         $waybill_quantity -= $for_supply;
                     }
+                    // $waybill_quantity = 0; //we have sent all items for delivery
+                    if ($waybill_quantity == 0) {
+                        break;
+                    }
                 endforeach;
             }
-        }
+        endforeach;
     }
     public function sendTransferItemInStockForDelivery($waybill_items)
     {

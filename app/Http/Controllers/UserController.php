@@ -538,7 +538,9 @@ class UserController extends Controller
 
     public function fetchRepsForTransferToSalesApp()
     {
-        $reps = Customer::with('user')->where('type', 'reps')->get();
+        $reps = Customer::with(['user' => function ($q) {
+            $q->where('email', 'NOT LIKE', 'default' . '%');
+        }])->where('type', 'reps')->get();
         return response()->json(compact('reps'), 200);
     }
 }

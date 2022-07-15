@@ -57,6 +57,8 @@ class ItemsController extends Controller
         $package_type = $request->package_type;
         $quantity_per_carton = $request->quantity_per_carton;
         $description = $request->description;
+        $basic_unit = $request->basic_unit;
+        $basic_unit_quantity_per_package_type = $request->basic_unit_quantity_per_package_type;
         $picture = $request->picture;
         $item = Item::where('name', $name)->first();
 
@@ -66,6 +68,8 @@ class ItemsController extends Controller
             $item->package_type = $package_type;
             $item->quantity_per_carton = $quantity_per_carton;
             $item->category_id = $category_id;
+            $item->basic_unit = $basic_unit;
+            $item->basic_unit_quantity_per_package_type = $basic_unit_quantity_per_package_type;
             // $item->sku = $sku;
             $item->description = $description;
             $item->picture = $picture;
@@ -115,6 +119,8 @@ class ItemsController extends Controller
         $item->category_id = $request->category_id;
         $item->package_type = $request->package_type;
         $item->quantity_per_carton = $request->quantity_per_carton;
+        $item->basic_unit = $request->basic_unit;
+        $item->basic_unit_quantity_per_package_type = $request->basic_unit_quantity_per_package_type;
         // $item->sku = $request->sku;
         $item->description = $request->description;
         $item->picture = $request->picture;

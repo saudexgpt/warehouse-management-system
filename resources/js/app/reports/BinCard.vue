@@ -125,7 +125,7 @@ export default {
       submitTitle: 'Fetch Report',
       panel: 'month',
       future: false,
-      panels: ['month'/*, 'quarter', 'year'*/],
+      panels: ['range', 'week', 'month', 'quarter', 'year'],
       show_calendar: false,
       table_title: '',
       in_warehouse: '',

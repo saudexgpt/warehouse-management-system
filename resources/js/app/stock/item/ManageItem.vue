@@ -56,7 +56,7 @@ export default {
     return {
       categories: [],
       items: [],
-      columns: ['action', 'name', 'category.name', 'package_type', 'quantity_per_carton', 'price.sale_price'],
+      columns: ['action', 'name', 'category.name', 'package_type', 'basic_unit', 'basic_unit_quantity_per_package_type', 'quantity_per_carton', 'price.sale_price'],
 
       options: {
         headings: {
@@ -65,6 +65,7 @@ export default {
           package_type: 'Package Type',
           quantity_per_carton: 'Quantity Per Carton',
           'price.sale_price': 'Rate',
+          basic_unit_quantity_per_package_type: 'Quantity per basic unit',
           // id: 'S/N',
         },
         // editableColumns:['name', 'category.name', 'sku'],

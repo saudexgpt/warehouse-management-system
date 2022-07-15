@@ -59,6 +59,11 @@
 
               <label for="">Rate per {{ form.package_type }}</label>
               <el-input v-model="item_price.sale_price" placeholder="Selling Price" class="span" />
+
+              <label for="">Basic Unit</label>
+              <el-input v-model="form.basic_unit" placeholder="Enter Basic unit" class="span" />
+              <label for="">Basic Unit Quantity per {{ form.package_type }}</label>
+              <el-input v-model="form.basic_unit_quantity_per_package_type" placeholder="Enter Quantity" class="span" />
             </el-col>
             <el-col :xs="24" :sm="12" :md="12">
               <label for="">Select Currency</label>
@@ -134,6 +139,8 @@ export default {
         name: '',
         package_type: '',
         quantity_per_carton: '',
+        basic_unit: '',
+        basic_unit_quantity_per_package_type: '',
         category_id: '',
         description: '',
         picture: 'images/no-image.jpeg',
