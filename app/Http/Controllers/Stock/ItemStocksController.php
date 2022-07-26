@@ -21,8 +21,6 @@ class ItemStocksController extends Controller
      */
     public function index(Request $request)
     {
-        $date = date('Y-m-d', strtotime('now'));
-
         // $date_from = Carbon::now()->startOfMonth();
         // $date_to = Carbon::now()->endOfMonth();
         // $panel = 'month';
@@ -32,6 +30,7 @@ class ItemStocksController extends Controller
 
         //     $panel = $request->panel;
         // }
+        $date = date('Y-m-d', strtotime('now'));
         $warehouse_id = $request->warehouse_id;
         $items_in_stock = ItemStockSubBatch::with(['warehouse', 'item' => function ($q) {
             $q->orderBy('name');
@@ -108,7 +107,7 @@ class ItemStocksController extends Controller
     {
         $sub_batches = $request->sub_batches;
 
-        $item_stock_sub_batches = $this->createSubBatches($request, $sub_batches);
+        $item_stock_sub_batches = $this->createSubBatches($request, $sub_batches, 0);
         return response()->json(compact('item_stock_sub_batches'), 200);
     }
     public function moveExpiredProducts(Request $request)

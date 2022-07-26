@@ -172,7 +172,7 @@
                   </el-tooltip>
                   <el-dropdown-menu slot="dropdown" style="padding: 10px;">
                     Confirm movement of  {{ props.row.balance - props.row.reserved_for_supply }} {{ formatPackageType(props.row.item.package_type) }} of <br>{{ props.row.item.name }} to Expired Warehouse?<br>
-                    <el-button class="btn btn-danger" @click="moveExpiredProduct(props.index, props.row)">Move</el-button>
+                    <a class="btn btn-primary" @click="moveExpiredProduct(props.index, props.row)">Yes, Move</a>
                     <el-dropdown-item :id="props.index" divided>Cancel</el-dropdown-item>
                   </el-dropdown-menu>
                 </el-dropdown>
@@ -504,7 +504,9 @@ export default {
     },
     moveExpiredProduct(index, data) {
       const app = this;
-      const loader = itemsInStock.loaderShow();
+      document.getElementById(index).click();
+      // const loader = itemsInStock.loaderShow();
+      app.expired_products.splice(index - 1, 1);
       const moveExpiredProduct = new Resource('stock/items-in-stock/move-expired-products');
       const param = {
         id: data.id,
@@ -516,15 +518,14 @@ export default {
       };
       moveExpiredProduct.store(param)
         .then(() => {
-          app.expired_products.splice(index - 1, 1);
           this.$message({
             message: 'Product moved successfully',
             type: 'success',
           });
-          loader.hide();
+          // loader.hide();
         })
         .catch(error => {
-          loader.hide();
+          // loader.hide();
           console.log(error.message);
         });
     },
