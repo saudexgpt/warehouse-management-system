@@ -36,6 +36,7 @@
                     :key="warehouse_index"
                     :value="warehouse.id"
                     :label="warehouse.name"
+                    :disabled="warehouse.id===8"
                   />
                 </el-select>
                 <!-- <label for>Transfer Invoice Number</label>

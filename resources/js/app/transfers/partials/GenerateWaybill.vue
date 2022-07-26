@@ -14,7 +14,12 @@
               <el-col :xs="24" :sm="12" :md="12">
                 <label for="">Select Warehouse</label>
                 <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable class="span" @change="fetchUndeliveredInvoices()">
-                  <el-option v-for="(warehouse, warehouse_index) in params.warehouses" :key="warehouse_index" :value="warehouse.id" :label="warehouse.name" />
+                  <el-option
+                    v-for="(warehouse, warehouse_index) in params.warehouses"
+                    :key="warehouse_index"
+                    :value="warehouse.id"
+                    :label="warehouse.name"
+                  />
 
                 </el-select>
               </el-col>

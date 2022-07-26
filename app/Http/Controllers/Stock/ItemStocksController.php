@@ -21,7 +21,8 @@ class ItemStocksController extends Controller
      */
     public function index(Request $request)
     {
-        //
+        $date = date('Y-m-d', strtotime('now'));
+
         // $date_from = Carbon::now()->startOfMonth();
         // $date_to = Carbon::now()->endOfMonth();
         // $panel = 'month';
@@ -37,9 +38,15 @@ class ItemStocksController extends Controller
         }, 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->where(function ($q) {
             $q->where('balance', '>', '0');
             $q->orWhere('in_transit', '>', '0');
-        })->orderBy('expiry_date')->get();
+        })->where('expiry_date', '>=', $date)
+            ->orderBy('expiry_date')->get();
 
-        $expired_products = ExpiredProduct::with(['item'])->groupBy(['batch_no'])->where('warehouse_id', $warehouse_id)->select('*', \DB::raw('SUM(quantity) as quantity'))->get();
+        $expired_products = ItemStockSubBatch::with(['warehouse', 'item' => function ($q) {
+            $q->orderBy('name');
+        }, 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->whereRaw('balance - reserved_for_supply > 0')->where('expiry_date', '<', $date)
+            ->orderBy('expiry_date')->get();
+
+        // $expired_products = ExpiredProduct::with(['item'])->groupBy(['batch_no'])->where('warehouse_id', $warehouse_id)->select('*', \DB::raw('SUM(quantity) as quantity'))->get();
         // $items_in_stock = ItemStockSubBatch::with(['warehouse', 'item' => function ($q) {
         //     $q->orderBy('name');
         // }, 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->where(function ($q) {
@@ -102,6 +109,18 @@ class ItemStocksController extends Controller
         $sub_batches = $request->sub_batches;
 
         $item_stock_sub_batches = $this->createSubBatches($request, $sub_batches);
+        return response()->json(compact('item_stock_sub_batches'), 200);
+    }
+    public function moveExpiredProducts(Request $request)
+    {
+        $id = $request->id;
+        $item_in_stock = ItemStockSubBatch::find($id);
+        $item_in_stock->reserved_for_supply = 0;
+        $item_in_stock->balance = 0;
+        $item_in_stock->save();
+        $request->warehouse_id = 8; // This is expired warehouse
+        $data = [$request];
+        $item_stock_sub_batches = $this->createSubBatches($request, $data, 1);
         return response()->json(compact('item_stock_sub_batches'), 200);
     }
     public function uploadBulkProductsInStock(Request $request)
@@ -204,7 +223,7 @@ class ItemStocksController extends Controller
         //     $message = 'Invalid File';
         // }
     }
-    private function createSubBatches($request, $sub_batches)
+    private function createSubBatches($request, $sub_batches, $is_warehouse_transfered)
     {
         $user = $this->getUser();
         $item_stock_sub_batches = [];
@@ -222,6 +241,7 @@ class ItemStocksController extends Controller
             $item_stock_sub_batch->balance = $batch['quantity'];
             $item_stock_sub_batch->goods_received_note = $batch['goods_received_note'];
             $item_stock_sub_batch->expiry_date = date('Y-m-d', strtotime($batch['expiry_date']));
+            $item_stock_sub_batch->is_warehouse_transfered = $is_warehouse_transfered;
             $item_stock_sub_batch->save();
 
             $item_stock_sub_batches[] = $item_stock_sub_batch;

@@ -75,25 +75,29 @@ class ItemStockSubBatch extends Model
     {
         $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
         foreach ($next_item_stock_batches as $next_item_stock_batch) {
-            if ($quantity_to_supply <= $next_item_stock_batch->balance) {
-                $next_item_stock_batch->in_transit += $quantity_to_supply;
-                $next_item_stock_batch->reserved_for_supply -=  $quantity_to_supply;
-                $next_item_stock_batch->balance -=  $quantity_to_supply;
-                $next_item_stock_batch->save();
+            $balance = $next_item_stock_batch->balance;
+            if ($quantity_to_supply > 0) {
 
-                $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $quantity_to_supply);
+                if ($quantity_to_supply <= $balance) {
+                    $next_item_stock_batch->in_transit += $quantity_to_supply;
+                    $next_item_stock_batch->reserved_for_supply -=  $quantity_to_supply;
+                    $next_item_stock_batch->balance -=  $quantity_to_supply;
+                    $next_item_stock_batch->save();
 
-                // $waybill_quantity = 0;
-                // break;
-            } else {
+                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $quantity_to_supply);
 
-                $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance);
+                    $quantity_to_supply = 0;
+                    break;
+                } else {
 
-                $quantity_to_supply -= $next_item_stock_batch->balance;
-                $next_item_stock_batch->in_transit += $next_item_stock_batch->balance;
-                $next_item_stock_batch->reserved_for_supply =  0;
-                $next_item_stock_batch->balance =  0;
-                $next_item_stock_batch->save();
+                    $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $balance);
+
+                    $quantity_to_supply -= $balance;
+                    $next_item_stock_batch->in_transit += $balance;
+                    $next_item_stock_batch->reserved_for_supply =  0;
+                    $next_item_stock_batch->balance =  0;
+                    $next_item_stock_batch->save();
+                }
             }
         }
 
@@ -114,23 +118,27 @@ class ItemStockSubBatch extends Model
     {
         $next_item_stock_batches = ItemStockSubBatch::where('item_id', $item_id)->where('balance', '>', 0)->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
         foreach ($next_item_stock_batches as $next_item_stock_batch) {
-            if ($quantity_to_supply <= $next_item_stock_batch->balance) {
-                $next_item_stock_batch->in_transit += $quantity_to_supply;
-                $next_item_stock_batch->balance -=  $quantity_to_supply;
-                $next_item_stock_batch->save();
+            if ($quantity_to_supply > 0) {
+                if ($quantity_to_supply <= $next_item_stock_batch->balance) {
+                    $next_item_stock_batch->in_transit += $quantity_to_supply;
+                    $next_item_stock_batch->balance -=  $quantity_to_supply;
+                    $next_item_stock_batch->save();
 
-                $this->dispatchTransferProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $quantity_to_supply);
+                    $this->dispatchTransferProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $quantity_to_supply);
 
-                // $waybill_quantity = 0;
-                // break;
-            } else {
+                    $quantity_to_supply = 0;
+                    break;
+                    // $waybill_quantity = 0;
+                    // break;
+                } else {
 
-                $this->dispatchTransferProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance);
+                    $this->dispatchTransferProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $next_item_stock_batch->balance);
 
-                $quantity_to_supply -= $next_item_stock_batch->balance;
-                $next_item_stock_batch->in_transit += $next_item_stock_batch->balance;
-                $next_item_stock_batch->balance =  0;
-                $next_item_stock_batch->save();
+                    $quantity_to_supply -= $next_item_stock_batch->balance;
+                    $next_item_stock_batch->in_transit += $next_item_stock_batch->balance;
+                    $next_item_stock_batch->balance =  0;
+                    $next_item_stock_batch->save();
+                }
             }
         }
 

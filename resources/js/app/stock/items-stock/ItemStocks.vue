@@ -29,7 +29,7 @@
       <br>
 
       <el-tabs v-model="activeActivity">
-        <el-tab-pane label="UNEXPIRED PRODUCTS" name="unexpired">
+        <el-tab-pane v-if="form.warehouse_id !== 8" label="UNEXPIRED PRODUCTS" name="unexpired">
           <div class="box-header">
             <h4 class="box-title">{{ table_title }}</h4>
 
@@ -130,7 +130,7 @@
 
           </div>
         </el-tab-pane>
-        <!-- <el-tab-pane label="EXPIRED PRODUCTS" name="expired">
+        <el-tab-pane label="EXPIRED PRODUCTS" name="expired">
           <div class="box-header">
             <h4 class="box-title">{{ expired_title }}</h4>
 
@@ -143,29 +143,44 @@
             </div>
 
             <v-client-table v-model="expired_products" :columns="expired_columns" :options="expired_options">
-              <div slot="quantity" slot-scope="{row}" class="alert alert-info">
+              <!-- <div slot="quantity" slot-scope="{row}" class="alert alert-info">
                 {{ row.quantity }} {{ formatPackageType(row.item.package_type) }}
 
               </div>
               <div slot="destroyed" slot-scope="{row}" class="alert alert-warning">
                 {{ row.destroyed }} {{ formatPackageType(row.item.package_type) }}
 
-              </div>
-              <div slot="expired" slot-scope="{row}" class="alert alert-danger">
+              </div> -->
+              <!-- <div slot="expired" slot-scope="{row}" class="alert alert-danger">
                 {{ row.expired }} {{ formatPackageType(row.item.package_type) }}
 
-              </div>
-              <div slot="balance" slot-scope="{row}" class="alert alert-success">
-                {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
+              </div> -->
+              <div slot="balance" slot-scope="{row}" class="alert alert-danger">
+                {{ row.balance - row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
 
               </div>
               <div slot="expiry_date" slot-scope="{row}">
                 {{ row.expiry_date }}
               </div>
+              <div v-if="form.warehouse_id !== 8" slot="action" slot-scope="props">
+                <el-dropdown
+                  class="avatar-container right-menu-item hover-effect"
+                  trigger="click"
+                >
+                  <el-tooltip content="Move to Expired Warehouse" placement="top">
+                    <el-button class="btn btn-danger" icon="el-icon-position" round />
+                  </el-tooltip>
+                  <el-dropdown-menu slot="dropdown" style="padding: 10px;">
+                    Confirm movement of  {{ props.row.balance - props.row.reserved_for_supply }} {{ formatPackageType(props.row.item.package_type) }} of <br>{{ props.row.item.name }} to Expired Warehouse?<br>
+                    <el-button class="btn btn-danger" @click="moveExpiredProduct(props.index, props.row)">Move</el-button>
+                    <el-dropdown-item :id="props.index" divided>Cancel</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </div>
             </v-client-table>
 
           </div>
-        </el-tab-pane> -->
+        </el-tab-pane>
       </el-tabs>
     </div>
     <show-item-reservation-transactions
@@ -240,12 +255,13 @@ export default {
         sortable: ['item.name', 'batch_no', 'expiry_date'/* 'item.name', 'batch_no', 'quantity', 'in_transit', 'supplied', 'balance', 'expiry_date', 'created_at'*/],
         filterable: ['stocker.name', 'item.name', 'batch_no', 'expiry_date', 'created_at'],
       },
-      expired_columns: ['item.name', 'batch_no', 'quantity', /* 'destroyed', 'balance', */'expiry_date'],
+      expired_columns: ['item.name', 'batch_no', 'balance', /* 'destroyed', 'balance', */'expiry_date', 'action'],
 
       expired_options: {
         headings: {
           'item.name': 'Product',
           batch_no: 'Batch No.',
+          balance: 'Balance',
 
           // id: 'S/N',
         },
@@ -259,7 +275,7 @@ export default {
         },
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: [/* 'item.name', 'batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'balance', 'expiry_date', 'created_at'*/],
-        filterable: ['item.name', 'batch_no', 'quantity', 'destroyed', 'balance', 'expiry_date'],
+        filterable: ['item.name', 'batch_no', 'balance', 'expiry_date'],
       },
       page: {
         option: 'list',
@@ -430,6 +446,9 @@ export default {
 
       const param = app.form;
       param.warehouse_id = app.warehouses[param.warehouse_index].id;
+      if (param.warehouse_id === 8){
+        app.activeActivity = 'expired';
+      }
       itemsInStock.list(param)
         .then(response => {
           app.items_in_stock = response.items_in_stock;
@@ -482,6 +501,32 @@ export default {
         return 'alert-bg'; // flag expiry date as red
       }
       return 'okay-bg'; // flag expiry date as green
+    },
+    moveExpiredProduct(index, data) {
+      const app = this;
+      const loader = itemsInStock.loaderShow();
+      const moveExpiredProduct = new Resource('stock/items-in-stock/move-expired-products');
+      const param = {
+        id: data.id,
+        item_id: data.item_id,
+        quantity: data.balance - data.reserved_for_supply,
+        batch_no: data.batch_no,
+        goods_received_note: data.goods_received_note,
+        expiry_date: data.expiry_date,
+      };
+      moveExpiredProduct.store(param)
+        .then(() => {
+          app.expired_products.splice(index - 1, 1);
+          this.$message({
+            message: 'Product moved successfully',
+            type: 'success',
+          });
+          loader.hide();
+        })
+        .catch(error => {
+          loader.hide();
+          console.log(error.message);
+        });
     },
     formatPackageType(type){
       // var formated_type = type + 's';

@@ -297,7 +297,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
             $router->put('update/{item_in_stock}', 'ItemStocksController@update')->middleware('permission:update item stocks|manage item stocks');
 
-
+            $router->post('move-expired-products', 'ItemStocksController@moveExpiredProducts');
 
 
             $router->delete('delete/{item_sub_stock}', 'ItemStocksController@destroy')->middleware('permission:delete item stocks|manage item stocks');
