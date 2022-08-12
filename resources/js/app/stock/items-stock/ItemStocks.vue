@@ -509,6 +509,7 @@ export default {
       app.expired_products.splice(index - 1, 1);
       const moveExpiredProduct = new Resource('stock/items-in-stock/move-expired-products');
       const param = {
+        expired_from: app.warehouses[app.form.warehouse_index].id,
         id: data.id,
         item_id: data.item_id,
         quantity: data.balance - data.reserved_for_supply,

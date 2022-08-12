@@ -766,7 +766,7 @@ class ReportsController extends Controller
         }
         $warehouse_id = $request->warehouse_id;
         $item_id = $request->item_id;
-        list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_product) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
+        list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_products) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
 
         $bincards = [];
         $quantity_in_stock = ($total_stock_till_date) ? $total_stock_till_date->total_quantity : 0;
@@ -829,20 +829,22 @@ class ReportsController extends Controller
                 ];
             }
         }
-        if ($expired_product) {
-            $bincards[] = [
-                'type' => 'out_bound',
-                'date' => $expired_product->expiry_date,
-                'invoice_no' => '-',
-                'waybill_grn' => 'Batch: ' . $expired_product->batch_no . " (EXPIRED)",
-                'quantity_transacted' => $expired_product->total_quantity,
-                'in' => '',
-                'out' => $expired_product->total_quantity,
-                'balance' => 0, // initially set to zero
-                'packaging' => $expired_product->item->package_type,
-                'physical_quantity' => '',
-                'sign' => '',
-            ];
+        if ($expired_products->isNotEmpty()) {
+            foreach ($expired_products as $expired_product) {
+                $bincards[] = [
+                    'type' => 'out_bound',
+                    'date' => $expired_product->created_at,
+                    'invoice_no' => '-',
+                    'waybill_grn' => 'Batch: ' . $expired_product->batch_no . " (EXPIRED)",
+                    'quantity_transacted' => $expired_product->quantity,
+                    'in' => '',
+                    'out' => $expired_product->quantity,
+                    'balance' => 0, // initially set to zero
+                    'packaging' => $expired_product->item->package_type,
+                    'physical_quantity' => '',
+                    'sign' => '',
+                ];
+            }
         }
 
         usort($bincards, function ($a, $b) {
@@ -884,9 +886,10 @@ class ReportsController extends Controller
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
             ->orderby('transfer_request_dispatched_products.created_at')->first();
-        $previous_expired_product = ExpiredProduct::groupBy(['batch_no'])->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])->where('expiry_date', '<', $date_from)->select('*', \DB::raw('SUM(quantity) as total_quantity'))->first();
+        // expired warehouse has id of 8
+        $previous_expired_product = ItemStockSubBatch::groupBy(['item_id'])->where(['item_id' => $item_id, 'warehouse_id' => 8, 'expired_from' => $warehouse_id])->where('created_at', '<', $date_from)->select('*', \DB::raw('SUM(quantity) as total_quantity'))->first();
 
-        $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
+        $inbounds = ItemStockSubBatch::with('item')->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
             ->where(function ($q) {
@@ -915,8 +918,12 @@ class ReportsController extends Controller
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
 
-        $expired_product = ExpiredProduct::groupBy(['batch_no'])->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])->where('expiry_date', '>=', $date_from)->where('expiry_date', '<=', $date_to)->select('*', \DB::raw('SUM(quantity) as total_quantity'))->first();
-        return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_product);
+        // $expired_product = ExpiredProduct::groupBy(['batch_no'])->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])->where('expiry_date', '>=', $date_from)->where('expiry_date', '<=', $date_to)->select('*', \DB::raw('SUM(quantity) as total_quantity'))->first();
+
+        // expired warehouse has id of 8
+        $expired_products = ItemStockSubBatch::with('item')->where(['item_id' => $item_id, 'expired_from' => $warehouse_id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->get();
+
+        return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_products);
     }
     public function instantBalances(Request $request)
     {
@@ -943,7 +950,7 @@ class ReportsController extends Controller
             $products = [];
             foreach ($warehouses as $warehouse) {
                 $warehouse_id = $warehouse->id;
-                list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_product) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
+                list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_products) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
 
                 // $waybill_items = WaybillItem::where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->where('created_at', '>=', $date_from)
                 //     ->where('created_at', '<=', $date_to)->get();
@@ -964,6 +971,7 @@ class ReportsController extends Controller
                 $total_on_transit = 0;
                 $total_delivered = 0;
                 $total_reserved = 0;
+                $quantity_expired = 0;
                 if ($inbounds->isNotEmpty()) {
                     foreach ($inbounds as $inbound) {
                         $quantity_in += $inbound->quantity;
@@ -989,47 +997,11 @@ class ReportsController extends Controller
                         }
                     }
                 }
-                // foreach ($waybill_items as $waybill_item) {
-                //     $dispatched_products = DispatchedProduct::groupBy('waybill_item_id')->where(['warehouse_id' => $warehouse_id, 'waybill_item_id' => $waybill_item->id])->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
-
-                //     if ($dispatched_products) {
-                //         $quantity_supplied = (int) $waybill_item->quantity - (int) $dispatched_products->quantity_supplied;
-                //         $total_reserved += $quantity_supplied;
-                //     } else {
-                //         $total_reserved += $waybill_item->quantity;
-                //     }
-
-                //     // $on_transit = DispatchedProduct::groupBy('waybill_item_id')->where(['warehouse_id' => $warehouse_id, 'waybill_item_id' => $waybill_item->id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('status', 'on transit')->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
-
-                //     // $delivered = DispatchedProduct::groupBy('waybill_item_id')->where(['warehouse_id' => $warehouse_id, 'waybill_item_id' => $waybill_item->id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('status', 'delivered')->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
-
-                //     // $total_on_transit += ($on_transit) ? (int) $on_transit->quantity_supplied : 0;
-                //     // $total_delivered += ($delivered) ? (int) $delivered->quantity_supplied : 0;
-                // }
-                // foreach ($transfer_waybill_items as $transfer_waybill_item) {
-                //     $dispatched_products2 = TransferRequestDispatchedProduct::groupBy('transfer_request_waybill_item_id')->where(['supply_warehouse_id' => $warehouse_id, 'transfer_request_waybill_item_id' => $transfer_waybill_item->id])->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
-
-                //     if ($dispatched_products2) {
-                //         $quantity_supplied = (int) $transfer_waybill_item->quantity - (int) $dispatched_products2->quantity_supplied;
-                //         $total_reserved += $quantity_supplied;
-                //     } else {
-                //         $total_reserved += $transfer_waybill_item->quantity;
-                //     }
-
-                //     // $on_transit2 = TransferRequestDispatchedProduct::groupBy('transfer_request_waybill_item_id')->where(['supply_warehouse_id' => $warehouse_id, 'transfer_request_waybill_item_id' => $transfer_waybill_item->id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('status', 'on transit')->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
-
-                //     // $delivered2 = TransferRequestDispatchedProduct::groupBy('transfer_request_waybill_item_id')->where(['supply_warehouse_id' => $warehouse_id, 'transfer_request_waybill_item_id' => $transfer_waybill_item->id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->where('status', 'delivered')->select(\DB::raw('SUM(quantity_supplied) as quantity_supplied'))->first();
-
-                //     // $total_on_transit += ($on_transit2) ? (int) $on_transit2->quantity_supplied : 0;
-                //     // $total_delivered += ($delivered2) ? (int) $delivered2->quantity_supplied : 0;
-                // }
-
-                // $warehouse->total_in = $total_in;
-                // $warehouse->total_out = $total_out;
-                // $warehouse->total_reserved = $total_reserved;
-                // $warehouse->total_physical_count = $total_in - $total_out;
-                // return $item;
-                $expired_quantity = ($expired_product) ? $expired_product->quantity : 0;
+                if ($expired_products->isNotEmpty()) {
+                    foreach ($expired_products as $expired_product) {
+                        $quantity_expired += $expired_product->quantity;
+                    }
+                }
                 $products[] = [
                     'product_id' => $item->id,
                     'product_name' => $item->name,
@@ -1038,8 +1010,8 @@ class ReportsController extends Controller
                     'brought_forward' => $brought_forward,
                     'quantity_in' => $quantity_in,
                     'quantity_out' => $quantity_out,
-                    'quantity_expired' => $expired_quantity,
-                    'balance' => $brought_forward + $quantity_in - $quantity_out - $expired_quantity,
+                    'quantity_expired' => $quantity_expired,
+                    'balance' => $brought_forward + $quantity_in - $quantity_out - $quantity_expired,
                 ];
             }
             $item->products = $products;

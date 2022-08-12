@@ -883,7 +883,7 @@ class InvoicesController extends Controller
                         $invoice_item_update->save();
 
                         if ($original_quantity > $invoice_item_update->quantity_supplied) {
-                            $partial_waybill_generated[] = $invoice_item->invoice_id;
+                            $partial_waybill_generated[] = $invoice_item_update->invoice_id;
                         }
                         $invoice_ids[] = $invoice_item_update->invoice_id;
 
@@ -905,24 +905,27 @@ class InvoicesController extends Controller
         }
 
         $invoice_ids = array_unique($invoice_ids);
+        $partial_waybill_generated = array_unique($partial_waybill_generated);
+        $invoice_numbers = '';
         foreach ($invoice_ids as $invoice_id) {
             $invoice = Invoice::find($invoice_id);
-            $invoice->full_waybill_generated = '0';
-            if (!in_array($invoice_id, $partial_waybill_generated)) {
+            $invoice->full_waybill_generated = '1';
+            if (in_array($invoice_id, $partial_waybill_generated)) {
 
-                $invoice->full_waybill_generated = '1';
+                $invoice->full_waybill_generated = '0';
             }
             $invoice->save();
+            $invoice_numbers = $invoice_numbers . $invoice->invoice_number . ', ';
+
             $title = "Waybill Generated";
-            $description = "Waybill ($waybill->waybill_no) generated for invoice ($invoice->invoice_number) by $user->name ($user->email)";
+            $description = "Waybill ($waybill->waybill_no) generated for invoices ($invoice_numbers) by $user->name ($user->email)";
             //log this action to invoice history
             $this->createInvoiceHistory($invoice, $title, $description);
-
-            //log this activity
-            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
-            $this->logUserActivity($title, $description, $roles);
         }
 
+        //log this activity
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+        $this->logUserActivity($title, $description, $roles);
 
         $waybill->invoices()->sync($invoice_ids);
         // }
@@ -1326,15 +1329,14 @@ class InvoicesController extends Controller
     {
         $customer_ids = $request->rep_ids;
         $customer_ids_array = explode('~', $customer_ids);
-        $date_from = '2021-12-01 00:00:00';
+        $date_from = '2022-08-02 00:00:00';
         $items = new Collection();
         foreach ($customer_ids_array as $customer_id) {
             $customer_items = DispatchedProduct::with('waybillItem.waybill', 'waybillItem.invoice', 'itemStock.item')
                 ->groupBy('waybill_item_id')
                 ->where('customer_id', $customer_id)
                 ->where('sent_to_rep', 0)
-                // ->where('dispatched_products.created_at', '>', $date_from)
-                // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
+                ->where('dispatched_products.updated_at', '>', $date_from)
                 ->select('*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
 
                 ->orderby('created_at')->get();

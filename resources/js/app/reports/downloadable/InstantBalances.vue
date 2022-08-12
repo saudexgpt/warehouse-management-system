@@ -55,7 +55,7 @@
             {{ row['quantity_out'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
-          <div slot="quantity_expired" slot-scope="{row}" class="alert alert-danger">
+          <div slot="quantity_expired" slot-scope="{row}" class="alert bg-black-active">
             {{ row['quantity_expired'] }} {{ formatPackageType(row['package_type']) }}
 
           </div>
