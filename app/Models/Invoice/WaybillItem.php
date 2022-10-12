@@ -25,6 +25,10 @@ class WaybillItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
+    public function batches()
+    {
+        return $this->hasMany(InvoiceItemBatch::class);
+    }
     public function dispatchProduct()
     {
         return $this->hasOne(DispatchedProduct::class);
@@ -46,6 +50,8 @@ class WaybillItem extends Model
         $waybill_item->quantity = $for_supply;
         $waybill_item->type = $invoice_item->type;
         $waybill_item->save();
+
+        return $waybill_item;
         // }
     }
 }

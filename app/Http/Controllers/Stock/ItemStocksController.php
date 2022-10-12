@@ -112,6 +112,7 @@ class ItemStocksController extends Controller
     }
     public function moveExpiredProducts(Request $request)
     {
+        $user = $this->getUser();
         $id = $request->id;
         $quantity = $request->quantity;
         $item_in_stock = ItemStockSubBatch::find($id);
@@ -120,6 +121,7 @@ class ItemStocksController extends Controller
         $item_in_stock->expired = $quantity;
         $item_in_stock->save();
         $request->warehouse_id = 8; // This is expired warehouse
+        $request->confirmed_by = $user->id;
         $data = [$request];
         $item_stock_sub_batches = $this->createSubBatches($request, $data, 1);
         return response()->json(compact('item_stock_sub_batches'), 200);
@@ -233,6 +235,7 @@ class ItemStocksController extends Controller
             $item_stock_sub_batch->stocked_by = $user->id;
             $item_stock_sub_batch->warehouse_id = $request->warehouse_id;
             $item_stock_sub_batch->expired_from = (isset($request->expired_from)) ? $request->expired_from : NULL;
+            $item_stock_sub_batch->confirmed_by = (isset($request->confirmed_by)) ? $request->confirmed_by : NULL;
 
             $item_stock_sub_batch->item_id = $batch['item_id'];
             $item_stock_sub_batch->batch_no = $batch['batch_no'];

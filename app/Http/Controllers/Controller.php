@@ -16,6 +16,7 @@ use App\Laravue\Models\Role;
 use App\Laravue\Models\User;
 use App\Models\Invoice\DispatchedProduct;
 use App\Models\Invoice\Invoice;
+use App\Models\Invoice\InvoiceItem;
 use App\Models\Invoice\InvoiceItemBatch;
 use App\Models\Invoice\InvoiceStatus;
 use App\Models\Invoice\WaybillItem;
@@ -56,6 +57,7 @@ class Controller extends BaseController
     {
         // $this->middleware('guest')->except('logout');
         $this->checkForNegativeTransitProduct();
+        $this->normalizePartialSuppliedInvoices();
         $this->resetPartialInvoices();
     }
     public function resolveIncompleteSupplies()
@@ -179,6 +181,17 @@ class Controller extends BaseController
         //         print_r($dispatch_products);
         //     }
         // });
+    }
+    private function normalizePartialSuppliedInvoices()
+    {
+        $invoice_items = InvoiceItem::groupBy('invoice_id')->whereRAW('quantity > quantity_supplied')->where('quantity_supplied', '>', 0)->select('invoice_id')->get();
+
+        foreach ($invoice_items as $invoice_item) {
+            $invoice = Invoice::find($invoice_item->invoice_id);
+            $invoice->full_waybill_generated = '0';
+            $invoice->status = 'pending';
+            $invoice->save();
+        }
     }
     private function checkForNegativeTransitProduct()
     {

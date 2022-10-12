@@ -308,11 +308,11 @@ export default {
     fetchUndeliveredInvoices(index) {
       const app = this;
       var form = app.form;
-      const loader = unDeliveredInvoices.loaderShow();
+      const loading = unDeliveredInvoices.loadingShow();
       unDeliveredInvoices.list(form).then((response) => {
         app.invoices = response.invoices;
         app.form.waybill_no = response.waybill_no;
-        loader.hide();
+        loading.hide();
         // app.fetchAvailableDrivers();
       });
     },
@@ -407,7 +407,8 @@ export default {
             },
           )
             .then(() => {
-              const loader = storeWaybillResource.loaderShow();
+              // const loading = storeWaybillResource.loadingShow();
+              this.loading = true;
               this.form.invoice_items = invoice_items;
               this.disabled = true;
               storeWaybillResource
@@ -421,15 +422,17 @@ export default {
                       type: 'success',
                       duration: 5 * 1000,
                     });
-                    loader.hide();
                     this.$router.replace('waybill');
                   }
+                  this.loading = false;
                 })
                 .catch((error) => {
+                  this.loading = false;
                   console.log(error.message);
                   this.disabled = false;
                 })
                 .finally(() => {
+                  this.loading = false;
                   this.creatingWaybill = false;
                   this.disabled = false;
                 });

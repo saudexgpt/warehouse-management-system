@@ -6,6 +6,7 @@
           <h4 class="box-title">Edit Waybill : {{ form.waybill_no }}</h4>
         </div>
         <div class="box-body">
+          <h4 class="alert alert-danger">Items on this Waybill can only be edited once</h4>
           <el-form ref="form" :model="form" label-width="120px">
             <el-row :gutter="2" class="padded">
               <el-col>
@@ -210,7 +211,8 @@ export default {
     },
     maximumQuantity(invoice_item, waybill_item){
       var waybill_quantity = waybill_item.old_quantity;
-      var order_quantity = invoice_item.quantity;
+      var order_quantity = invoice_item.quantity - (invoice_item.quantity_supplied - waybill_quantity);
+      // var order_quantity = invoice_item.quantity - waybill_quantity;
       var stocks = waybill_item.item.stocks;
 
       var total_batch_balance = parseInt(waybill_quantity);
@@ -237,7 +239,7 @@ export default {
             },
           )
             .then(() => {
-              const loader = updateWaybillResource.loaderShow();
+              this.loading = true;
               this.form.waybill_items = this.waybill_items;
               this.disabled = true;
               updateWaybillResource
@@ -251,17 +253,20 @@ export default {
                       type: 'success',
                       duration: 5 * 1000,
                     });
-                    loader.hide();
+                    // loader.hide();
                     this.$emit('update', response.warehouse);
                   }
+                  this.loading = false;
                 })
                 .catch((error) => {
                   console.log(error.message);
                   this.disabled = false;
+                  this.loading = false;
                 })
                 .finally(() => {
                   this.creatingWaybill = false;
                   this.disabled = false;
+                  this.loading = false;
                 });
             })
             .catch(() => {

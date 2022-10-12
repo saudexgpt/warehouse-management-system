@@ -162,8 +162,19 @@
               <div slot="expiry_date" slot-scope="{row}">
                 {{ row.expiry_date }}
               </div>
+              <div slot="confirmer.name" slot-scope="{row}">
+                <div :id="row.id">
+                  <div v-if="row.confirmed_by == null">
+                    <a v-if="checkPermission(['audit confirm actions'])" title="Click to confirm" class="btn btn-warning" @click="confirmItemStocked(row.id);"><i class="fa fa-check" /> </a>
+                  </div>
+                  <div v-else>
+                    {{ row.confirmer.name }}
+                  </div>
+                </div>
+              </div>
               <div v-if="form.warehouse_id !== 8" slot="action" slot-scope="props">
                 <el-dropdown
+                  v-if="props.row.confirmed_by !== null"
                   class="avatar-container right-menu-item hover-effect"
                   trigger="click"
                 >
@@ -176,6 +187,9 @@
                     <el-dropdown-item :id="props.index" divided>Cancel</el-dropdown-item>
                   </el-dropdown-menu>
                 </el-dropdown>
+                <div v-else>
+                  Entry needs to be confirmed by auditor before movement
+                </div>
               </div>
             </v-client-table>
 
@@ -255,10 +269,11 @@ export default {
         sortable: ['item.name', 'batch_no', 'expiry_date'/* 'item.name', 'batch_no', 'quantity', 'in_transit', 'supplied', 'balance', 'expiry_date', 'created_at'*/],
         filterable: ['stocker.name', 'item.name', 'batch_no', 'expiry_date', 'created_at'],
       },
-      expired_columns: ['item.name', 'batch_no', 'balance', /* 'destroyed', 'balance', */'expiry_date', 'action'],
+      expired_columns: ['confirmer.name', 'item.name', 'batch_no', 'balance', /* 'destroyed', 'balance', */'expiry_date', 'action'],
 
       expired_options: {
         headings: {
+          'confirmer.name': 'Confirmed By',
           'item.name': 'Product',
           batch_no: 'Batch No.',
           balance: 'Balance',

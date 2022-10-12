@@ -404,7 +404,13 @@ class InvoicesController extends Controller
             $q->where('supply_status', '!=', 'Complete');
         }, 'invoiceItems.item.stocks' => function ($p) use ($warehouse_id) {
             $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id)->whereRaw('confirmed_by IS NOT NULL');
-        }])->where('warehouse_id', $warehouse_id)->where('status', '!=', 'delivered')->where('full_waybill_generated', '0')->whereRaw('confirmed_by IS NOT NULL')->orderBy('id', 'DESC')->get();
+        }])
+            ->where('warehouse_id', $warehouse_id)
+            ->where('status', '!=', 'delivered')
+            // ->where('full_waybill_generated', '0')
+            ->whereRaw('confirmed_by IS NOT NULL')
+            ->orderBy('id', 'DESC')
+            ->get();
         return response()->json(compact('invoices', 'waybill_no'), 200);
     }
 
@@ -754,7 +760,7 @@ class InvoicesController extends Controller
         return response()->json(compact('available_vehicles'), 200);
     }
 
-    private function createInvoiceItemBatches($invoice_item, $batches, $quantity)
+    private function createInvoiceItemBatches($waybill_item, $invoice_item, $batches, $quantity)
     {
 
         //$quantity = $invoice_item->quantity;
@@ -772,6 +778,7 @@ class InvoicesController extends Controller
                     $invoice_item_batch = new InvoiceItemBatch();
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                    $invoice_item_batch->waybill_item_id = $waybill_item->id;
                     $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
                     $invoice_item_batch->to_supply = $quantity;
                     $invoice_item_batch->quantity = $quantity;
@@ -784,6 +791,7 @@ class InvoicesController extends Controller
                     $invoice_item_batch = new InvoiceItemBatch();
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                    $invoice_item_batch->waybill_item_id = $waybill_item->id;
                     $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
                     $invoice_item_batch->to_supply = $real_balance;
                     $invoice_item_batch->quantity = $real_balance;
@@ -804,6 +812,7 @@ class InvoicesController extends Controller
                     $invoice_item_batch = new InvoiceItemBatch();
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                    $invoice_item_batch->waybill_item_id = $waybill_item->id;
                     $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
                     $invoice_item_batch->to_supply = $quantity;
                     $invoice_item_batch->quantity = $quantity;
@@ -816,6 +825,7 @@ class InvoicesController extends Controller
                     $invoice_item_batch = new InvoiceItemBatch();
                     $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
                     $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                    $invoice_item_batch->waybill_item_id = $waybill_item->id;
                     $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
                     $invoice_item_batch->to_supply = $real_balance;
                     $invoice_item_batch->quantity = $real_balance;
@@ -877,17 +887,20 @@ class InvoicesController extends Controller
                     if (($original_quantity - $quantity_supplied)  >= $for_supply) {
 
 
-                        $balance = $this->createInvoiceItemBatches($invoice_item_update, $batches, $for_supply);
-                        $actual_supply_quantity = $for_supply - $balance;
+                        $actual_supply_quantity = $for_supply; //  - $balance;
                         $invoice_item_update->quantity_supplied += $actual_supply_quantity;
                         $invoice_item_update->save();
+
+                        $waybill_item = $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_item_update, $actual_supply_quantity);
+
+                        $balance = $this->createInvoiceItemBatches($waybill_item, $invoice_item_update, $batches, $for_supply);
+
+
 
                         if ($original_quantity > $invoice_item_update->quantity_supplied) {
                             $partial_waybill_generated[] = $invoice_item_update->invoice_id;
                         }
                         $invoice_ids[] = $invoice_item_update->invoice_id;
-
-                        $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_item, $actual_supply_quantity);
                     }
                 }
             }
@@ -923,11 +936,11 @@ class InvoicesController extends Controller
             $this->createInvoiceHistory($invoice, $title, $description);
         }
 
+
+        $waybill->invoices()->sync($invoice_ids);
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
         $this->logUserActivity($title, $description, $roles);
-
-        $waybill->invoices()->sync($invoice_ids);
         // }
         // $this->createDispatchedWaybill($waybill, $request);
 
@@ -947,7 +960,7 @@ class InvoicesController extends Controller
             // we want to get all invoice item for this waybill item and deduct what was reserved
             $old_quantity = $waybill_item->old_quantity;
             $diff = $waybill_item->quantity - $old_quantity;
-            $waybillItem = WaybillItem::find($waybill_item->id);
+            $waybillItem = WaybillItem::with('item', 'invoice')->find($waybill_item->id);
             $waybillItem->quantity = $waybill_item->quantity;
             $waybillItem->save();
             $invoice_item = $waybillItem->invoiceItem;
@@ -973,19 +986,29 @@ class InvoicesController extends Controller
                 $item_stock_batch->save();
                 $reserved_batch->forceDelete();
             }
-            $this->createInvoiceItemBatches($invoice_item, $batches, $waybill_quantity);
+            $this->createInvoiceItemBatches($waybillItem, $invoice_item, $batches, $waybill_quantity);
 
+            if ($diff !== 0) {
+                $item = $waybillItem->item->name;
+                $invoice = $waybillItem->invoice;
+                $title = "Waybill items Updated";
+                $description = "Quantity of $item in waybill ($waybill->waybill_no) was updated from $old_quantity to $waybillItem->quantity by $user->name ($user->email)";
+                //log this action to invoice history
+                $this->createInvoiceHistory($invoice, $title, $description);
+            }
             // delete the waybill item
             // $waybill_item->delete();
         }
-        foreach ($invoices as $invoice) {
-            if (in_array($invoices->id, $partial_waybill_generated)) {
-                $invoice->full_waybill_generated = '0';
-            } else {
-                $invoice->full_waybill_generated = '1';
-            }
-            $invoice->save();
-        }
+        $waybill->edited = 1;
+        $waybill->save();
+        // foreach ($invoices as $invoice) {
+        //     if (in_array($invoices->id, $partial_waybill_generated)) {
+        //         $invoice->full_waybill_generated = '0';
+        //     } else {
+        //         $invoice->full_waybill_generated = '1';
+        //     }
+        //     $invoice->save();
+        // }
         return response()->json(compact('waybill'), 200);
     }
     private function createDispatchedWaybill($waybill_id, $vehicle_id)
@@ -1270,7 +1293,6 @@ class InvoicesController extends Controller
         $description = "Invoice ($invoice->invoice_number) was deleted by $actor->name ($actor->phone)";
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
-        $this->logUserActivity($title, $description, $roles);
 
         // $invoice_items = $invoice->invoiceItems; //()->batches()->delete();
         // foreach ($invoice_items as $invoice_item) {
@@ -1288,6 +1310,8 @@ class InvoicesController extends Controller
         // }
         $invoice->invoiceItems()->delete();
         $invoice->delete();
+
+        $this->logUserActivity($title, $description, $roles);
         return response()->json(null, 204);
     }
     public function deleteWaybill(Waybill $waybill)
@@ -1305,7 +1329,7 @@ class InvoicesController extends Controller
             $invoice = $invoice_item->invoice;
             $invoice->full_waybill_generated = '0';
             $invoice->save();
-            $invoice_item->quantity_supplied = 0;
+            $invoice_item->quantity_supplied -= $waybill_item->quantity;
             $invoice_item->save();
             $batches = $invoice_item->batches;
             foreach ($batches as $batch) {
@@ -1314,7 +1338,7 @@ class InvoicesController extends Controller
                 $item_stock_sub_batch->reserved_for_supply -= $batch->to_supply;
                 $item_stock_sub_batch->save();
             }
-            $invoice_item->batches()->delete();
+            $waybill_item->batches()->delete();
         }
         $waybill->waybillItems()->delete();
         $waybill->trips()->delete();

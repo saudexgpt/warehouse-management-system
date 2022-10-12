@@ -111,7 +111,7 @@ class TransFerExpiredProducts extends Command
     public function handle()
     {
         //
-        $this->returnExpiredProducts();
+        // $this->returnExpiredProducts();
         // $this->checkForExpiredProduct();
         // $this->checkForNegativeTransitProduct();
     }

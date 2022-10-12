@@ -15,7 +15,7 @@ $router->post('rep-stock', 'Invoice\InvoicesController@sendRepStock');
 $router->post('fetch-reps-details', 'UserController@fetchRepsForTransferToSalesApp');
 
 $router->get('resolve-incomplete-supplies', 'Controller@resolveIncompleteSupplies');
-
+$router->get('partial-invoices', 'Controller@normalizePartialSuppliedInvoices');
 $router->get('hello-message', function () {
     return response()->json(['message' => 'Hello World'], 200);
 });

@@ -60,7 +60,7 @@
             />
           </el-col>
         </el-row>
-        <v-client-table v-model="waybills" :columns="columns" :options="options">
+        <v-client-table v-model="waybills" v-loading="loader" :columns="columns" :options="options">
           <div slot="invoices" slot-scope="props">
             <div v-if="props.row.invoices.length > 0">
               <span v-for="(invoice, invoice_index) in props.row.invoices" :key="invoice_index">
@@ -90,7 +90,7 @@
           </div>
           <div slot="action" slot-scope="props">
             <a class="btn btn-default" @click="waybill=props.row; page.option='waybill_details'"><i class="el-icon-tickets" /></a>
-            <a v-if="checkPermission(['generate waybill']) && props.row.status==='pending'" class="btn btn-warning" @click="waybill=props.row; page.option='edit_waybill'"><i class="el-icon-edit" /></a>
+            <a v-if="checkPermission(['generate waybill']) && props.row.status==='pending' && props.row.edited === 0" class="btn btn-warning" @click="waybill=props.row; page.option='edit_waybill'"><i class="el-icon-edit" /></a>
             <a v-if="props.row.dispatch_products.length < 1 && checkPermission(['delete pending waybill'])" class="btn btn-danger" @click="deleteWaybill(props.index, props.row)"><i class="el-icon-delete" /></a>
             <!-- <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="click">
               <div class="avatar-wrapper" style="color: brown">
@@ -210,6 +210,7 @@ export default {
       show_calendar: false,
       downloadLoading: false,
       filename: 'Waybills',
+      loader: false,
 
     };
   },
@@ -290,7 +291,7 @@ export default {
     },
     getWaybills() {
       const app = this;
-      const loader = fetchWaybills.loaderShow();
+      app.loader = true;
       const { limit, page } = app.form;
       app.options.perPage = limit;
       const param = app.form;
@@ -308,10 +309,10 @@ export default {
             element['index'] = (page - 1) * limit + index + 1;
           });
           app.total = response.waybills.total;
-          loader.hide();
+          app.loader = false;
         })
         .catch(error => {
-          loader.hide();
+          app.loader = false;
           console.log(error.message);
         });
     },
