@@ -56,9 +56,9 @@ class Controller extends BaseController
     public function __construct()
     {
         // $this->middleware('guest')->except('logout');
-        $this->checkForNegativeTransitProduct();
-        $this->normalizePartialSuppliedInvoices();
-        $this->resetPartialInvoices();
+        // $this->checkForNegativeTransitProduct();
+        // $this->normalizePartialSuppliedInvoices();
+        // $this->resetPartialInvoices();
     }
     public function resolveIncompleteSupplies()
     {
@@ -245,6 +245,7 @@ class Controller extends BaseController
     }
     public function fetchCustomers()
     {
+        set_time_limit(0);
         $customers = Customer::with(['user', 'type'])->get();
         $customer_types = CustomerType::get();
         return response()->json(compact('customers', 'customer_types'), 200);

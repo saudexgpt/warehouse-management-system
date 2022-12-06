@@ -302,7 +302,6 @@ import BulkInvoiceUpload from './BulkInvoiceUpload';
 import Resource from '@/api/resource';
 const createInvoice = new Resource('invoice/general/store');
 // const necessaryParams = new Resource('fetch-necessary-params');
-const getCustomers = new Resource('fetch-customers');
 const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
   // name: 'CreateInvoice',
@@ -318,8 +317,8 @@ export default {
         },
       },
       upload_type: 'normal',
-      customers: [],
-      customer_types: [],
+      // customers: [],
+      // customer_types: [],
       items_in_stock_dialog: false,
       dialogFormVisible: false,
       userCreating: false,
@@ -406,6 +405,12 @@ export default {
     params() {
       return this.$store.getters.params;
     },
+    customers() {
+      return this.$store.getters.customers;
+    },
+    customer_types() {
+      return this.$store.getters.customer_types;
+    },
   },
   watch: {
     invoice_items() {
@@ -469,10 +474,7 @@ export default {
     },
     fetchCustomers() {
       const app = this;
-      getCustomers.list().then((response) => {
-        app.customers = response.customers;
-        app.customer_types = response.customer_types;
-      });
+      app.$store.dispatch('customer/fetch');
     },
     submitNewInvoice() {
       const app = this;

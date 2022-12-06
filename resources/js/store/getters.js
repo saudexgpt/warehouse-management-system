@@ -17,5 +17,7 @@ const getters = {
   permissionRoutes: state => state.permission.routes,
   addRoutes: state => state.permission.addRoutes,
   params: state => state.app.params,
+  customers: state => state.customer.customers,
+  customer_types: state => state.customer.customer_types,
 };
 export default getters;

@@ -818,7 +818,7 @@ class ReportsController extends Controller
                     'type' => 'out_bound',
                     'date' => $outbound->created_at,
                     'invoice_no' => $outbound->transferWaybillItem->invoice->request_number,
-                    'waybill_grn' => $outbound->transferWaybill->transfer_request_waybill_no,
+                    'waybill_grn' => ($outbound->transferWaybill) ? $outbound->transferWaybill->transfer_request_waybill_no : '',
                     'quantity_transacted' => $outbound->total_quantity_supplied,
                     'in' => '',
                     'out' => $outbound->total_quantity_supplied,
@@ -1123,9 +1123,15 @@ class ReportsController extends Controller
         }
         $invoiceItemQuery = InvoiceItem::with('warehouse', 'invoice.customer.user', 'item')
             ->where($condition)
-            ->whereRaw('quantity - quantity_supplied > 0')
-            ->where('created_at', '>=', $date_from)
-            ->where('created_at', '<=', $date_to);
+            ->where('supply_status', '!=', 'Complete')
+            // ->where(function ($q) {
+            //     $q->where('supply_status', '!=', 'Complete');
+            //     $q->orWhere(function ($p) {
+            //         $p->whereRaw('quantity - quantity_supplied > 0');
+            //     });
+            // })
+            ->where('updated_at', '>=', $date_from)
+            ->where('updated_at', '<=', $date_to);
 
         if ($is_download == 'yes') {
             $invoice_items = $invoiceItemQuery->get();

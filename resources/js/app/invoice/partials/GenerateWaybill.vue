@@ -308,11 +308,13 @@ export default {
     fetchUndeliveredInvoices(index) {
       const app = this;
       var form = app.form;
-      const loading = unDeliveredInvoices.loadingShow();
+      app.loading = true;
+      // const loading = unDeliveredInvoices.loaderShow();
       unDeliveredInvoices.list(form).then((response) => {
         app.invoices = response.invoices;
         app.form.waybill_no = response.waybill_no;
-        loading.hide();
+        app.loading = false;
+        // loading.hide();
         // app.fetchAvailableDrivers();
       });
     },
@@ -407,7 +409,7 @@ export default {
             },
           )
             .then(() => {
-              // const loading = storeWaybillResource.loadingShow();
+              // const loading = storeWaybillResource.loaderShow();
               this.loading = true;
               this.form.invoice_items = invoice_items;
               this.disabled = true;

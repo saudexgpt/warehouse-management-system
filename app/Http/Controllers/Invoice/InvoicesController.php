@@ -1338,7 +1338,10 @@ class InvoicesController extends Controller
                 $item_stock_sub_batch->reserved_for_supply -= $batch->to_supply;
                 $item_stock_sub_batch->save();
             }
-            $waybill_item->batches()->delete();
+            if (!empty($waybill_item->batches)) {
+
+                $waybill_item->batches()->delete();
+            }
         }
         $waybill->waybillItems()->delete();
         $waybill->trips()->delete();
