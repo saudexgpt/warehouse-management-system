@@ -22,6 +22,15 @@ const permissionRoutes = {
         permissions: ['create invoice', 'view invoice'],
       },
     },
+    {
+      path: 'invoice-reversals',
+      component: () => import('@/app/invoice/InvoiceReversals'),
+      name: 'InvoiceReversals',
+      meta: {
+        title: 'Invoices Reversals',
+        permissions: ['manage invoice reversals'],
+      },
+    },
     // {
     //   path: 'details/:id',
     //   component: () => import('@/app/invoice/Details'),

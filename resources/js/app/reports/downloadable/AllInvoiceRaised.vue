@@ -107,7 +107,7 @@
             {{ currency + Number(props.row.amount).toLocaleString() }}
           </div>
           <div slot="created_at" slot-scope="props">
-            {{ moment(props.row.created_at).format('lll') }}
+            {{ moment(props.row.created_at).format('ll') }}
           </div>
           <div slot="quantity" slot-scope="props">
             {{ props.row.quantity }} {{ props.row.type }}
@@ -117,6 +117,12 @@
           </div>
           <div slot="balance" slot-scope="props" class="alert alert-danger">
             {{ props.row.quantity - props.row.quantity_supplied }} {{ props.row.type }}
+          </div>
+          <div slot="waybilled" slot-scope="props">
+            {{ (props.row.first_waybill_item) ? moment(props.row.first_waybill_item.created_at).format('ll') : '-' }}
+          </div>
+          <div slot="delay" slot-scope="props">
+            {{ (props.row.first_waybill_item) ? dateDiff(moment(props.row.first_waybill_item.created_at), moment(props.row.created_at)) + ' days' : '-' }}
           </div>
 
         </v-client-table>
@@ -135,7 +141,6 @@
 <script>
 import moment from 'moment';
 import Pagination from '@/components/Pagination';
-import { parseTime } from '@/utils';
 import Resource from '@/api/resource';
 const outboundReport = new Resource('reports/tabular/all-invoice-raised');
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
@@ -155,7 +160,7 @@ export default {
       invoice_items: [],
       invoice_statuses: [],
       currency: '',
-      columns: ['item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'warehouse.name', 'quantity', 'rate', 'amount', 'created_at'],
+      columns: ['item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'warehouse.name', 'quantity', 'rate', 'amount', 'created_at', 'waybilled', 'delay'],
 
       options: {
         headings: {
@@ -182,8 +187,8 @@ export default {
         perPage: 100,
         filterByColumn: true,
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'quantity', 'created_at'],
-        filterable: ['invoice.invoice_number', 'item.name', 'warehouse.name', 'invoice.customer.user.name', 'quantity', 'created_at'],
+        sortable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'created_at'],
+        filterable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'created_at'],
       },
       page: {
         option: 'list',
@@ -223,6 +228,9 @@ export default {
   },
   methods: {
     moment,
+    dateDiff(a, b){
+      return a.diff(b, 'days');
+    },
     showCalendar(){
       this.show_calendar = !this.show_calendar;
     },
@@ -281,8 +289,8 @@ export default {
       param.is_download = 'yes';
       const { invoice_items } = await outboundReport.list(param);
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '']];
-        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Rate', 'Amount', 'Created At'];
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Rate', 'Amount', 'Created At', 'Waybilled', 'Delay'];
         const filterVal = this.columns;
         const list = invoice_items;
         const data = this.formatJson(filterVal, list);
@@ -300,7 +308,7 @@ export default {
     formatJson(filterVal, jsonData) {
       return jsonData.map(v => filterVal.map(j => {
         if (j === 'created_at') {
-          return parseTime(v['created_at']);
+          return moment(v['created_at']).format('ll');
         }
         if (j === 'item.name') {
           return v['item']['name'];
@@ -319,6 +327,12 @@ export default {
         }
         if (j === 'rate') {
           return this.currency + Number(v['rate']).toLocaleString();
+        }
+        if (j === 'waybilled') {
+          return (v['first_waybill_item']) ? moment(v['first_waybill_item']['created_at']).format('ll') : '-';
+        }
+        if (j === 'delay') {
+          return (v['first_waybill_item']) ? this.dateDiff(moment(v['first_waybill_item']['created_at']), moment(v['created_at'])) + ' days' : '-';
         }
         if (j === 'amount') {
           return this.currency + Number(v['amount']).toLocaleString();

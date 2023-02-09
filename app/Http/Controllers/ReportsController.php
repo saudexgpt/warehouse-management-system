@@ -1087,7 +1087,7 @@ class ReportsController extends Controller
             $is_download = $request->is_download;
         }
 
-        $invoiceItemQuery = InvoiceItem::with('warehouse', 'item', 'invoice.customer.user')
+        $invoiceItemQuery = InvoiceItem::with('warehouse', 'item', 'invoice.customer.user', 'firstWaybillItem')
             ->where($condition)
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to);
@@ -1095,7 +1095,7 @@ class ReportsController extends Controller
         if ($is_download == 'yes') {
             $invoice_items = $invoiceItemQuery->get();
         } else {
-            $invoice_items = $invoiceItemQuery->paginate(100);
+            $invoice_items = $invoiceItemQuery->paginate(50);
         }
 
         return response()->json(compact('invoice_items'), 200);
@@ -1121,9 +1121,10 @@ class ReportsController extends Controller
         if (isset($request->is_download)) {
             $is_download = $request->is_download;
         }
-        $invoiceItemQuery = InvoiceItem::with('warehouse', 'invoice.customer.user', 'item')
+        $invoiceItemQuery = InvoiceItem::with('warehouse', 'invoice.customer.user', 'item', 'firstWaybillItem')
             ->where($condition)
-            ->where('supply_status', '!=', 'Complete')
+            // ->where('supply_status', '!=', 'Complete')
+            ->whereRaw('quantity - quantity_supplied - quantity_reversed > 0')
             // ->where(function ($q) {
             //     $q->where('supply_status', '!=', 'Complete');
             //     $q->orWhere(function ($p) {
@@ -1136,8 +1137,57 @@ class ReportsController extends Controller
         if ($is_download == 'yes') {
             $invoice_items = $invoiceItemQuery->get();
         } else {
-            $invoice_items = $invoiceItemQuery->paginate(100);
+            $invoice_items = $invoiceItemQuery->paginate(50);
         }
         return response()->json(compact('invoice_items'), 200);
+    }
+
+    public function allUntreatedInvoices(Request $request)
+    {
+        set_time_limit(0);
+        $warehouse_id = $request->warehouse_id;
+        $panel = 'month';
+        $condition = [];
+        if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
+            $condition = ['warehouse_id' => $request->warehouse_id];
+        }
+        $invoiceItemQuery = InvoiceItem::with('warehouse', 'invoice.customer.user', 'item')
+            ->where($condition)
+            ->whereRaw('quantity - quantity_supplied - quantity_reversed > 0');
+
+        if (isset($request->invoice_no) && $request->invoice_no !== '') {
+            $invoice_no = $request->invoice_no;
+            $invoiceItemQuery->whereHas('invoice', function ($q) use ($invoice_no) {
+                $q->where('invoice_number', $invoice_no);
+            });
+        }
+        $invoice_items = $invoiceItemQuery->paginate(50);
+        return response()->json(compact('invoice_items'), 200);
+    }
+
+    public function allPartiallyTreatedInvoices(Request $request)
+    {
+        set_time_limit(0);
+        $warehouse_id = $request->warehouse_id;
+        $panel = 'month';
+        $condition = [];
+        if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
+            $condition = ['invoice_items.warehouse_id' => $request->warehouse_id];
+        }
+        $invoiceItemQuery = InvoiceItemBatch::groupBy('invoice_item_id')
+            ->with('invoiceItem.warehouse', 'invoice.customer.user', 'invoiceItem.item')
+            ->join('invoice_items', 'invoice_items.id', '=', 'invoice_item_batches.invoice_item_id')
+            ->where($condition)
+            ->where('invoice_item_batches.quantity', '>', 0)
+            ->select('invoice_item_batches.*');
+
+        if (isset($request->invoice_no) && $request->invoice_no !== '') {
+            $invoice_no = $request->invoice_no;
+            $invoiceItemQuery->whereHas('invoice', function ($q) use ($invoice_no) {
+                $q->where('invoice_number', $invoice_no);
+            });
+        }
+        $invoice_item_batches = $invoiceItemQuery->paginate(50);
+        return response()->json(compact('invoice_item_batches'), 200);
     }
 }

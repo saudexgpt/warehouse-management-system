@@ -37,6 +37,10 @@ class InvoiceItem extends Model
     {
         return $this->hasMany(WaybillItem::class);
     }
+    public function firstWaybillItem()
+    {
+        return $this->hasOne(WaybillItem::class);
+    }
 
     public function updateInvoiceItemsForWaybill($waybill_items)
     {

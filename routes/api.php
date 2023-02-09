@@ -99,6 +99,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->get('products-in-stock', 'ReportsController@productsInStockTabular')->middleware('permission:view reports');
             $router->get('outbounds', 'ReportsController@outbounds')->middleware('permission:view reports');
             $router->get('unsupplied', 'ReportsController@unsuppliedInvoices')->middleware('permission:view reports');
+            $router->get('all-untreated-invoices', 'ReportsController@allUntreatedInvoices');
+            $router->get('all-partially-treated-invoices', 'ReportsController@allPartiallyTreatedInvoices');
 
             $router->get('all-invoice-raised', 'ReportsController@allInvoicesRaised');
         });
@@ -154,6 +156,9 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->delete('delete/{invoice}', 'InvoicesController@destroy')->middleware('permission:delete invoice');
 
             $router->put('assign-invoice-to-warehouse/{invoice}', 'InvoicesController@assignInvoiceToWarehouse')->middleware('permission:assign invoice to warehouse');
+
+            $router->put('reverse-untreated-invoice-item/{invoice_item}', 'InvoicesController@reverseUnTreatedInvoiceItem'); //->middleware('permission:assign invoice to warehouse');
+            $router->put('reverse-partially-treated-invoice-item/{invoice_item}', 'InvoicesController@reversePartiallyTreatedInvoiceItem');
         });
         $router->group(['prefix' => 'waybill'], function () use ($router) {
             $router->get('/', 'InvoicesController@waybills')->middleware('permission:view waybill|manage waybill');

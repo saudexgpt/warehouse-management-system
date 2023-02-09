@@ -44,23 +44,27 @@
         </el-button>
         <v-client-table ref="myTable" v-model="items_in_stock" :columns="columns" :options="options">
           <div slot="brought_forward" slot-scope="{row}" class="alert alert-info">
-            {{ row['brought_forward'] }} {{ formatPackageType(row['package_type']) }}
+            {{ row['brought_forward'] }}
 
           </div>
           <div slot="quantity_in" slot-scope="{row}" class="alert alert-warning">
-            {{ row['quantity_in'] }} {{ formatPackageType(row['package_type']) }}
+            {{ row['quantity_in'] }}
 
           </div>
           <div slot="quantity_out" slot-scope="{row}" class="alert alert-danger">
-            {{ row['quantity_out'] }} {{ formatPackageType(row['package_type']) }}
+            {{ row['quantity_out'] }}
 
           </div>
           <div slot="quantity_expired" slot-scope="{row}" class="alert bg-black-active">
-            {{ row['quantity_expired'] }} {{ formatPackageType(row['package_type']) }}
+            {{ row['quantity_expired'] }}
 
           </div>
           <div slot="balance" slot-scope="{row}" class="alert alert-success">
-            {{ row['balance'] }} {{ formatPackageType(row['package_type']) }}
+            {{ row['balance'] }}
+
+          </div>
+          <div slot="uom" slot-scope="{row}">
+            {{ formatPackageType(row['package_type']) }}
 
           </div>
           <!-- <div slot="updated_at" slot-scope="{row}">
@@ -92,7 +96,7 @@ export default {
       warehouses: [],
       items_in_stock: [],
       view_by: null,
-      columns: ['product_name', 'warehouse', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
+      columns: ['product_name', 'warehouse', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance', 'uom'],
 
       options: {
         headings: {
@@ -104,6 +108,7 @@ export default {
           quantity_out: 'QTY OUT',
           quantity_expired: 'QTY EXPIRED',
           balance: 'BALANCE',
+          uom: 'UOM',
         },
         filterByColumn: true,
         pagination: {
@@ -212,8 +217,8 @@ export default {
       // const filtered_string = this.$refs.myTable.$refs.table.query;
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '', '', '', '']];
-        const tHeader = ['PRODUCT', 'WAREHOUSE', 'BROUGHT FORWARD', 'QUANTITY IN', 'QUANTITY OUT', 'QUANTITY EXPIRED', 'BALANCE'];
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '']];
+        const tHeader = ['PRODUCT', 'WAREHOUSE', 'BROUGHT FORWARD', 'QUANTITY IN', 'QUANTITY OUT', 'QUANTITY EXPIRED', 'BALANCE', 'UOM'];
         const filterVal = this.columns;
         const list = this.items_in_stock; // (filtered_string === '') ? this.items_in_stock : this.$refs.myTable.filteredData;
         const data = this.formatJson(filterVal, list);

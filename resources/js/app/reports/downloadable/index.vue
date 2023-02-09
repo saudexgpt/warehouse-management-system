@@ -2,6 +2,16 @@
   <div class="dashboard-editor-container">
     <el-card>
       <el-tabs v-model="activeActivity">
+        <el-tab-pane label="Unsupplied Invoices" name="Unsupplied">
+          <!-- <keep-alive> -->
+          <unsupplied-invoices v-if="params != null && activeActivity=='Unsupplied'" :params="params" />
+          <!-- </keep-alive> -->
+        </el-tab-pane>
+        <el-tab-pane label="All Invoices Raised" name="InvoiceRaised">
+          <!-- <keep-alive> -->
+          <all-invoice-raised v-if="params != null && activeActivity=='InvoiceRaised'" :params="params" />
+          <!-- </keep-alive> -->
+        </el-tab-pane>
         <el-tab-pane label="Instant Balances" name="InstantBalances">
           <!-- <keep-alive> -->
           <instant-balances v-if="params != null && activeActivity=='InstantBalances'" :params="params" />
@@ -15,16 +25,6 @@
         <el-tab-pane label="Outbounds" name="Outbounds">
           <!-- <keep-alive> -->
           <outbounds v-if="params != null && activeActivity=='Outbounds'" :params="params" />
-          <!-- </keep-alive> -->
-        </el-tab-pane>
-        <el-tab-pane label="All Invoices Raised" name="InvoiceRaised">
-          <!-- <keep-alive> -->
-          <all-invoice-raised v-if="params != null && activeActivity=='InvoiceRaised'" :params="params" />
-          <!-- </keep-alive> -->
-        </el-tab-pane>
-        <el-tab-pane label="Unsupplied Invoices" name="Unsupplied">
-          <!-- <keep-alive> -->
-          <unsupplied-invoices v-if="params != null && activeActivity=='Unsupplied'" :params="params" />
           <!-- </keep-alive> -->
         </el-tab-pane>
         <el-tab-pane label="Products" name="Products">
@@ -65,7 +65,7 @@ export default {
   },
   data() {
     return {
-      activeActivity: 'InstantBalances',
+      activeActivity: 'Unsupplied',
       data_summary: '',
     };
   },

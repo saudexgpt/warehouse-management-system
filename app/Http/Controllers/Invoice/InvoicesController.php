@@ -401,7 +401,7 @@ class InvoicesController extends Controller
         }*/
         // $invoices = Invoice::with(['invoiceItems', 'invoiceItems.item'])->where('warehouse_id', $warehouse_id)->where('status', '!=', 'delivered')->get();
         $invoices = Invoice::with(['customer.user', 'confirmer', 'invoiceItems' => function ($q) {
-            $q->where('supply_status', '!=', 'Complete');
+            $q->whereRaw('quantity - quantity_supplied - quantity_reversed > 0');
         }, 'invoiceItems.item.stocks' => function ($p) use ($warehouse_id) {
             $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id)->whereRaw('confirmed_by IS NOT NULL');
         }])
@@ -1244,7 +1244,7 @@ class InvoicesController extends Controller
 
                 $invoice->status = $status;
                 // check for partial supplies
-                $incomplete_invoice_item = $invoice->invoiceItems()->whereIn('supply_status', ['Partial', 'Pending'])->get();
+                $incomplete_invoice_item = $invoice->invoiceItems()->whereRaw('quantity - quantity_supplied >')->get();
                 if ($incomplete_invoice_item->isNotEmpty()) {
                     $invoice->status = 'partially supplied';
                 }
@@ -1379,5 +1379,94 @@ class InvoicesController extends Controller
 
         return response()->json(['items' => $items], 200);
         // $invoice_item_stock = InvoiceItemBatch::join
+    }
+    public function reverseUnTreatedInvoiceItem(Request $request, InvoiceItem $invoice_item)
+    {
+        //since we have not treated this yet, we just remove it
+        $user = $this->getUser();
+        $invoice = Invoice::find($invoice_item->invoice_id);
+        $item = $invoice_item->item->name;
+        $package_type = $invoice_item->type;
+        $total_reversed_quantity = $invoice_item->quantity;
+        $title = "Invoice Item Reversal";
+        $description = "$total_reversed_quantity $package_type of $item was reversed from invoice $invoice->invoice_number by $user->name ($user->email)";
+        $this->createInvoiceHistory($invoice, $title, $description);
+
+        $invoice_item->quantity_reversed = $total_reversed_quantity;
+        $invoice_item->save();
+
+        $incomplete_invoice_item = $invoice->invoiceItems()->whereRaw('quantity - quantity_supplied - quantity_reversed > 0')->get();
+        if ($incomplete_invoice_item->isNotEmpty()) {
+            $invoice->status = 'partially supplied';
+        } else {
+            $invoice->status = 'delivered';
+        }
+        $invoice->save();
+        $this->logUserActivity($title, $description);
+        return response()->json([], 204);
+    }
+    public function reversePartiallyTreatedInvoiceItem(Request $request, InvoiceItem $invoice_item)
+    {
+
+        $invoice = Invoice::find($invoice_item->invoice_id);
+        $item = $invoice_item->item->name;
+        $package_type = $invoice_item->type;
+        $total_reversed_quantity = 0;
+        //since we have not treated this yet, we just remove it
+        $invoiceItemBatches = InvoiceItemBatch::with('itemStockBatch')->where('quantity', '>', 0)
+            ->where('invoice_item_id', $invoice_item->id)
+            ->get();
+        foreach ($invoiceItemBatches as $invoiceItemBatch) {
+            $date = date('Y-m-d', strtotime($invoiceItemBatch->created_at));
+            $quantity_to_reverse = $invoiceItemBatch->quantity;
+
+
+            $invoiceItemBatch->quantity = 0;
+            $invoiceItemBatch->quantity_reversed = $quantity_to_reverse;
+            $invoiceItemBatch->save();
+
+            $invoice_item->quantity_supplied -= $quantity_to_reverse;
+            $invoice_item->quantity_reversed += $quantity_to_reverse;
+            $invoice_item->save();
+
+            //unreserve all reservations
+            $item_stock_batch = $invoiceItemBatch->itemStockBatch;
+            if ($item_stock_batch->reserved_for_supply >= $quantity_to_reverse) {
+
+                $item_stock_batch->reserved_for_supply -= $quantity_to_reverse;
+                $item_stock_batch->save();
+            }
+            //reverse all waybill generated
+            $waybill_item = WaybillItem::where('invoice_item_id', $invoice_item->id)
+                ->where('quantity', '>=', $quantity_to_reverse)->where('created_at', 'LIKE', '%' . $date . '%')->first();
+            if ($waybill_item) {
+
+                $waybill_item->quantity -= $quantity_to_reverse;
+                $waybill_item->quantity_reversed += $quantity_to_reverse;
+                $waybill_item->save();
+
+                // if ($waybill_item->quantity == 0) {
+                //     $waybill_item->delete();
+                // }
+            }
+
+            $total_reversed_quantity += $quantity_to_reverse;
+        }
+        $incomplete_invoice_item = $invoice->invoiceItems()->whereRaw('quantity - quantity_supplied - quantity_reversed > 0')->get();
+        if ($incomplete_invoice_item->isNotEmpty()) {
+            $invoice->status = 'partially supplied';
+        } else {
+            $invoice->status = 'delivered';
+        }
+        $invoice->save();
+
+        $user = $this->getUser();
+
+        $title = "Invoice Item Reversal";
+        $description = "$total_reversed_quantity $package_type of $item was reversed from invoice $invoice->invoice_number by $user->name ($user->email)";
+        //log this action to invoice history
+        $this->createInvoiceHistory($invoice, $title, $description);
+        $this->logUserActivity($title, $description);
+        return response()->json([], 204);
     }
 }

@@ -81,6 +81,7 @@
                     <th>Quantity</th>
                     <th>Supplied</th>
                     <th>Balance</th>
+                    <th>Quantity Reversed</th>
                     <th>Rate</th>
                     <th>Per</th>
                     <th>Amount</th>
@@ -124,6 +125,11 @@
                     </td>
                     <td>
                       {{ invoice_item.quantity - invoice_item.quantity_supplied }}
+                      {{ invoice_item.type }}
+                      <br><code v-html="showItemsInCartons(invoice_item.quantity - invoice_item.quantity_supplied, invoice_item.quantity_per_carton, invoice_item.type)" />
+                    </td>
+                    <td>
+                      {{ invoice_item.quantity_reversed }}
                       {{ invoice_item.type }}
                       <br><code v-html="showItemsInCartons(invoice_item.quantity - invoice_item.quantity_supplied, invoice_item.quantity_per_carton, invoice_item.type)" />
                     </td>
