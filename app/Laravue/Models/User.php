@@ -107,23 +107,26 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        foreach ($this->roles as $role) {
-            if ($role->isAdmin()) {
-                return true;
-            }
-        }
 
-        return false;
+        return $this->hasRole('admin');
+        // foreach ($this->roles as $role) {
+        //     if ($role->isAdmin()) {
+        //         return true;
+        //     }
+        // }
+
+        // return false;
     }
     public function isAssistantAdmin(): bool
     {
-        foreach ($this->roles as $role) {
-            if ($role->isAssistantAdmin()) {
-                return true;
-            }
-        }
+        return $this->hasRole('assistant admin');
+        // foreach ($this->roles as $role) {
+        //     if ($role->isAssistantAdmin()) {
+        //         return true;
+        //     }
+        // }
 
-        return false;
+        // return false;
     }
     // public function receivesBroadcastNotificationsOn()
     // {

@@ -19,5 +19,6 @@ const getters = {
   params: state => state.app.params,
   customers: state => state.customer.customers,
   customer_types: state => state.customer.customer_types,
+  baseUrl: state => state.app.baseUrl,
 };
 export default getters;

@@ -11,6 +11,16 @@ const permissionRoutes = {
   },
   children: [
     {
+      path: 'apis',
+      component: () => import('@/app/reports/APIs'),
+      name: 'ApiReports',
+      meta: {
+        title: 'APIs',
+        icon: 'el-icon-magic-stick',
+        roles: ['admin'],
+      },
+    },
+    {
       path: 'bin-card',
       component: () => import('@/app/reports/BinCard'),
       name: 'BinCard',

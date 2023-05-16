@@ -3,8 +3,8 @@
     <el-row :gutter="10">
       <el-col :xs="24" :sm="8" :md="8">
         <label for="">Select Warehouse</label>
-        <el-select v-model="form.warehouse_index" placeholder="Select Warehouse" class="span" filterable @input="getInvoices()">
-          <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="index" :label="warehouse.name" />
+        <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" class="span" filterable @input="getInvoices()">
+          <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="warehouse.id" :label="warehouse.name" />
 
         </el-select>
 
@@ -134,12 +134,16 @@ import Resource from '@/api/resource';
 import checkPermission from '@/utils/permission';
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 export default {
-  name: 'UnsuppliedInvoices',
   components: { Pagination },
+  props: {
+    warehouses: {
+      type: Array,
+      default: () => [],
+    },
+  },
   data() {
     return {
       activeTab: 'Invoice',
-      warehouses: [],
       invoice_item_batches: [],
       invoice_statuses: [],
       currency: '',
@@ -181,8 +185,7 @@ export default {
         option: 'list',
       },
       form: {
-        warehouse_index: '',
-        warehouse_id: 'all',
+        warehouse_id: '',
         invoice_no: '',
         page: 1,
         limit: 100,
@@ -203,15 +206,6 @@ export default {
 
     };
   },
-
-  computed: {
-    params() {
-      return this.$store.getters.params;
-    },
-  },
-  mounted() {
-    this.fetchNecessaryParams();
-  },
   beforeDestroy() {
 
   },
@@ -220,15 +214,6 @@ export default {
     checkPermission,
     showCalendar(){
       this.show_calendar = !this.show_calendar;
-    },
-    fetchNecessaryParams() {
-      const app = this;
-      app.warehouses = app.params.warehouses;
-      app.form.warehouse_index = 0;
-      app.form.warehouse_id = app.warehouses[0].id;
-      app.invoice_statuses = app.params.invoice_statuses;
-      app.currency = app.params.currency;
-      app.getInvoices();
     },
     getInvoices() {
       const app = this;
@@ -253,7 +238,7 @@ export default {
     },
     reverseInvoice(entry) {
       const app = this;
-      if (confirm(`Are you sure you want to reverse ${entry.quantity} ${entry.invoice_item.type} of ${entry.invoice_item.item.name} from invoice ${entry.invoice.invoice_number}? This cannot be undone`)) {
+      if (confirm(`Are you sure you want to reverse ${entry.invoice_item.quantity - entry.quantity} ${entry.invoice_item.type} of ${entry.invoice_item.item.name} from invoice ${entry.invoice.invoice_number}? This cannot be undone`)) {
         const reverseInvoiceResource = new Resource('invoice/general/reverse-partially-treated-invoice-item');
         const loader = reverseInvoiceResource.loaderShow();
         reverseInvoiceResource.update(entry.invoice_item_id)

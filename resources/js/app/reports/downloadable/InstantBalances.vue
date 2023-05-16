@@ -64,7 +64,7 @@
 
           </div>
           <div slot="uom" slot-scope="{row}">
-            {{ formatPackageType(row['package_type']) }}
+            {{ formatPackageType(row['uom']) }}
 
           </div>
           <!-- <div slot="updated_at" slot-scope="{row}">
@@ -73,6 +73,13 @@
       </div> -->
         </v-client-table>
       </div>
+      <pagination
+        v-show="total > 0"
+        :total="total"
+        :page.sync="form.page"
+        :limit.sync="form.limit"
+        @pagination="fetchItemStocks"
+      />
 
     </div>
 
@@ -80,11 +87,15 @@
 </template>
 <script>
 import moment from 'moment';
+import Pagination from '@/components/Pagination';
 import Resource from '@/api/resource';
 // const fetchWarehouse = new Resource('warehouse/fetch-warehouse');
 const itemsInStock = new Resource('reports/instant-balances');
 export default {
   // name: 'InstantBalances',
+  components: {
+    Pagination,
+  },
   props: {
     params: {
       type: Object,
@@ -115,7 +126,7 @@ export default {
           dropdown: true,
           chunk: 200,
         },
-        perPage: 200,
+        perPage: 10,
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
         filterable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
@@ -129,7 +140,10 @@ export default {
         from: '',
         to: '',
         panel: '',
+        page: 1,
+        limit: 10,
       },
+      total: 0,
       submitTitle: 'Fetch Report',
       panel: 'month',
       future: false,
@@ -150,7 +164,7 @@ export default {
     this.warehouses = this.params.warehouses;
     this.warehouse_index = 0;
     this.form.warehouse_id = this.warehouses[0].id;
-    this.setDateRange('');
+    // this.setDateRange('');
   },
   beforeDestroy() {
 
@@ -202,9 +216,15 @@ export default {
       const loader = itemsInStock.loaderShow();
       const param = app.form;
       param.view_by = app.view_by;
+      const { limit, page } = param;
+      app.options.perPage = limit;
       itemsInStock.list(param)
         .then(response => {
           app.items_in_stock = response.items_in_stock;
+          app.items_in_stock.forEach((element, index) => {
+            element['index'] = (page - 1) * limit + index + 1;
+          });
+          app.total = response.items.total;
 
           loader.hide();
         })
@@ -213,14 +233,17 @@ export default {
           console.log(error.message);
         });
     },
-    handleDownload() {
+    async handleDownload() {
       // const filtered_string = this.$refs.myTable.$refs.table.query;
       this.downloadLoading = true;
+      const param = this.form;
+      param.is_download = 'yes';
+      const { items_in_stock } = await itemsInStock.list(param);
       import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '']];
         const tHeader = ['PRODUCT', 'WAREHOUSE', 'BROUGHT FORWARD', 'QUANTITY IN', 'QUANTITY OUT', 'QUANTITY EXPIRED', 'BALANCE', 'UOM'];
         const filterVal = this.columns;
-        const list = this.items_in_stock; // (filtered_string === '') ? this.items_in_stock : this.$refs.myTable.filteredData;
+        const list = items_in_stock; // (filtered_string === '') ? this.items_in_stock : this.$refs.myTable.filteredData;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({
           multiHeader,

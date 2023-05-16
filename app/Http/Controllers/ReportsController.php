@@ -766,6 +766,7 @@ class ReportsController extends Controller
         }
         $warehouse_id = $request->warehouse_id;
         $item_id = $request->item_id;
+        $item = Item::find($item_id);
         list($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_products) = $this->getProductTransaction($item_id, $date_from, $date_to, $warehouse_id);
 
         $bincards = [];
@@ -787,7 +788,7 @@ class ReportsController extends Controller
                     'in' => $inbound->quantity,
                     'out' => '',
                     'balance' => 0, // initially set to zero
-                    'packaging' => $inbound->item->package_type,
+                    'packaging' => $item->package_type,
                     'physical_quantity' => '',
                     'sign' => '',
                 ];
@@ -805,7 +806,7 @@ class ReportsController extends Controller
                     'in' => '',
                     'out' => $outbound->total_quantity_supplied,
                     'balance' => 0, // initially set to zero
-                    'packaging' => $outbound->itemStock->item->package_type,
+                    'packaging' => $item->package_type,
                     'physical_quantity' => '',
                     'sign' => '',
                 ];
@@ -823,7 +824,7 @@ class ReportsController extends Controller
                     'in' => '',
                     'out' => $outbound->total_quantity_supplied,
                     'balance' => 0, // initially set to zero
-                    'packaging' => $outbound->itemStock->item->package_type,
+                    'packaging' => $item->package_type,
                     'physical_quantity' => '',
                     'sign' => '',
                 ];
@@ -840,7 +841,7 @@ class ReportsController extends Controller
                     'in' => '',
                     'out' => $expired_product->quantity,
                     'balance' => 0, // initially set to zero
-                    'packaging' => $expired_product->item->package_type,
+                    'packaging' => $item->package_type,
                     'physical_quantity' => '',
                     'sign' => '',
                 ];
@@ -869,14 +870,14 @@ class ReportsController extends Controller
                     $p->where('supplied', '>', 0);
                 });
             })
-            ->select('*', \DB::raw('SUM(quantity) as total_quantity'))
+            ->select(\DB::raw('SUM(quantity) as total_quantity'))
             ->first();
         $previous_outbound = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
             ->where('dispatched_products.warehouse_id', $warehouse_id)
             ->where('item_stock_sub_batches.item_id', $item_id)
             ->where('dispatched_products.created_at', '<', $date_from)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
+            ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
             ->orderby('dispatched_products.created_at')->first();
 
         $previous_transfer_outbound = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
@@ -884,12 +885,17 @@ class ReportsController extends Controller
             ->where('item_stock_sub_batches.item_id', $item_id)
             ->where('transfer_request_dispatched_products.created_at', '<', $date_from)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
-            ->orderby('transfer_request_dispatched_products.created_at')->first();
+            ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
+            ->orderby('transfer_request_dispatched_products.created_at')
+            ->first();
         // expired warehouse has id of 8
-        $previous_expired_product = ItemStockSubBatch::groupBy(['item_id'])->where(['item_id' => $item_id, 'warehouse_id' => 8, 'expired_from' => $warehouse_id])->where('created_at', '<', $date_from)->select('*', \DB::raw('SUM(quantity) as total_quantity'))->first();
+        $previous_expired_product = ItemStockSubBatch::groupBy(['item_id'])
+            ->where(['item_id' => $item_id, 'warehouse_id' => 8, 'expired_from' => $warehouse_id])
+            ->where('created_at', '<', $date_from)
+            ->select(\DB::raw('SUM(quantity) as total_quantity'))
+            ->first();
 
-        $inbounds = ItemStockSubBatch::with('item')->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
+        $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
             ->where(function ($q) {
@@ -899,6 +905,7 @@ class ReportsController extends Controller
                     $p->where('supplied', '>', 0);
                 });
             })
+            ->select('quantity', 'batch_no', 'goods_received_note', 'created_at')
             ->orderby('created_at')
             ->get();
         $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
@@ -908,7 +915,7 @@ class ReportsController extends Controller
             ->where('dispatched_products.created_at', '>=', $date_from)
             ->where('dispatched_products.created_at', '<=', $date_to)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('dispatched_products.created_at')->get();
+            ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('dispatched_products.created_at')->get();
         $outbounds2 = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
             ->groupBy(['transfer_request_waybill_id', 'status'])
             ->where('supply_warehouse_id', $warehouse_id)
@@ -916,37 +923,48 @@ class ReportsController extends Controller
             ->where('transfer_request_dispatched_products.created_at', '>=', $date_from)
             ->where('transfer_request_dispatched_products.created_at', '<=', $date_to)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
+            ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
 
         // $expired_product = ExpiredProduct::groupBy(['batch_no'])->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])->where('expiry_date', '>=', $date_from)->where('expiry_date', '<=', $date_to)->select('*', \DB::raw('SUM(quantity) as total_quantity'))->first();
 
         // expired warehouse has id of 8
-        $expired_products = ItemStockSubBatch::with('item')->where(['item_id' => $item_id, 'expired_from' => $warehouse_id])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->get();
+        $expired_products = ItemStockSubBatch::where(['item_id' => $item_id, 'expired_from' => $warehouse_id])->where('created_at', '>=', $date_from)
+            ->where('created_at', '<=', $date_to)
+            ->select('quantity', 'batch_no', 'goods_received_note', 'created_at')
+            ->get();
 
         return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_products);
     }
     public function instantBalances(Request $request)
     {
-        $date_from = Carbon::now()->startOfMonth();
-        $date_to = Carbon::now()->endOfMonth();
+        set_time_limit(0);
+        $date_from = Carbon::now()->startOfYear();
+        $date_to = Carbon::now()->endOfYear();
         $panel = 'month';
         if (isset($request->from, $request->to)) {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
             $panel = $request->panel;
         }
+        $is_download = $request->is_download;
+        if ($is_download == 'yes') {
+            $items = Item::orderBy('name')->select('id', 'name', 'package_type')->get();
+        } else {
+            $items = Item::orderBy('name')->select('id', 'name', 'package_type')->paginate($request->limit);
+        }
 
-        $items = Item::orderBy('name')->get();
+
+
+        $warehouse_id = $request->warehouse_id;
+        if ($warehouse_id === 'all') {
+            $warehouses = Warehouse::get();
+        } else {
+            // we do it this way to get a collection even though it is single
+            $warehouses = Warehouse::where('id', $warehouse_id)->get();
+        }
         $items_in_stock = [];
         foreach ($items as $item) {
             $item_id = $item->id;
-            $warehouse_id = $request->warehouse_id;
-            if ($warehouse_id === 'all') {
-                $warehouses = Warehouse::get();
-            } else {
-                // we do it this way to get a collection even though it is single
-                $warehouses = Warehouse::where('id', $warehouse_id)->get();
-            }
             $products = [];
             foreach ($warehouses as $warehouse) {
                 $warehouse_id = $warehouse->id;
@@ -1005,7 +1023,7 @@ class ReportsController extends Controller
                 $products[] = [
                     'product_id' => $item->id,
                     'product_name' => $item->name,
-                    'package_type' => $item->package_type,
+                    'uom' => $item->package_type,
                     'warehouse' => $warehouse->name,
                     'brought_forward' => $brought_forward,
                     'quantity_in' => $quantity_in,
@@ -1014,10 +1032,9 @@ class ReportsController extends Controller
                     'balance' => $brought_forward + $quantity_in - $quantity_out - $quantity_expired,
                 ];
             }
-            $item->products = $products;
             $items_in_stock = array_merge($items_in_stock, $products);
         }
-        return response()->json(compact('items_in_stock'), 200);
+        return response()->json(compact('items', 'items_in_stock'), 200);
     }
 
     public function reservedProductTransactions(ItemStockSubBatch $item_in_stock)
@@ -1069,70 +1086,95 @@ class ReportsController extends Controller
 
     public function allInvoicesRaised(Request $request)
     {
-        $date_from = Carbon::now()->startOfMonth();
-        $date_to = Carbon::now()->endOfMonth();
-        $panel = 'month';
+        set_time_limit(0);
+        $invoiceItemQuery = InvoiceItem::query();
+
+        $invoiceItemQuery = $invoiceItemQuery->join('invoices', 'invoice_items.invoice_id', 'invoices.id')
+            ->join('customers', 'invoices.customer_id', 'customers.id')
+            ->join('users', 'customers.user_id', 'users.id')
+            ->join('items', 'invoice_items.item_id', 'items.id')
+            ->join('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
+            ->join('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
+            ->selectRaw(
+                'warehouses.name as warehouse,
+                users.name as customer,
+                invoice_number,
+                items.name as product,
+                invoice_items.type as uom,
+                invoice_items.rate,
+                invoice_items.amount,
+                invoice_items.quantity,
+                invoice_items.quantity_supplied,
+                invoice_items.quantity_reversed,
+                invoice_items.created_at,
+                waybill_items.created_at as date_waybilled,
+                DATEDIFF(waybill_items.created_at, invoice_items.created_at) as invoice_delay_before_waybilled_in_days'
+            );
+
+        if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.warehouse_id', $request->warehouse_id);
+        }
+
         if (isset($request->from, $request->to)) {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
-            $panel = $request->panel;
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '>=', $date_from);
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '<=', $date_to);
         }
-        $condition = [];
-        if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
-            $condition = ['warehouse_id' => $request->warehouse_id];
-        }
-
         $is_download = 'no';
         if (isset($request->is_download)) {
             $is_download = $request->is_download;
         }
-
-        $invoiceItemQuery = InvoiceItem::with('warehouse', 'item', 'invoice.customer.user', 'firstWaybillItem')
-            ->where($condition)
-            ->where('created_at', '>=', $date_from)
-            ->where('created_at', '<=', $date_to);
 
         if ($is_download == 'yes') {
             $invoice_items = $invoiceItemQuery->get();
         } else {
             $invoice_items = $invoiceItemQuery->paginate(50);
         }
-
         return response()->json(compact('invoice_items'), 200);
     }
     public function unsuppliedInvoices(Request $request)
     {
         set_time_limit(0);
-        $warehouse_id = $request->warehouse_id;
-        $date_from = Carbon::now()->startOfMonth();
-        $date_to = Carbon::now()->endOfMonth();
-        $panel = 'month';
-        if (isset($request->from, $request->to, $request->panel)) {
-            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
-            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
-            $panel = $request->panel;
-        }
-        $condition = [];
+        $invoiceItemQuery = InvoiceItem::query();
+
+        $invoiceItemQuery = $invoiceItemQuery->join('invoices', 'invoice_items.invoice_id', 'invoices.id')
+            ->join('customers', 'invoices.customer_id', 'customers.id')
+            ->join('users', 'customers.user_id', 'users.id')
+            ->join('items', 'invoice_items.item_id', 'items.id')
+            ->join('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
+            ->join('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
+
+            ->whereRaw('invoice_items.quantity - invoice_items.quantity_supplied - invoice_items.quantity_reversed > 0')
+            ->selectRaw(
+                'warehouses.name as warehouse,
+                users.name as customer,
+                invoice_number,
+                items.name as product,
+                invoice_items.type as uom,
+                invoice_items.rate,
+                invoice_items.amount,
+                invoice_items.quantity,
+                invoice_items.quantity_supplied,
+                invoice_items.quantity_reversed,
+                invoice_items.quantity - invoice_items.quantity_supplied - invoice_items.quantity_reversed as unsupplied,
+                invoice_items.created_at'
+            );
+
         if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
-            $condition = ['warehouse_id' => $request->warehouse_id];
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.warehouse_id', $request->warehouse_id);
         }
 
+        if (isset($request->from, $request->to)) {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '>=', $date_from);
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '<=', $date_to);
+        }
         $is_download = 'no';
         if (isset($request->is_download)) {
             $is_download = $request->is_download;
         }
-        $invoiceItemQuery = InvoiceItem::with('warehouse', 'invoice.customer.user', 'item', 'firstWaybillItem')
-            ->where($condition)
-            // ->where('supply_status', '!=', 'Complete')
-            ->whereRaw('quantity - quantity_supplied - quantity_reversed > 0')
-            // ->where(function ($q) {
-            //     $q->where('supply_status', '!=', 'Complete');
-            //     $q->orWhere(function ($p) {
-            //         $p->whereRaw('quantity - quantity_supplied > 0');
-            //     });
-            // })
-            ->where('updated_at', '>=', $date_from)
-            ->where('updated_at', '<=', $date_to);
 
         if ($is_download == 'yes') {
             $invoice_items = $invoiceItemQuery->get();
@@ -1141,6 +1183,47 @@ class ReportsController extends Controller
         }
         return response()->json(compact('invoice_items'), 200);
     }
+    // public function unsuppliedInvoices2(Request $request)
+    // {
+    //     set_time_limit(0);
+    //     $warehouse_id = $request->warehouse_id;
+    //     $date_from = Carbon::now()->startOfMonth();
+    //     $date_to = Carbon::now()->endOfMonth();
+    //     $panel = 'month';
+    //     if (isset($request->from, $request->to, $request->panel)) {
+    //         $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+    //         $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+    //         $panel = $request->panel;
+    //     }
+    //     $condition = [];
+    //     if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
+    //         $condition = ['warehouse_id' => $request->warehouse_id];
+    //     }
+
+    //     $is_download = 'no';
+    //     if (isset($request->is_download)) {
+    //         $is_download = $request->is_download;
+    //     }
+    //     $invoiceItemQuery = InvoiceItem::with('warehouse', 'invoice.customer.user', 'item', 'firstWaybillItem')
+    //         ->where($condition)
+    //         // ->where('supply_status', '!=', 'Complete')
+    //         ->whereRaw('quantity - quantity_supplied - quantity_reversed > 0')
+    //         // ->where(function ($q) {
+    //         //     $q->where('supply_status', '!=', 'Complete');
+    //         //     $q->orWhere(function ($p) {
+    //         //         $p->whereRaw('quantity - quantity_supplied > 0');
+    //         //     });
+    //         // })
+    //         ->where('updated_at', '>=', $date_from)
+    //         ->where('updated_at', '<=', $date_to);
+
+    //     if ($is_download == 'yes') {
+    //         $invoice_items = $invoiceItemQuery->get();
+    //     } else {
+    //         $invoice_items = $invoiceItemQuery->paginate(50);
+    //     }
+    //     return response()->json(compact('invoice_items'), 200);
+    // }
 
     public function allUntreatedInvoices(Request $request)
     {

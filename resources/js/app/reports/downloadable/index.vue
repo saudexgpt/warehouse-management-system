@@ -42,6 +42,11 @@
           <users v-if="activeActivity=='Users'" :can-add-new="false" />
           <!-- </keep-alive> -->
         </el-tab-pane>
+        <el-tab-pane label="Customers" name="Customers">
+          <!-- <keep-alive> -->
+          <customers v-if="activeActivity=='Customers'" />
+          <!-- </keep-alive> -->
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
@@ -57,11 +62,12 @@ import InstantBalances from './InstantBalances';
 import Products from '@/app/stock/item/ManageItem';
 import Fleets from './fleets';
 import Users from './users/List';
+import Customers from './Customers';
 // const necessaryParams = new Resource('fetch-necessary-params');
 export default {
   name: 'DownloadReports',
   components: {
-    Inbounds, Outbounds, InstantBalances, UnsuppliedInvoices, AllInvoiceRaised, Products, Fleets, Users,
+    Inbounds, Outbounds, InstantBalances, UnsuppliedInvoices, AllInvoiceRaised, Customers, Products, Fleets, Users,
   },
   data() {
     return {

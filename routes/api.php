@@ -19,6 +19,16 @@ $router->get('partial-invoices', 'Controller@normalizePartialSuppliedInvoices');
 $router->get('hello-message', function () {
     return response()->json(['message' => 'Hello World'], 200);
 });
+
+// Publicly accessible api
+$router->group(['prefix' => 'report'], function () use ($router) {
+    $router->get('customers', 'ApiController@customers');
+    $router->get('instant-balances', 'ApiController@instantBalances');
+    $router->get('unsupplied-invoices', 'ApiController@unsuppliedInvoices');
+    $router->get('all-generated-invoices', 'ApiController@allInvoicesRaised');
+});
+
+
 $router->post('auth/login', 'AuthController@login');
 $router->get('dispatch-product/issue', 'DebugController@solveDispatchProductIssue');
 $router->get('total-product', 'DebugController@totalDispatchedProduct');
@@ -40,28 +50,34 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
     $router->get('auth/user', 'AuthController@user');
     $router->post('auth/logout', 'AuthController@logout');
-    $router->get('users', 'UserController@index')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+    $router->group(['middleware' => ['permission:manage user']], function () use ($router) {
+        $router->get('users', 'UserController@index'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+        $router->post('users', 'UserController@store'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+        $router->post('users/add-bulk-customers', 'UserController@addBulkCustomers'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+
+        $router->get('users/{user}', 'UserController@show'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+        $router->put('users/reset-password/{user}', 'UserController@adminResetUserPassword'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+
+        $router->delete('users/{user}', 'UserController@destroy'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+        $router->delete('customers/{user}', 'UserController@destroyCustomer'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+        $router->get('users/{user}/permissions', 'UserController@permissions'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+        $router->put('users/{user}/permissions', 'UserController@updatePermissions'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+        $router->apiResource('roles', 'RoleController'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+        $router->get('roles/{role}/permissions', 'RoleController@permissions'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+        $router->apiResource('permissions', 'PermissionController'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+    });
+
     $router->get('user-notifications', 'UserController@userNotifications');
 
-    $router->post('users', 'UserController@store')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
-    $router->post('users/add-bulk-customers', 'UserController@addBulkCustomers')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
 
-    $router->get('users/{user}', 'UserController@show')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
     $router->put('users/{user}', 'UserController@update');
     $router->put('users/assign-role/{user}', 'UserController@assignRole');
 
     $router->put('users/change-customer-details/{customer}', 'UserController@changeCustomerDetails');
     $router->put('users/update-password/{user}', 'UserController@updatePassword');
-    $router->put('users/reset-password/{user}', 'UserController@adminResetUserPassword')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
 
-    $router->delete('users/{user}', 'UserController@destroy')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
-    $router->delete('customers/{user}', 'UserController@destroyCustomer')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
-    $router->get('users/{user}/permissions', 'UserController@permissions')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
-    $router->put('users/{user}/permissions', 'UserController@updatePermissions')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
-    $router->apiResource('roles', 'RoleController')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
-    $router->get('roles/{role}/permissions', 'RoleController@permissions')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
-    $router->apiResource('permissions', 'PermissionController')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_PERMISSION_MANAGE);
-    // $router->apiResource('users', 'UserController')->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
+
+    // $router->apiResource('users', 'UserController'); //->middleware('permission:' . \App\Laravue\Acl::PERMISSION_USER_MANAGE);
 
 
     $router->get('fetch-necessary-params', 'Controller@fetchNecessayParams');
@@ -274,8 +290,10 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         /////////////////////////////general stock////////////////////////
         $router->group(['prefix' => 'general-items'], function () use ($router) {
 
-            $router->get('/', 'ItemsController@index')->middleware('permission:view general items|manage general items');
-            $router->group(['middleware' => 'permission:manage general items'], function () use ($router) {
+            $router->group(['middleware' => ['permission:view general items|manage general items']], function () use ($router) {
+                $router->get('/', 'ItemsController@index')->middleware('permission:view general items|manage general items');
+            });
+            $router->group(['middleware' => ['permission:manage general items']], function () use ($router) {
 
                 $router->post('store', 'ItemsController@store');
                 $router->put('update/{item}', 'ItemsController@update');

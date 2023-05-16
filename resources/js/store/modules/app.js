@@ -10,6 +10,7 @@ const state = {
   language: getLanguage(),
   size: Cookies.get('size') || 'medium',
   params: null,
+  baseUrl: 'https://gpl.3coretechnology.com/api',
 };
 
 const mutations = {

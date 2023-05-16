@@ -180,67 +180,6 @@ export default {
     };
   },
   computed: {
-    // normalizedMenuPermissions() {
-    //   let tmp = [];
-    //   this.currentUser.permissions.role.forEach(permission => {
-    //     tmp.push({
-    //       id: permission.id,
-    //       name: permission.name,
-    //       disabled: true,
-    //     });
-    //   });
-    //   const rolePermissions = {
-    //     id: -1, // Just a faked ID
-    //     name: 'Inherited from role',
-    //     disabled: true,
-    //     children: this.classifyPermissions(tmp).menu,
-    //   };
-
-    //   tmp = this.menuPermissions.filter(permission => !this.currentUser.permissions.role.find(p => p.id === permission.id));
-    //   const userPermissions = {
-    //     id: 0, // Faked ID
-    //     name: 'Extra menus',
-    //     children: tmp,
-    //     disabled: tmp.length === 0,
-    //   };
-
-    //   return [rolePermissions, userPermissions];
-    // },
-    // normalizedOtherPermissions() {
-    //   let tmp = [];
-    //   this.currentUser.permissions.role.forEach(permission => {
-    //     tmp.push({
-    //       id: permission.id,
-    //       name: permission.name,
-    //       disabled: true,
-    //     });
-    //   });
-    //   const rolePermissions = {
-    //     id: -1,
-    //     name: 'Inherited from role',
-    //     disabled: true,
-    //     children: this.classifyPermissions(tmp).other,
-    //   };
-
-    //   tmp = this.otherPermissions.filter(permission => !this.currentUser.permissions.role.find(p => p.id === permission.id));
-    //   const userPermissions = {
-    //     id: 0,
-    //     name: 'Extra permissions',
-    //     children: tmp,
-    //     disabled: tmp.length === 0,
-    //   };
-
-    //   return [rolePermissions, userPermissions];
-    // },
-    // userMenuPermissions() {
-    //   return this.classifyPermissions(this.userPermissions).menu;
-    // },
-    // userOtherPermissions() {
-    //   return this.classifyPermissions(this.userPermissions).other;
-    // },
-    // userPermissions() {
-    //   return this.currentUser.permissions.role.concat(this.currentUser.permissions.user);
-    // },
   },
   created() {
     this.getList();

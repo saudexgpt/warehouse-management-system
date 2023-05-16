@@ -1387,7 +1387,7 @@ class InvoicesController extends Controller
         $invoice = Invoice::find($invoice_item->invoice_id);
         $item = $invoice_item->item->name;
         $package_type = $invoice_item->type;
-        $total_reversed_quantity = $invoice_item->quantity;
+        $total_reversed_quantity = $invoice_item->quantity - $invoice_item->quantity_supplied;
         $title = "Invoice Item Reversal";
         $description = "$total_reversed_quantity $package_type of $item was reversed from invoice $invoice->invoice_number by $user->name ($user->email)";
         $this->createInvoiceHistory($invoice, $title, $description);

@@ -109,20 +109,11 @@
           <div slot="created_at" slot-scope="props">
             {{ moment(props.row.created_at).format('ll') }}
           </div>
-          <div slot="quantity" slot-scope="props">
-            {{ props.row.quantity }} {{ props.row.type }}
+          <div slot="date_waybilled" slot-scope="props">
+            {{ moment(props.row.date_waybilled).format('ll') }}
           </div>
-          <div slot="quantity_supplied" slot-scope="props">
-            {{ props.row.quantity_supplied }} {{ props.row.type }}
-          </div>
-          <div slot="balance" slot-scope="props" class="alert alert-danger">
-            {{ props.row.quantity - props.row.quantity_supplied }} {{ props.row.type }}
-          </div>
-          <div slot="waybilled" slot-scope="props">
-            {{ (props.row.first_waybill_item) ? moment(props.row.first_waybill_item.created_at).format('ll') : '-' }}
-          </div>
-          <div slot="delay" slot-scope="props">
-            {{ (props.row.first_waybill_item) ? dateDiff(moment(props.row.first_waybill_item.created_at), moment(props.row.created_at)) + ' days' : '-' }}
+          <div slot="invoice_delay_before_waybilled_in_days" slot-scope="props">
+            {{ moment(props.row.invoice_delay_before_waybilled_in_days) + ' days' }}
           </div>
 
         </v-client-table>
@@ -160,25 +151,13 @@ export default {
       invoice_items: [],
       invoice_statuses: [],
       currency: '',
-      columns: ['item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'warehouse.name', 'quantity', 'rate', 'amount', 'created_at', 'waybilled', 'delay'],
+      columns: ['product', 'invoice_number', 'customer', 'warehouse', 'quantity', 'quantity_supplied', 'uom', 'rate', 'amount', 'created_at', 'date_waybilled', 'invoice_delay_before_waybilled_in_days'],
 
       options: {
         headings: {
-          'item.name': 'Product',
-          'invoice.invoice_number': 'Invoice No.',
-          'invoice.customer.user.name': 'Customer Name',
-          'warehouse.name': 'Concerned Warehouse',
-          // 'invoice.customer.user.name': 'Customer',
-          // 'invoice.invoice_number': 'Invoice',
-          // 'batches': 'Batch Nos.',
-          // 'item.name': 'Product',
-          // 'quantity_supplied': 'Supplied',
-          // 'invoice.invoice_date': 'Invoice Date',
-          // 'created_at': 'Date Saved',
-          // 'delivery_status': 'Status',
-          // 'updated_at': 'Delivery Date',
-
-          // id: 'S/N',
+          // quantity_reversed: 'Reversed',
+          date_waybilled: 'Waybilled',
+          invoice_delay_before_waybilled_in_days: 'Delay',
         },
         pagination: {
           dropdown: true,
@@ -187,8 +166,8 @@ export default {
         perPage: 100,
         filterByColumn: true,
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'created_at'],
-        filterable: ['invoice.invoice_number', 'item.name', 'invoice.customer.user.name', 'created_at'],
+        sortable: ['invoice_number', 'product', 'customer', 'created_at'],
+        filterable: ['invoice_number', 'product', 'customer', 'created_at'],
       },
       page: {
         option: 'list',
@@ -289,8 +268,8 @@ export default {
       param.is_download = 'yes';
       const { invoice_items } = await outboundReport.list(param);
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Rate', 'Amount', 'Created At', 'Waybilled', 'Delay'];
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Quantity Supplied', 'UOM', 'Rate', 'Amount', 'Created At', 'Waybilled', 'Delay'];
         const filterVal = this.columns;
         const list = invoice_items;
         const data = this.formatJson(filterVal, list);
@@ -318,9 +297,6 @@ export default {
         }
         if (j === 'invoice.customer.user.name') {
           return v['invoice']['customer']['user']['name'];
-        }
-        if (j === 'quantity') {
-          return v['quantity'] + ' ' + v['type'];
         }
         if (j === 'warehouse.name') {
           return v['warehouse']['name'];
