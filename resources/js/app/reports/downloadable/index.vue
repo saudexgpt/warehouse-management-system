@@ -7,6 +7,12 @@
           <unsupplied-invoices v-if="params != null && activeActivity=='Unsupplied'" :params="params" />
           <!-- </keep-alive> -->
         </el-tab-pane>
+        <el-tab-pane label="UNTREATED INVOICES" name="untreated">
+          <untreated-invoices :warehouses="params.warehouses" />
+        </el-tab-pane>
+        <el-tab-pane label="PARTIALLY TREATED INVOICES" name="partially_treated">
+          <partially-treated-invoices :warehouses="params.warehouses" />
+        </el-tab-pane>
         <el-tab-pane label="All Invoices Raised" name="InvoiceRaised">
           <!-- <keep-alive> -->
           <all-invoice-raised v-if="params != null && activeActivity=='InvoiceRaised'" :params="params" />
@@ -58,6 +64,8 @@ import Inbounds from './inbounds';
 import Outbounds from './outbounds';
 import UnsuppliedInvoices from './UnsuppliedInvoices';
 import AllInvoiceRaised from './AllInvoiceRaised';
+import UntreatedInvoices from '@/app/invoice/partials/UntreatedInvoices';
+import PartiallyTreatedInvoices from '@/app/invoice/partials/PartiallyTreatedInvoices';
 import InstantBalances from './InstantBalances';
 import Products from '@/app/stock/item/ManageItem';
 import Fleets from './fleets';
@@ -67,7 +75,7 @@ import Customers from './Customers';
 export default {
   name: 'DownloadReports',
   components: {
-    Inbounds, Outbounds, InstantBalances, UnsuppliedInvoices, AllInvoiceRaised, Customers, Products, Fleets, Users,
+    Inbounds, Outbounds, InstantBalances, UnsuppliedInvoices, UntreatedInvoices, PartiallyTreatedInvoices, AllInvoiceRaised, Customers, Products, Fleets, Users,
   },
   data() {
     return {

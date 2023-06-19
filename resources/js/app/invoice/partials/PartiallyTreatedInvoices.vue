@@ -9,6 +9,18 @@
         </el-select>
 
       </el-col>
+      <el-col :xs="24" :sm="10" :md="10">
+        <br>
+        <el-popover
+          placement="right"
+          trigger="click"
+        >
+          <date-range-picker :from="$route.query.from" :to="$route.query.to" :panel="panel" :panels="panels" :submit-title="submitTitle" :future="future" @update="setDateRange" />
+          <el-button id="pick_outbound_date" slot="reference" type="success">
+            <i class="el-icon-date" /> Pick Date Range
+          </el-button>
+        </el-popover>
+      </el-col>
 
     </el-row>
     <br>
@@ -190,6 +202,8 @@ export default {
         page: 1,
         limit: 100,
         keyword: '',
+        from: '',
+        to: '',
       },
       total: 0,
       submitTitle: 'Fetch Report',
@@ -214,6 +228,22 @@ export default {
     checkPermission,
     showCalendar(){
       this.show_calendar = !this.show_calendar;
+    },
+    setDateRange(values){
+      const app = this;
+      document.getElementById('pick_outbound_date').click();
+      let panel = app.panel;
+      let from = app.week_start;
+      let to = app.week_end;
+      if (values !== '') {
+        to = this.format(new Date(values.to));
+        from = this.format(new Date(values.from));
+        panel = values.panel;
+      }
+      app.form.from = from;
+      app.form.to = to;
+      app.form.panel = panel;
+      app.getInvoices();
     },
     getInvoices() {
       const app = this;

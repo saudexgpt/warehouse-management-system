@@ -915,7 +915,7 @@ class ReportsController extends Controller
             ->where('dispatched_products.created_at', '>=', $date_from)
             ->where('dispatched_products.created_at', '<=', $date_to)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('dispatched_products.created_at')->get();
+            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('dispatched_products.created_at')->get();
         $outbounds2 = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
             ->groupBy(['transfer_request_waybill_id', 'status'])
             ->where('supply_warehouse_id', $warehouse_id)
@@ -923,7 +923,7 @@ class ReportsController extends Controller
             ->where('transfer_request_dispatched_products.created_at', '>=', $date_from)
             ->where('transfer_request_dispatched_products.created_at', '<=', $date_to)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
+            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
 
         // $expired_product = ExpiredProduct::groupBy(['batch_no'])->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])->where('expiry_date', '>=', $date_from)->where('expiry_date', '<=', $date_to)->select('*', \DB::raw('SUM(quantity) as total_quantity'))->first();
 
@@ -1236,6 +1236,7 @@ class ReportsController extends Controller
         }
         $invoiceItemQuery = InvoiceItem::with('warehouse', 'invoice.customer.user', 'item')
             ->where($condition)
+            ->where('quantity_supplied', '=', 0)
             ->whereRaw('quantity - quantity_supplied - quantity_reversed > 0');
 
         if (isset($request->invoice_no) && $request->invoice_no !== '') {
@@ -1243,6 +1244,12 @@ class ReportsController extends Controller
             $invoiceItemQuery->whereHas('invoice', function ($q) use ($invoice_no) {
                 $q->where('invoice_number', $invoice_no);
             });
+        }
+        if (isset($request->from, $request->to)) {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $invoiceItemQuery = $invoiceItemQuery->where('created_at', '>=', $date_from);
+            $invoiceItemQuery = $invoiceItemQuery->where('created_at', '<=', $date_to);
         }
         $invoice_items = $invoiceItemQuery->paginate(50);
         return response()->json(compact('invoice_items'), 200);
@@ -1269,6 +1276,12 @@ class ReportsController extends Controller
             $invoiceItemQuery->whereHas('invoice', function ($q) use ($invoice_no) {
                 $q->where('invoice_number', $invoice_no);
             });
+        }
+        if (isset($request->from, $request->to)) {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '>=', $date_from);
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '<=', $date_to);
         }
         $invoice_item_batches = $invoiceItemQuery->paginate(50);
         return response()->json(compact('invoice_item_batches'), 200);
