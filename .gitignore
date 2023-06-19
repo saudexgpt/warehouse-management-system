@@ -16,6 +16,7 @@
 .env
 composer.lock
 package-lock.json
+package-lock-old.json
 .env.backup
 .idea
 .phpunit.result.cache

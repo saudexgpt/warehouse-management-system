@@ -227,6 +227,10 @@ export default {
     showCalendar(){
       this.show_calendar = !this.show_calendar;
     },
+    format(date) {
+      var month = date.toLocaleString('en-US', { month: 'short' });
+      return month + ' ' + date.getDate() + ', ' + date.getFullYear();
+    },
     setDateRange(values){
       const app = this;
       document.getElementById('pick_outbound_date').click();
