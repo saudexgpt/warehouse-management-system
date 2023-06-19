@@ -15,6 +15,7 @@
 /public/*.js.map
 .env
 composer.lock
+composer-old.lock
 package-lock.json
 package-lock-old.json
 .env.backup
