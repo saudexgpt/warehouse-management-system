@@ -43,69 +43,10 @@
             >Fetch</el-button>
           </el-col>
         </el-row>
+        <el-button :loading="downloadLoading" style="margin:0 0 20px 20px;" type="primary" icon="document" @click="handleDownload">
+          Export Excel
+        </el-button>
         <v-client-table v-model="invoice_item_batches" :columns="columns" :options="options">
-          <!-- <div slot="child_row" slot-scope="props">
-            <aside>
-              <legend>Delivery Details for Invoice No.: {{ props.row.invoice.invoice_number }}</legend>
-              <v-client-table v-model="props.row.waybill_items" :columns="['waybill_no', 'quantity', 'supply_status', 'dispatchers', 'supply_date']">
-                <div slot="waybill_no" slot-scope="{row}">
-                  {{ row.waybill.waybill_no }}
-
-                </div>
-                <div slot="quantity" slot-scope="{row}">
-                  {{ row.quantity }} {{ row.type }}
-
-                </div>
-                <div slot="supply_status" slot-scope="{row}">
-                  {{ row.waybill.status }}
-
-                </div>
-                <div slot="dispatchers" slot-scope="{row}">
-                  <div v-if="row.waybill.dispatcher">
-                    <span v-for="(vehicle_driver, index) in row.waybill.dispatcher.vehicle.vehicle_drivers" :key="index">
-                      {{ vehicle_driver.driver.user.name }}<br>
-                    </span>
-                  </div>
-                  <div v-else>
-                    Not assigned
-                  </div>
-
-                </div>
-                <div slot="supply_date" slot-scope="{row}">
-                  {{ moment(row.updated_at).format('MMM D, YYYY') }}
-                </div>
-              </v-client-table>
-            </aside>
-
-          </div> -->
-          <!-- <div slot="batches" slot-scope="props">
-            <div v-for="(invoice_batch, batch_index) in props.row.batches" :key="batch_index">
-              <div v-if="invoice_batch.item_stock_batch">
-                {{ invoice_batch.item_stock_batch.batch_no }}
-              </div>, <br>
-            </div>
-          </div>
-          <div slot="amount" slot-scope="props">
-            {{ currency + Number(props.row.invoice.amount).toLocaleString() }}
-          </div>
-          <div slot="quantity" slot-scope="props">
-            {{ props.row.quantity + ' ' + props.row.type }}
-          </div>
-          <div slot="quantity_supplied" slot-scope="props">
-            {{ props.row.quantity_supplied + ' ' + props.row.type }}
-          </div>
-          <div slot="balance" slot-scope="props">
-            {{ props.row.quantity - props.row.quantity_supplied + ' ' + props.row.type }}
-          </div>
-          <div slot="invoice.invoice_date" slot-scope="props">
-            {{ moment(props.row.invoice.invoice_date).format('MMM D, YYYY') }}
-          </div>
-          <div slot="created_at" slot-scope="props">
-            {{ moment(props.row.created_at).format('MMM D, YYYY') }}
-          </div>
-          <div slot="updated_at" slot-scope="props">
-            {{ (props.row.delivery_status === 'delivered') ? moment(props.row.updated_at).format('MMM D, YYYY') : 'Pending' }}
-          </div> -->
           <div slot="action" slot-scope="{row}">
             <el-button v-if="checkPermission(['manage invoice reversals'])" type="danger" round @click="reverseInvoice(row)">Reverse</el-button>
           </div>
@@ -144,6 +85,8 @@ import moment from 'moment';
 import Pagination from '@/components/Pagination';
 import Resource from '@/api/resource';
 import checkPermission from '@/utils/permission';
+
+const outboundReport = new Resource('reports/tabular/all-partially-treated-invoices');
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 export default {
   components: { Pagination },
@@ -159,7 +102,7 @@ export default {
       invoice_item_batches: [],
       invoice_statuses: [],
       currency: '',
-      columns: ['action', 'invoice_item.item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'invoice_item.quantity', 'invoice_item.quantity_supplied', 'quantity', 'uom', 'created_at'],
+      columns: ['action', 'invoice_item.item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'invoice_item.warehouse.name', 'invoice_item.quantity', 'invoice_item.quantity_supplied', 'quantity', 'uom', 'created_at'],
 
       options: {
         headings: {
@@ -251,7 +194,6 @@ export default {
     },
     getInvoices() {
       const app = this;
-      const outboundReport = new Resource('reports/tabular/all-partially-treated-invoices');
       const loader = outboundReport.loaderShow();
       const { limit, page } = this.form;
       const param = app.form;
@@ -286,6 +228,54 @@ export default {
             console.log(error.message);
           });
       }
+    },
+    async handleDownload() {
+      this.downloadLoading = true;
+      const param = this.form;
+      param.is_download = 'yes';
+      const { invoice_items } = await outboundReport.list(param);
+      import('@/vendor/Export2Excel').then(excel => {
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Quantity Supplied', 'Unsupplied', 'UOM', 'Created At'];
+        const filterVal = ['invoice_item.item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'invoice_item.warehouse.name', 'invoice_item.quantity', 'invoice_item.quantity_supplied', 'quantity', 'uom', 'created_at'];
+        const list = invoice_items;
+        const data = this.formatJson(filterVal, list);
+        excel.export_json_to_excel({
+          multiHeader,
+          header: tHeader,
+          data,
+          filename: this.filename,
+          autoWidth: true,
+          bookType: 'csv',
+        });
+        this.downloadLoading = false;
+      });
+    },
+    formatJson(filterVal, jsonData) {
+      return jsonData.map(v => filterVal.map(j => {
+        if (j === 'created_at') {
+          return moment(v['created_at']).format('ll');
+        }
+        if (j === 'warehouse.name') {
+          return v['warehouse']['name'];
+        }
+        if (j === 'item.name') {
+          return v['item']['name'];
+        }
+        if (j === 'invoice.invoice_number') {
+          return v['invoice']['invoice_number'];
+        }
+        if (j === 'invoice.customer.user.name') {
+          return v['invoice']['customer']['user']['name'];
+        }
+        if (j === 'uom') {
+          return v['type'];
+        }
+        if (j === 'balance') {
+          return parseInt(v['quantity'] - v['quantity_supplied'] - v['quantity_reversed']);
+        }
+        return v[j];
+      }));
     },
   },
 };

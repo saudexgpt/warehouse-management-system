@@ -43,6 +43,9 @@
             >Fetch</el-button>
           </el-col>
         </el-row>
+        <el-button :loading="downloadLoading" style="margin:0 0 20px 20px;" type="primary" icon="document" @click="handleDownload">
+          Export Excel
+        </el-button>
         <v-client-table v-model="invoice_items" :columns="columns" :options="options">
           <!-- <div slot="child_row" slot-scope="props">
             <aside>
@@ -144,6 +147,7 @@ import moment from 'moment';
 import Pagination from '@/components/Pagination';
 import Resource from '@/api/resource';
 import checkPermission from '@/utils/permission';
+const outboundReport = new Resource('reports/tabular/all-untreated-invoices');
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 export default {
   components: { Pagination },
@@ -249,7 +253,6 @@ export default {
     },
     getInvoices() {
       const app = this;
-      const outboundReport = new Resource('reports/tabular/all-untreated-invoices');
       const loader = outboundReport.loaderShow();
       const { limit, page } = this.form;
       const param = app.form;
@@ -284,6 +287,54 @@ export default {
             console.log(error.message);
           });
       }
+    },
+    async handleDownload() {
+      this.downloadLoading = true;
+      const param = this.form;
+      param.is_download = 'yes';
+      const { invoice_items } = await outboundReport.list(param);
+      import('@/vendor/Export2Excel').then(excel => {
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Quantity Supplied', 'Unsupplied', 'UOM', 'Created At'];
+        const filterVal = ['item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'warehouse.name', 'quantity', 'quantity_supplied', 'balance', 'uom', 'created_at'];
+        const list = invoice_items;
+        const data = this.formatJson(filterVal, list);
+        excel.export_json_to_excel({
+          multiHeader,
+          header: tHeader,
+          data,
+          filename: this.filename,
+          autoWidth: true,
+          bookType: 'csv',
+        });
+        this.downloadLoading = false;
+      });
+    },
+    formatJson(filterVal, jsonData) {
+      return jsonData.map(v => filterVal.map(j => {
+        if (j === 'created_at') {
+          return moment(v['created_at']).format('ll');
+        }
+        if (j === 'warehouse.name') {
+          return v['warehouse']['name'];
+        }
+        if (j === 'item.name') {
+          return v['item']['name'];
+        }
+        if (j === 'invoice.invoice_number') {
+          return v['invoice']['invoice_number'];
+        }
+        if (j === 'invoice.customer.user.name') {
+          return v['invoice']['customer']['user']['name'];
+        }
+        if (j === 'uom') {
+          return v['type'];
+        }
+        if (j === 'balance') {
+          return parseInt(v['quantity'] - v['quantity_supplied'] - v['quantity_reversed']);
+        }
+        return v[j];
+      }));
     },
   },
 };

@@ -1251,7 +1251,16 @@ class ReportsController extends Controller
             $invoiceItemQuery = $invoiceItemQuery->where('created_at', '>=', $date_from);
             $invoiceItemQuery = $invoiceItemQuery->where('created_at', '<=', $date_to);
         }
-        $invoice_items = $invoiceItemQuery->paginate(50);
+        $is_download = 'no';
+        if (isset($request->is_download)) {
+            $is_download = $request->is_download;
+        }
+
+        if ($is_download == 'yes') {
+            $invoice_items = $invoiceItemQuery->get();
+        } else {
+            $invoice_items = $invoiceItemQuery->paginate(50);
+        }
         return response()->json(compact('invoice_items'), 200);
     }
 
@@ -1283,7 +1292,16 @@ class ReportsController extends Controller
             $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '>=', $date_from);
             $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '<=', $date_to);
         }
-        $invoice_item_batches = $invoiceItemQuery->paginate(50);
+        $is_download = 'no';
+        if (isset($request->is_download)) {
+            $is_download = $request->is_download;
+        }
+
+        if ($is_download == 'yes') {
+            $invoice_items = $invoiceItemQuery->get();
+        } else {
+            $invoice_items = $invoiceItemQuery->paginate(50);
+        }
         return response()->json(compact('invoice_item_batches'), 200);
     }
 }
