@@ -114,17 +114,6 @@ export default {
           quantity: 'Unsupplied Waybill Quantity',
           uom: 'UOM',
           'invoice_item.warehouse.name': 'Concerned Warehouse',
-          // 'invoice.customer.user.name': 'Customer',
-          // 'invoice.invoice_number': 'Invoice',
-          // 'batches': 'Batch Nos.',
-          // 'item.name': 'Product',
-          // 'quantity_supplied': 'Supplied',
-          // 'invoice.invoice_date': 'Invoice Date',
-          // 'created_at': 'Date Saved',
-          // 'delivery_status': 'Status',
-          // 'updated_at': 'Delivery Date',
-
-          // id: 'S/N',
         },
         pagination: {
           dropdown: true,
