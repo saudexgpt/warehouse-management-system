@@ -218,7 +218,7 @@ export default {
       invoice: {},
       selected_row_index: '',
       downloadLoading: false,
-      filename: 'Unsupplied Invoices',
+      filename: 'Untreated Invoices',
 
     };
   },

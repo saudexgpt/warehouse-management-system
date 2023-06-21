@@ -1,5 +1,6 @@
 <template>
   <div class="">
+    <aside>Description: These are invoices generated but not fully supplied to the customer</aside>
     <el-row :gutter="10">
       <el-col :xs="24" :sm="8" :md="8">
         <label for="">Select Warehouse</label>
@@ -154,11 +155,11 @@ export default {
       invoice_items: [],
       invoice_statuses: [],
       currency: '',
-      columns: ['product', 'invoice_number', 'customer', 'warehouse', 'quantity', 'quantity_supplied', 'unsupplied', 'uom', 'rate', 'amount', 'created_at'],
+      columns: ['product', 'invoice_number', 'customer', 'warehouse', 'quantity', 'quantity_supplied', 'unsupplied', 'quantity_reversed', 'uom', 'rate', 'amount', 'created_at'],
 
       options: {
         headings: {
-          // quantity_reversed: 'Reversed',
+          quantity_reversed: 'Reversed',
           date_waybilled: 'Waybilled',
           invoice_delay_before_waybilled_in_days: 'Delay',
         },
@@ -269,8 +270,8 @@ export default {
       param.is_download = 'yes';
       const { invoice_items } = await outboundReport.list(param);
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Quantity Supplied', 'Unsupplied', 'UOM', 'Rate', 'Amount', 'Created At'];
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Quantity Supplied', 'Unsupplied', 'Reversed', 'UOM', 'Rate', 'Amount', 'Created At'];
         const filterVal = this.columns;
         const list = invoice_items;
         const data = this.formatJson(filterVal, list);
@@ -307,9 +308,6 @@ export default {
         }
         if (j === 'uom') {
           return v['type'];
-        }
-        if (j === 'balance') {
-          return parseInt(v['quantity'] - v['quantity_supplied']);
         }
         if (j === 'rate') {
           return this.currency + Number(v['rate']).toLocaleString();

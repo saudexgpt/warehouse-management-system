@@ -1,5 +1,6 @@
 <template>
   <div class="">
+    <aside>Description: These are all waybill generated invoices</aside>
     <el-row :gutter="10">
       <el-col :xs="24" :sm="8" :md="8">
         <label for="">Select Warehouse</label>

@@ -148,7 +148,7 @@ export default {
       invoice: {},
       selected_row_index: '',
       downloadLoading: false,
-      filename: 'Unsupplied Invoices',
+      filename: 'Partially Treated Invoices',
 
     };
   },
@@ -222,12 +222,12 @@ export default {
       this.downloadLoading = true;
       const param = this.form;
       param.is_download = 'yes';
-      const { invoice_items } = await outboundReport.list(param);
+      const { invoice_item_batches } = await outboundReport.list(param);
       import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Quantity', 'Quantity Supplied', 'Unsupplied', 'UOM', 'Created At'];
+        const tHeader = ['Product', 'Invoice No.', 'Customer', 'Concerned Warehouse', 'Invoice Quantity', 'Quantity Supplied', 'Unsupplied Waybill Quantity', 'UOM', 'Created At'];
         const filterVal = ['invoice_item.item.name', 'invoice.invoice_number', 'invoice.customer.user.name', 'invoice_item.warehouse.name', 'invoice_item.quantity', 'invoice_item.quantity_supplied', 'quantity', 'uom', 'created_at'];
-        const list = invoice_items;
+        const list = invoice_item_batches;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({
           multiHeader,
@@ -245,11 +245,11 @@ export default {
         if (j === 'created_at') {
           return moment(v['created_at']).format('ll');
         }
-        if (j === 'warehouse.name') {
-          return v['warehouse']['name'];
+        if (j === 'invoice_item.warehouse.name') {
+          return v['invoice_item']['warehouse']['name'];
         }
-        if (j === 'item.name') {
-          return v['item']['name'];
+        if (j === 'invoice_item.item.name') {
+          return v['invoice_item']['item']['name'];
         }
         if (j === 'invoice.invoice_number') {
           return v['invoice']['invoice_number'];
@@ -257,11 +257,16 @@ export default {
         if (j === 'invoice.customer.user.name') {
           return v['invoice']['customer']['user']['name'];
         }
-        if (j === 'uom') {
-          return v['type'];
+        if (j === 'invoice_item.quantity') {
+          return v['invoice_item']['quantity'];
         }
-        if (j === 'balance') {
-          return parseInt(v['quantity'] - v['quantity_supplied'] - v['quantity_reversed']);
+        if (j === 'invoice_item.quantity_supplied') {
+          const invoice_quantity = v['invoice_item']['quantity'];
+          const batch_quantity = v['quantity'];
+          return invoice_quantity - batch_quantity;
+        }
+        if (j === 'uom') {
+          return v['invoice_item']['type'];
         }
         return v[j];
       }));

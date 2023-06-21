@@ -1143,9 +1143,10 @@ class ReportsController extends Controller
             ->join('users', 'customers.user_id', 'users.id')
             ->join('items', 'invoice_items.item_id', 'items.id')
             ->join('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
-            ->join('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
+            // ->rightJoin('invoice_item_batches', 'invoice_items.id', 'invoice_item_batches.invoice_item_id')
+            // ->join('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
 
-            ->whereRaw('invoice_items.quantity - invoice_items.quantity_supplied - invoice_items.quantity_reversed > 0')
+            ->where('supply_status', '!=', 'Complete')
             ->selectRaw(
                 'warehouses.name as warehouse,
                 users.name as customer,
@@ -1179,7 +1180,7 @@ class ReportsController extends Controller
         if ($is_download == 'yes') {
             $invoice_items = $invoiceItemQuery->get();
         } else {
-            $invoice_items = $invoiceItemQuery->paginate(50);
+            $invoice_items = $invoiceItemQuery->paginate($request->limit);
         }
         return response()->json(compact('invoice_items'), 200);
     }
@@ -1298,9 +1299,9 @@ class ReportsController extends Controller
         }
 
         if ($is_download == 'yes') {
-            $invoice_items = $invoiceItemQuery->get();
+            $invoice_item_batches = $invoiceItemQuery->get();
         } else {
-            $invoice_items = $invoiceItemQuery->paginate(50);
+            $invoice_item_batches = $invoiceItemQuery->paginate(50);
         }
         return response()->json(compact('invoice_item_batches'), 200);
     }
