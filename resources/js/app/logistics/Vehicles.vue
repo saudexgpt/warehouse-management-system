@@ -38,9 +38,9 @@
             <div slot="drivers" slot-scope="props">
               <span v-for="(vehicle_driver, index) in props.row.vehicle_drivers" :key="index">
                 <div v-if="vehicle_driver.driver">
-                  <div v-if="vehicle_driver.driver.user">
-                    {{ vehicle_driver.driver.user.name+' ('+vehicle_driver.type+' Driver)' }}<br>
-                  </div>
+                  <div v-if="vehicle_driver.driver.user" style="cursor:pointer;" @click="unassignDriver(vehicle_driver.id)">
+                    {{ vehicle_driver.driver.user.name+' ('+vehicle_driver.type+' Driver)' }}
+                  </div><br>
                 </div>
 
               </span>
@@ -221,6 +221,27 @@ export default {
           app.assigningVehicle = false;
           console.log(error.message);
         });
+    },
+    unassignDriver(id) {
+      const app = this;
+      if (confirm('Are you sure you want to unassign this driver from the vehicle?')) {
+        app.assigningVehicle = true;
+        const unassignDriverResource = new Resource('logistics/vehicles/unassign-driver');
+        unassignDriverResource.destroy(id)
+          .then(response => {
+            app.assigningVehicle = false;
+            app.vehicles = response.vehicles;
+            this.$message({
+              message: 'Driver Unassigned',
+              type: 'success',
+            });
+            app.dialogFormVisible = false;
+          })
+          .catch(error => {
+            app.assigningVehicle = false;
+            console.log(error.message);
+          });
+      }
     },
     fetchNecessaryParams() {
       const app = this;

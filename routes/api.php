@@ -31,6 +31,8 @@ $router->group(['prefix' => 'report'], function () use ($router) {
 
 $router->post('auth/login', 'AuthController@login');
 $router->get('dispatch-product/issue', 'DebugController@solveDispatchProductIssue');
+$router->get('update-dispatch-product-invoice', 'DebugController@updateDispatchProductInvoiceId');
+
 $router->get('total-product', 'DebugController@totalDispatchedProduct');
 $router->get('reserved-', 'DebugController@reservedProducts');
 $router->get('stock-balance', 'DebugController@balanceStockAccount');
@@ -178,6 +180,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         });
         $router->group(['prefix' => 'waybill'], function () use ($router) {
             $router->get('/', 'InvoicesController@waybills')->middleware('permission:view waybill|manage waybill');
+            $router->get('show/{waybill}', 'InvoicesController@showWaybill')->middleware('permission:view waybill|manage waybill');
+
             $router->get('undelivered-invoices', 'InvoicesController@unDeliveredInvoices')->middleware('permission:generate waybill|manage waybill');
 
             $router->get('expenses', 'InvoicesController@waybillExpenses')->middleware('permission:manage waybill cost');
@@ -197,6 +201,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->delete('delete/{waybill}', 'InvoicesController@deleteWaybill')->middleware('permission:delete pending waybill');
 
             $router->group(['middleware' => 'permission:manage waybill|generate waybill'], function () use ($router) {
+
+                $router->get('edit/{waybill}', 'InvoicesController@editWaybill');
                 $router->get('undelivered-invoices', 'InvoicesController@unDeliveredInvoices');
                 $router->get('fetch-available-vehicles', 'InvoicesController@fetchAvailableVehicles');
                 $router->post('store', 'InvoicesController@generateWaybill');
@@ -310,6 +316,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         $router->group(['prefix' => 'items-in-stock'], function () use ($router) {
 
             $router->get('product-batches', 'ItemStocksController@productBatches');
+            $router->get('product-stock-balance-by-expiry-date', 'ItemStocksController@productStockBalanceByExpiryDate');
+
             $router->get('/', 'ItemStocksController@index')->middleware('permission:view item stocks|manage item stocks');
 
             $router->get('product-batches', 'ItemStocksController@productBatches');
@@ -326,6 +334,12 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->delete('delete/{item_sub_stock}', 'ItemStocksController@destroy')->middleware('permission:delete item stocks|manage item stocks');
             //});
 
+        });
+        $router->group(['prefix' => 'count'], function () use ($router) {
+
+            $router->get('/', 'ItemStocksController@fetchStockCounts');
+            $router->post('prepare', 'ItemStocksController@prepareStockCount');
+            $router->put('save-count/{stock_count}', 'ItemStocksController@countStock');
         });
         ///////////////////manage item Category//////////////////////////////////
         $router->group(['prefix' => 'item-category'], function () use ($router) {
@@ -387,6 +401,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
                 $router->get('drivers', 'VehiclesController@vehicleDrivers');
                 $router->post('assign-driver', 'VehiclesController@assignDriver');
+                $router->delete('unassign-driver/{vehicle_driver}', 'VehiclesController@unAssignDriver');
             });
         });
         $router->group(['prefix' => 'vehicle-types'], function () use ($router) {

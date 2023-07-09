@@ -30,7 +30,7 @@
             <label>{{ waybill.transfer_requests[0].request_warehouse.name.toUpperCase() }}</label>
           </address>
           <legend>Invoice Products</legend>
-          <table class="table table-bordered">
+          <table v-loading="load" class="table table-bordered">
             <thead>
               <tr>
                 <th>
@@ -129,7 +129,7 @@
           <div v-if="waybill.status === 'pending'">
             <a
               class="btn btn-primary"
-              @click="form.status = 'in transit'; changeWaybillStatus()"
+              @click="changeWaybillStatus('in transit')"
             >Click to Mark Goods In Transit</a>
             <span
               class="label label-danger"
@@ -138,7 +138,7 @@
           <div v-else-if="waybill.status === 'in transit' && warehouseId === waybill.request_warehouse_id && checkPermission(['audit confirm actions']) ">
             <a
               class="btn btn-success"
-              @click="form.status = 'delivered'; changeWaybillStatus()"
+              @click="changeWaybillStatus('delivered')"
             >Click to Mark Goods as Received</a>
             <span
               class="label label-danger"
@@ -211,6 +211,7 @@ export default {
       print_waybill: false,
       confirmed_items: [],
       activate_confirm_button: false,
+      load: false,
     };
   },
   mounted() {
@@ -220,15 +221,19 @@ export default {
     checkPermission,
     checkRole,
     moment,
-    changeWaybillStatus(){
+    changeWaybillStatus(action){
       const app = this;
-      var param = app.waybill;
-      const message = 'Do you really want to update goods delivery status to: ' + app.form.status.toUpperCase() + '?';
+      const message = 'Do you really want to update goods delivery status to: ' + action.toUpperCase() + '?';
       if (confirm(message)) {
-        param.status = app.form.status;
-        changeWaybillStatusResource.update(param.id, param)
+        app.load = true;
+        const param = { status: action };
+        changeWaybillStatusResource.update(app.waybill.id, param)
           .then(response => {
-            app.waybill.status = app.form.status;
+            app.load = false;
+            app.waybill.status = response.waybill_status;
+          }).catch(error => {
+            app.load = false;
+            console.log(error.message);
           });
       }
     },
@@ -247,10 +252,12 @@ export default {
       var param = { waybill_item_ids: app.confirmed_items };
       const message = 'Are you sure everything is intact? Click OK to submit.';
       if (confirm(message)) {
+        app.load = true;
         param.status = app.form.status;
         confirmWaybillDetailsResource
           .update(app.waybill.id, param)
           .then(response => {
+            app.load = false;
             app.waybill.status = app.form.status;
 
             if (response.confirmed === 'success') {

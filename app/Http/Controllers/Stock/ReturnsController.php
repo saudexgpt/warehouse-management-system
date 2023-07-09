@@ -93,7 +93,12 @@ class ReturnsController extends Controller
         $warehouse_id = 7;
         $approved_quantity = $request->approved_quantity;
         $details = json_decode(json_encode($request->product_details));
-
+        // update the approved quantity
+        $returned_prod = ReturnedProduct::find($details->id);
+        $returned_prod->quantity_approved += $approved_quantity;
+        if ($returned_prod->quantity >= $returned_prod->quantity_approved) {
+            $returned_prod->save();
+        }
         $item_stock_sub_batch = new ItemStockSubBatch();
         $item_stock_sub_batch->stocked_by = $user->id;
         $item_stock_sub_batch->warehouse_id = $warehouse_id;
@@ -105,16 +110,12 @@ class ReturnsController extends Controller
         $item_stock_sub_batch->in_transit = 0; // initial values set to zero
         $item_stock_sub_batch->supplied = 0;
         $item_stock_sub_batch->balance = $approved_quantity;
+        $item_stock_sub_batch->comments = "Returned by $returned_prod->customer_name on $returned_prod->date_returned. Reason: $returned_prod->reason. Approved By: $user->name";
         // $item_stock_sub_batch->goods_received_note = ($details->grn) ? $details->grn : $details->batch_no;
         $item_stock_sub_batch->expiry_date = date('Y-m-d', strtotime($details->expiry_date));
         $item_stock_sub_batch->save();
 
-        // update the approved quantity
-        $returned_prod = ReturnedProduct::find($details->id);
-        $returned_prod->quantity_approved += $approved_quantity;
-        if ($returned_prod->quantity >= $returned_prod->quantity_approved) {
-            $returned_prod->save();
-        }
+
 
 
         $title = "Returned products approval";

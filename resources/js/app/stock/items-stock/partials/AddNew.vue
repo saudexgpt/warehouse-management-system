@@ -4,7 +4,7 @@
       <h4 class="box-title">Add Product to Stock</h4>
       <span class="pull-right">
         <a class="btn btn-danger" @click="page.option = 'list'"> Back</a>
-        <a class="btn btn-success" @click="bulkUpload = true"> Bulk Upload</a>
+        <!-- <a class="btn btn-success" @click="bulkUpload = true"> Bulk Upload</a> -->
       </span>
     </div>
     <div class="box-body">
@@ -39,7 +39,7 @@
             </el-row>
           </el-form>
         </aside>
-        <el-row :gutter="2" class="padded">
+        <el-row v-if="form.warehouse_id !== ''" :gutter="2" class="padded">
           <el-col>
             <div style="overflow: auto">
               <label for="">Sub Batches</label>
@@ -59,12 +59,24 @@
                     <td>
                       <span>
                         <a v-if="sub_batches.length > 1" class="btn btn-danger btn-flat fa fa-trash" @click="removeLine(index)" />
-                        <a class="btn btn-info btn-flat fa fa-plus" @click="addLine(index)" />
+                        <a class="btn btn-info btn-flat fa fa-plus" @click="addLine()" />
                       </span>
                     </td>
                     <td>
-                      <el-select v-model="sub_batch.item_id" placeholder="Select Product" filterable class="span">
-                        <el-option v-for="(item, item_index) in params.items" :key="item_index" :value="item.id" :label="item.name" />
+                      <el-select
+                        v-model="sub_batch.item"
+                        value-key="id"
+                        placeholder="Select Product"
+                        filterable
+                        class="span"
+                        @input="fetchItemDetails(index)"
+                      >
+                        <el-option
+                          v-for="(item, item_index) in params.items"
+                          :key="item_index"
+                          :value="item"
+                          :label="item.name"
+                        />
 
                       </el-select>
                     </td>
@@ -75,7 +87,10 @@
                       <el-input v-model="sub_batch.goods_received_note" type="text" outline placeholder="GRN" />
                     </td>
                     <td>
-                      <el-input v-model="sub_batch.quantity" type="number" outline placeholder="Quantity" min="1" />
+                      <el-input v-model="sub_batch.quantity" type="number" outline placeholder="Quantity" min="1">
+                        <span slot="append">{{ sub_batch.type }}</span>
+                      </el-input>
+                      <br><code v-html="showItemsInCartons(sub_batch.quantity, sub_batch.quantity_per_carton, sub_batch.type)" />
                     </td>
                     <td>
                       <el-date-picker v-model="sub_batch.expiry_date" type="date" outline format="yyyy/MM/dd" value-format="yyyy-MM-dd" />
@@ -88,9 +103,7 @@
               </table>
             </div>
           </el-col>
-        </el-row>
-        <el-row :gutter="2" class="padded">
-          <el-col :xs="24" :sm="6" :md="6">
+          <el-col :xs="24" :sm="24" :md="24">
             <el-button type="success" @click="addProductToStock"><i class="el-icon-upload" />
               Submit
             </el-button>
@@ -104,6 +117,7 @@
 <script>
 import moment from 'moment';
 import Resource from '@/api/resource';
+import showItemsInCartons from '@/utils/functions';
 import BulkUpload from './BulkUpload';
 const createProduct = new Resource('stock/items-in-stock/store');
 
@@ -181,25 +195,35 @@ export default {
   },
   methods: {
     moment,
-    addLine(index) {
+    showItemsInCartons,
+    fetchItemDetails(index) {
+      const app = this;
+      const item = app.sub_batches[index].item;
+      app.sub_batches[index].item_id = item.id;
+      app.sub_batches[index].type = item.package_type;
+      app.sub_batches[index].quantity_per_carton = item.quantity_per_carton;
+    },
+    isRowEmpty() {
+      const checkEmptyLines = this.sub_batches.filter(detail => detail.quantity === '' || detail.batch_no === '' || detail.expiry_date === '' || detail.item_id === '' || detail.goods_received_note === '');
+
+      if (checkEmptyLines.length) {
+        return true;
+      }
+      return false;
+    },
+    addLine() {
       this.fill_fields_error = false;
-
-      const checkEmptyLines = this.sub_batches.filter(detail => detail.quantity === '' || detail.batch_no === '' || detail.expiry_date === '' || detail.item_id === '');
-
-      if (checkEmptyLines.length >= 1 && this.sub_batches.length > 0) {
+      if (this.isRowEmpty()) {
         this.fill_fields_error = true;
-        // this.sub_batches[index].seleted_category = true;
         return;
       } else {
-        // if (this.sub_batches.length > 0)
-        //     this.sub_batches[index].grade = '';
-
         this.sub_batches.push({
+          item: null,
           item_id: '',
           quantity: '',
           batch_no: '',
           expiry_date: '',
-          goods_received_note: null,
+          goods_received_note: '',
         });
       }
     },
@@ -207,11 +231,14 @@ export default {
       this.fill_fields_error = false;
       if (!this.blockRemoval) {
         this.sub_batches.splice(detailId, 1);
-        this.calculateTotal(null);
       }
     },
     addProductToStock() {
       const app = this;
+      if (this.isRowEmpty()) {
+        app.$alert('Please fill all empty fields before you submit');
+        return;
+      }
       const load = createProduct.loaderShow();
       var form = app.form;
       // form.expiry_date = app.moment(form.expiry_date).format('LLL');

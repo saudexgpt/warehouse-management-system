@@ -69,6 +69,7 @@
               <th>BALANCE (in {{ packaging }})</th>
               <th>PHYSICAL QUANTITY</th>
               <th>SIGN</th>
+              <th>COMMENTS</th>
             </tr>
           </thead>
           <tbody>
@@ -82,6 +83,7 @@
               <td>{{ bincard.balance }}</td>
               <td>{{ bincard.physical_quantity }}</td>
               <td>{{ bincard.sign }}</td>
+              <td>{{ bincard.comments }}</td>
             </tr>
           </tbody>
         </table>
@@ -107,7 +109,7 @@ export default {
       items: [],
       bincards: [],
       currency: '',
-      columns: ['date', 'invoice_no', 'waybill_grn', 'in', 'out', 'balance', 'physical_quantity', 'sign'],
+      columns: ['date', 'invoice_no', 'waybill_grn', 'in', 'out', 'balance', 'physical_quantity', 'sign', 'comments'],
 
       product_name: '',
       page: {
@@ -243,14 +245,15 @@ export default {
           'packaging': '',
           'physical_quantity': '',
           'sign': '',
+          'comments': '',
         },
       );
     },
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [['Bincard for ' + this.table_title, '', '', '', '', '', '', '', '']];
-        const tHeader = ['DATE', 'INVOICE NO.', 'WAYBILL/DELIVERY', 'IN', 'SOLD OUT', 'BALANCE (in ' + this.packaging + ')', 'PHYSICAL QUANTITY', 'SIGN'];
+        const multiHeader = [['Bincard for ' + this.table_title, '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['DATE', 'INVOICE NO.', 'WAYBILL/DELIVERY', 'IN', 'SOLD OUT', 'BALANCE (in ' + this.packaging + ')', 'PHYSICAL QUANTITY', 'SIGN', 'COMMENTS'];
         const filterVal = this.columns;
         const list = this.bincards;
         const data = this.formatJson(filterVal, list);

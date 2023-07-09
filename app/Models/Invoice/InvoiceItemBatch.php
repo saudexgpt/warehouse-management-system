@@ -18,6 +18,10 @@ class InvoiceItemBatch extends Model
     {
         return $this->belongsTo(InvoiceItem::class);
     }
+    public function waybillItem()
+    {
+        return $this->belongsTo(WaybillItem::class);
+    }
     public function itemStockBatch()
     {
         return $this->belongsTo(ItemStockSubBatch::class, 'item_stock_sub_batch_id', 'id');

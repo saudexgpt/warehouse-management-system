@@ -256,6 +256,15 @@
                 </div>
               </div>
             </v-client-table>
+            <el-row :gutter="20">
+              <pagination
+                v-show="total > 0"
+                :total="total"
+                :page.sync="form.page"
+                :limit.sync="form.limit"
+                @pagination="getWaybills"
+              />
+            </el-row>
           </div>
         </div>
       </div>
@@ -272,6 +281,7 @@ import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 import { parseTime } from '@/utils';
 import Resource from '@/api/resource';
+import Pagination from '@/components/Pagination';
 // import WaybillDetails from './partials/WaybillDetails';
 // const necessaryParams = new Resource('fetch-necessary-params');
 const fetchWaybillExpenses = new Resource('invoice/waybill/expenses');
@@ -283,7 +293,7 @@ const confirmDeliveryCostResource = new Resource('audit/confirm/delivery-cost');
 // const deleteItemInStock = new Resource('stock/items-in-stock/delete');
 export default {
   // name: 'WaybillDeliveryCost',
-  // components: { WaybillDetails },
+  components: { Pagination },
   props: {
     canGenerateNewWaybill: {
       type: Boolean,
@@ -326,7 +336,10 @@ export default {
       form: {
         warehouse_index: '',
         warehouse_id: '',
+        limit: 20,
+        page: 1,
       },
+      total: 0,
       new_waybill_expense: {
         dispatch_company: 'GREENLIFE LOGISTICS',
         waybill_ids: [],
@@ -440,6 +453,8 @@ export default {
     },
     getWaybills() {
       const app = this;
+      const { limit, page } = this.form;
+      this.options.perPage = limit;
       app.new_waybill_expense.warehouse_id =
         app.warehouses[app.form.warehouse_index].id;
       const loader = fetchWaybillExpenses.loaderShow();
@@ -451,9 +466,13 @@ export default {
       fetchWaybillExpenses
         .list(param)
         .then((response) => {
-          app.delivery_trips = response.delivery_trips;
-          app.waybills_with_pending_wayfare =
-            response.waybills_with_pending_wayfare;
+          this.delivery_trips = response.delivery_trips.data;
+          this.delivery_trips.forEach((element, index) => {
+            element['index'] = (page - 1) * limit + index + 1;
+          });
+          this.total = response.delivery_trips.total;
+
+          app.waybills_with_pending_wayfare = response.waybills_with_pending_wayfare;
           app.new_waybill_expense.trip_no = response.trip_no;
           app.vehicles = response.vehicles;
           loader.hide();

@@ -79,7 +79,11 @@ class GoodsTransferController extends Controller
         $transfer_requests = TransferRequest::with(['requestWarehouse', 'transferRequestItems' => function ($q) {
             $q->where('supply_status', '!=', 'Complete');
         }, 'transferRequestItems.item.stocks' => function ($p) use ($warehouse_id) {
-            $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id);
+            $p->whereRaw('balance - reserved_for_supply > 0')
+                ->whereRaw('confirmed_by IS NOT NULL')
+                ->orderBy('expiry_date')
+                ->orderBy('batch_no')
+                ->where('warehouse_id', $warehouse_id);
         }])->where('supply_warehouse_id', $warehouse_id)->where('full_waybill_generated', 0)->orderBy('id', 'DESC')->get();
         return response()->json(compact('transfer_requests', 'waybill_no'), 200);
     }
@@ -177,41 +181,41 @@ class GoodsTransferController extends Controller
         // $quantity = $transfer_request_item->quantity;
         // $quantity = $transfer_request_item->quantity_supplied;
         // If a specific batch was set when raising the invoice, we set it here
-        if (!empty($batches)) {
-            foreach ($batches as $batch) {
-                $item_sub_batch = ItemStockSubBatch::find($batch);
-                $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
-                if ($quantity <= $real_balance) {
-                    $transfer_request_item_batch = new TransferRequestItemBatch();
-                    $transfer_request_item_batch->transfer_request_id = $transfer_request_item->transfer_request_id;
-                    $transfer_request_item_batch->transfer_request_item_id = $transfer_request_item->id;
-                    $transfer_request_item_batch->item_stock_sub_batch_id = $batch;
-                    $transfer_request_item_batch->to_supply = $quantity;
-                    $transfer_request_item_batch->quantity = $quantity;
-                    $transfer_request_item_batch->save();
+        // if (!empty($batches)) {
+        //     foreach ($batches as $batch) {
+        //         $item_sub_batch = ItemStockSubBatch::find($batch);
+        //         $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
+        //         if ($quantity <= $real_balance) {
+        //             $transfer_request_item_batch = new TransferRequestItemBatch();
+        //             $transfer_request_item_batch->transfer_request_id = $transfer_request_item->transfer_request_id;
+        //             $transfer_request_item_batch->transfer_request_item_id = $transfer_request_item->id;
+        //             $transfer_request_item_batch->item_stock_sub_batch_id = $batch;
+        //             $transfer_request_item_batch->to_supply = $quantity;
+        //             $transfer_request_item_batch->quantity = $quantity;
+        //             $transfer_request_item_batch->save();
 
-                    $item_sub_batch->reserved_for_supply += $quantity;
-                    $item_sub_batch->save();
-                    $quantity = 0;
-                    break;
-                } else {
-                    $transfer_request_item_batch = new TransferRequestItemBatch();
-                    $transfer_request_item_batch->transfer_request_id = $transfer_request_item->transfer_request_id;
-                    $transfer_request_item_batch->transfer_request_item_id = $transfer_request_item->id;
-                    $transfer_request_item_batch->item_stock_sub_batch_id = $batch;
-                    $transfer_request_item_batch->to_supply = $real_balance;
-                    $transfer_request_item_batch->quantity = $real_balance;
-                    $transfer_request_item_batch->save();
-                    $item_sub_batch->reserved_for_supply += $real_balance;
-                    $item_sub_batch->save();
-                    $quantity -= $real_balance;
-                }
-            }
-        }
+        //             $item_sub_batch->reserved_for_supply += $quantity;
+        //             $item_sub_batch->save();
+        //             $quantity = 0;
+        //             break;
+        //         } else {
+        //             $transfer_request_item_batch = new TransferRequestItemBatch();
+        //             $transfer_request_item_batch->transfer_request_id = $transfer_request_item->transfer_request_id;
+        //             $transfer_request_item_batch->transfer_request_item_id = $transfer_request_item->id;
+        //             $transfer_request_item_batch->item_stock_sub_batch_id = $batch;
+        //             $transfer_request_item_batch->to_supply = $real_balance;
+        //             $transfer_request_item_batch->quantity = $real_balance;
+        //             $transfer_request_item_batch->save();
+        //             $item_sub_batch->reserved_for_supply += $real_balance;
+        //             $item_sub_batch->save();
+        //             $quantity -= $real_balance;
+        //         }
+        //     }
+        // }
 
         if ($quantity > 0) {
             // If a specific batch was NOT set when raising the invoice, we make it automatic here using FIFO (First In First Out) principle
-            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $transfer_request_item->supply_warehouse_id, 'item_id' => $transfer_request_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->get();
+            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $transfer_request_item->supply_warehouse_id, 'item_id' => $transfer_request_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->orderBy('id')->get();
 
             foreach ($batches_of_items_in_stock as $item_sub_batch) {
                 $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
@@ -373,7 +377,7 @@ class GoodsTransferController extends Controller
                     if ($original_quantity >= $for_supply) {
                         $transfer_request_item_update->quantity_supplied += $for_supply;
                         $transfer_request_item_update->save();
-                        $this->createTransferRequestItemBatches($transfer_request_item_update, $batches, $for_supply);
+                        // $this->createTransferRequestItemBatches($transfer_request_item_update, $batches, $for_supply);
 
                         $waybill_item_obj->createTransferRequestWaybillItems($waybill->id, $warehouse_id, $transfer_request_item);
                     }
@@ -425,176 +429,6 @@ class GoodsTransferController extends Controller
 
         return response()->json(compact('waybill'), 200);
     }
-
-    // private function createDispatchedTransferRequestWaybill($waybill_id, $vehicle_id)
-    // {
-    //     //
-    //     $dispatched_waybill = DispatchedTransferRequestWaybill::where('waybill_id', $waybill_id)->first();
-    //     if (!$dispatched_waybill) {
-    //         $dispatched_waybill = new DispatchedTransferRequestWaybill();
-    //     }
-    //     $dispatched_waybill->waybill_id = $waybill_id;
-    //     $dispatched_waybill->vehicle_id = $vehicle_id;
-    //     $dispatched_waybill->save();
-    // }
-    // public function waybillExpenses(Request $request)
-    // {
-    //     $warehouse_id = $request->warehouse_id;
-    //     $trip_no = $this->nextReceiptNo('trip');
-    //     $vehicles = Vehicle::with('vehicleDrivers.driver.user')->where('warehouse_id', $warehouse_id)->get();
-    //     $delivery_trips = DeliveryTrip::with('cost.confirmer', 'waybills', 'vehicle.vehicleDrivers.driver.user')->orderBy('id', 'DESC')->where(['warehouse_id' => $warehouse_id])->get();
-
-    //     $waybills_with_pending_wayfare = TransferRequestWaybill::where(['warehouse_id' => $warehouse_id, 'waybill_wayfare_status' => 'pending'])->where('confirmed_by', '!=', null)->get();
-
-    //     return response()->json(compact('delivery_trips', 'waybills_with_pending_wayfare', 'trip_no', 'vehicles'), 200);
-    // }
-
-    // public function addTransferRequestWaybillExpenses(Request $request)
-    // {
-    //     $trip_no = $request->trip_no;
-    //     $delivery_trip = DeliveryTrip::where('trip_no', $trip_no)->first();
-    //     if ($delivery_trip) {
-    //         // $this->incrementReceiptNo('waybill');
-    //         $trip_no = $this->nextReceiptNo('trip');
-    //     }
-    //     $waybill_ids = $request->waybill_ids;
-    //     $description = $request->description;
-    //     $warehouse_id = $request->warehouse_id;
-    //     $vehicle_id = $request->vehicle_id;
-    //     $vehicle_no = $request->vehicle_no;
-    //     $dispatchers = $request->dispatchers;
-    //     // if ($vehicle_id !== null) {
-    //     //     $vehicle = Vehicle::with('vehicleDrivers.driver.user')->find($vehicle_id);
-    //     // }
-    //     $dispatch_company = $request->dispatch_company;
-
-    //     # code...
-
-    //     $delivery_trip = new DeliveryTrip();
-    //     $delivery_trip->warehouse_id = $warehouse_id;
-    //     $delivery_trip->vehicle_id = $vehicle_id;
-    //     $delivery_trip->dispatch_company = $dispatch_company;
-    //     $delivery_trip->vehicle_no = $vehicle_no;
-    //     $delivery_trip->dispatchers = $dispatchers;
-    //     $delivery_trip->trip_no = $trip_no;
-    //     $delivery_trip->description = $description;
-    //     if ($delivery_trip->save()) {
-    //         //update next receipt no
-    //         $this->incrementReceiptNo('trip');
-    //         $delivery_trip->waybills()->syncWithoutDetaching($waybill_ids); // add all waybills for this trip
-    //         foreach ($delivery_trip->waybills as $waybill) {
-    //             // update waybill wayfare status
-    //             if ($vehicle_id != null) {
-    //                 $this->createDispatchedTransferRequestWaybill($waybill->id, $vehicle_id);
-    //             }
-    //             $waybill->dispatch_company = $dispatch_company;
-    //             $waybill->waybill_wayfare_status = 'given';
-    //             $waybill->save();
-    //         }
-    //         // populate delivery trip expenses
-    //         $delivery_trip_id = $delivery_trip->id;
-    //         $delivery_expense = DeliveryTripExpense::where('delivery_trip_id', $delivery_trip_id)->first();
-    //         if (!$delivery_expense) {
-    //             $delivery_expense = new DeliveryTripExpense();
-    //             $delivery_expense->warehouse_id = $warehouse_id;
-    //             $delivery_expense->delivery_trip_id = $delivery_trip_id;
-    //             $delivery_expense->amount = $request->amount;
-    //             $delivery_expense->details = $description;
-    //             $delivery_expense->save();
-    //         }
-    //     }
-    //     $user = $this->getUser();
-    //     $title = "Created waybill delivery cost";
-    //     $description = "New delivery cost for trip no.: " . $trip_no . " was created by $user->name ($user->email)";
-    //     //log this activity
-    //     $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
-
-    //     $this->logUserActivity($title, $description, $roles);
-    //     return $this->showDeliveryTrip($delivery_trip->id, $warehouse_id);
-    // }
-
-    // public function deliveryTripsForExtraCost(Request $request)
-    // {
-    //     $regular_delivery_trips = DeliveryTripExpense::with('deliveryTrip')->where('expense_type', 'regular')->get();
-    //     $extra_delivery_costs = DeliveryTripExpense::with(['confirmer', 'deliveryTrip.waybills', 'deliveryTrip.vehicle.vehicleDrivers.driver.user'])->where('expense_type', 'extra')->get();
-    //     return response()->json(compact('regular_delivery_trips', 'extra_delivery_costs'), 200);
-    // }
-
-    // public function addExtraDeliveryCost(Request $request)
-    // {
-    //     $delivery_trip_id = $request->delivery_trip_id;
-    //     $delivery_trip = DeliveryTrip::find($delivery_trip_id);
-    //     $delivery_expense = DeliveryTripExpense::where(['delivery_trip_id' => $delivery_trip_id, 'expense_type' => 'extra'])->first();
-    //     if (!$delivery_expense) {
-    //         $delivery_expense = new DeliveryTripExpense();
-    //         $delivery_expense->warehouse_id = $delivery_trip->warehouse_id;
-    //         $delivery_expense->delivery_trip_id = $request->delivery_trip_id;
-    //         $delivery_expense->expense_type = 'extra';
-    //         $delivery_expense->amount = $request->amount;
-    //         $delivery_expense->details = $request->details;
-    //         $delivery_expense->save();
-    //     }
-    //     $delivery_expense = DeliveryTripExpense::with(['confirmer', 'deliveryTrip.waybills', 'deliveryTrip.vehicle.vehicleDrivers.driver.user'])->where('expense_type', 'extra')->find($delivery_expense->id);
-    //     return response()->json(compact('delivery_expense'), 200);
-    // }
-    // private function showDeliveryTrip($delivery_trip_id, $warehouse_id)
-    // {
-    //     $trip_no = $this->nextReceiptNo('trip');
-    //     $delivery_trip = DeliveryTrip::with('cost', 'waybills', 'vehicle.vehicleDrivers.driver.user')->orderBy('id', 'DESC')->find($delivery_trip_id);
-    //     $waybills_with_pending_wayfare = TransferRequestWaybill::where(['warehouse_id' => $warehouse_id, 'waybill_wayfare_status' => 'pending'])->get();
-    //     return response()->json(compact('delivery_trip', 'waybills_with_pending_wayfare', 'trip_no'), 200);
-    // }
-    // public function addTransferRequestWaybillToTrip(Request $request)
-    // {
-    //     $waybill_id = $request->waybill_id;
-    //     $delivery_trip_id = $request->delivery_trip_id;
-    //     $delivery_trip = DeliveryTrip::find($delivery_trip_id);
-    //     // if($delivery_trip->waybills()->count() == 1 ){
-    //     //     // delete the delivery trip entry
-    //     // }
-    //     // $delivery_trip->waybills()->syncWithoutDetaching($waybill_id);
-    //     $delivery_trip->waybills()->syncWithoutDetaching($waybill_id);
-    //     if ($delivery_trip->vehicle_id !== NULL) {
-    //         $this->createDispatchedTransferRequestWaybill($waybill_id, $delivery_trip->vehicle_id);
-    //     }
-    //     // update waybill wayfare status to pending
-    //     $waybill = TransferRequestWaybill::find($waybill_id);
-    //     $waybill->waybill_wayfare_status = 'given';
-    //     $waybill->save();
-    //     $actor = $this->getUser();
-    //     $title = "TransferRequestWaybill added to trip";
-    //     $description = "TransferRequestWaybill $waybill->waybill_no was added to trip with trip no.: " . $delivery_trip->trip_no . " by $actor->name ($actor->phone)";
-    //     //log this activity
-    //     $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
-
-    //     $this->logUserActivity($title, $description, $roles);
-    //     return $this->showDeliveryTrip($delivery_trip->id, $delivery_trip->warehouse_id);
-    // }
-    // public function detachTransferRequestWaybillFromTrip(Request $request)
-    // {
-    //     $waybill_id = $request->waybill_id;
-    //     $delivery_trip_id = $request->delivery_trip_id;
-    //     $delivery_trip = DeliveryTrip::find($delivery_trip_id);
-    //     // if($delivery_trip->waybills()->count() == 1 ){
-    //     //     // delete the delivery trip entry
-    //     // }
-    //     $waybill = TransferRequestWaybill::find($waybill_id);
-    //     $delivery_trip->waybills()->detach($waybill_id);
-
-    //     // update waybill wayfare status to pending
-
-    //     $waybill->dispatcher()->delete();
-    //     $waybill->waybill_wayfare_status = 'pending';
-    //     $waybill->save();
-    //     $actor = $this->getUser();
-    //     $title = "TransferRequestWaybill removed from trip";
-    //     $description = "TransferRequestWaybill $waybill->waybill_no was removed from trip with trip no.: " . $delivery_trip->trip_no . " by $actor->name ($actor->phone)";
-    //     //log this activity
-    //     $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
-
-    //     $this->logUserActivity($title, $description, $roles);
-    //     return $this->showDeliveryTrip($delivery_trip->id, $delivery_trip->warehouse_id);
-    // }
     public function setWaybillDispatcher(Request $request)
     {
         $dispatcher = $request->user_id;
@@ -611,17 +445,22 @@ class GoodsTransferController extends Controller
         $transfer_request_item_obj = new TransferRequestItem();
         $user = $this->getUser();
         $status = $request->status;
+        // update items in stock based on waybill status
+        if ($status === 'in transit') {
+            list($out_of_stock_count, $message) = $item_in_stock_obj->checkStockBalanceForEachTransferWaybillItem($waybill->waybillItems);
+            if ($out_of_stock_count > 0) {
+                // ball out if an item on the list is more than what is in stock
+                return response()->json(compact('message'), 500);
+            }
+            $item_in_stock_obj->sendTransferItemInStockForDelivery($waybill->waybillItems);
+            // let's update the invoice items for this waybill
+        }
         // update waybill status
         $waybill->status = $status;
         $waybill->save();
 
         // update invoice items to account for partial supplies and complete ones
         $transfer_request_item_obj->updateTransferRequestItemsForTransferRequestWaybill($waybill->waybillItems);
-        // update items in stock based on waybill status
-        if ($status === 'in transit') {
-            $item_in_stock_obj->sendTransferItemInStockForDelivery($waybill->waybillItems);
-            // let's update the invoice items for this waybill
-        }
         $transfer_requests = $waybill->transferRequests;
         $title = "Transfer Request Waybill status updated";
         $description = "Transfer Request Waybill ($waybill->transfer_request_waybill_no) status updated to " . strtoupper($waybill->status) . " by $user->name ($user->email)";
@@ -681,6 +520,7 @@ class GoodsTransferController extends Controller
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
         $this->logUserActivity($title, $description, $roles);
+        return response()->json(['waybill_status' => $status], 200);
     }
     /**
      * Update the specified resource in storage.

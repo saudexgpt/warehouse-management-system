@@ -17,9 +17,9 @@
     <div class="row invoice-info" align="center">
       <span v-html="companyContact" />
       <legend>WAYBILL/DELIVERY NOTE</legend>
+
     </div>
     <!-- /.row -->
-
     <!-- Table row -->
     <div class="row">
       <div class="col-xs-8 table-responsive">
@@ -54,17 +54,13 @@
                 <code v-html="showItemsInCartons(waybill_item.quantity, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
               </td>
               <td>
-                <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
-                  <span v-if="batch.to_supply === waybill_item.quantity">
-                    {{ (batch.item_stock_batch) ? batch.item_stock_batch.batch_no : '' }}
-                  </span>
+                <div v-for="(batch, batch_index) in uniqueBatchNoAndExpiryDates(waybill_item.invoice_item.batches, 'batch')" :key="batch_index">
+                  <small>{{ batch }},<br></small>
                 </div>
               </td>
               <td>
-                <div v-for="(batch, batch_index) in waybill_item.invoice_item.batches" :key="batch_index">
-                  <span v-if="batch.to_supply === waybill_item.quantity">
-                    {{ (batch.item_stock_batch) ? moment(batch.item_stock_batch.expiry_date).format('MMMM Do YYYY') : '' }}
-                  </span>
+                <div v-for="(expiry_date, expiry_date_index) in uniqueBatchNoAndExpiryDates(waybill_item.invoice_item.batches, 'expiry_date')" :key="expiry_date_index">
+                  {{ moment(expiry_date).format('MMMM Do YYYY') }},<br>
                 </div>
               </td>
               <!-- <td align="right">{{ currency + Number(waybill_item.rate).toLocaleString() }}</td>
@@ -173,6 +169,22 @@ export default {
     checkRole,
     moment,
     showItemsInCartons,
+    uniqueBatchNoAndExpiryDates(batches, option) {
+      const batch_nos = [];
+      const expiry_dates = [];
+      batches.forEach(batch => {
+        if (!batch_nos.includes(batch.item_stock_batch.batch_no)) {
+          batch_nos.push(batch.item_stock_batch.batch_no);
+        }
+        if (!expiry_dates.includes(batch.item_stock_batch.expiry_date)) {
+          expiry_dates.push(batch.item_stock_batch.expiry_date);
+        }
+      });
+      if (option === 'batch') {
+        return batch_nos;
+      }
+      return expiry_dates;
+    },
     doPrint() {
       window.print();
     },
@@ -181,14 +193,13 @@ export default {
 </script>
 <style>
 @media print {
-* {
+  * {
     -webkit-print-color-adjust: exact !important; /*Chrome, Safari */
     color-adjust: exact !important;  /*Firefox*/
 
   }
   .clear-margin {
     margin-top: -100px !important;
-    background: url("../../../../../public/svg/watermark.png");
   }
 }
 </style>

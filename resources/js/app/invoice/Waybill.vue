@@ -90,7 +90,7 @@
           </div>
           <div slot="action" slot-scope="props">
             <a class="btn btn-default" @click="waybill=props.row; page.option='waybill_details'"><i class="el-icon-tickets" /></a>
-            <a v-if="checkPermission(['generate waybill']) && props.row.status==='pending' && props.row.edited === 0" class="btn btn-warning" @click="waybill=props.row; page.option='edit_waybill'"><i class="el-icon-edit" /></a>
+            <a v-if="checkPermission(['generate waybill']) && props.row.status==='pending'" class="btn btn-warning" @click="waybill=props.row; page.option='edit_waybill'"><i class="el-icon-edit" /></a>
             <a v-if="props.row.dispatch_products.length < 1 && checkPermission(['delete pending waybill'])" class="btn btn-danger" @click="deleteWaybill(props.index, props.row)"><i class="el-icon-delete" /></a>
             <!-- <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="click">
               <div class="avatar-wrapper" style="color: brown">
@@ -125,9 +125,9 @@
     </div>
     <div v-if="page.option !=='list'">
       <a class="btn btn-danger no-print" @click="page.option='list'">Go Back</a>
-      <waybill-details v-if="page.option==='waybill_details'" :waybill="waybill" :page="page" :company-name="params.company_name" :company-contact="params.company_contact" :currency="currency" />
+      <waybill-details v-if="page.option==='waybill_details'" :waybill-id="waybill.id" :page="page" :company-name="params.company_name" :company-contact="params.company_contact" :currency="currency" />
 
-      <edit-waybill v-if="page.option==='edit_waybill'" :waybill="waybill" :page="page" :params="params" :currency="currency" @update="updateTable" />
+      <edit-waybill v-if="page.option==='edit_waybill'" :waybill-id="waybill.id" :page="page" :params="params" :currency="currency" @update="updateTable" />
     </div>
   </div>
 </template>

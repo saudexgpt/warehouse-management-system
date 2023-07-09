@@ -8,6 +8,7 @@ use App\Models\Invoice\InvoiceItemBatch;
 use App\Models\Invoice\WaybillItem;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 
 class DebugController extends Controller
@@ -52,6 +53,25 @@ class DebugController extends Controller
             }
         }
         return 'saved';
+    }
+
+    public function updateDispatchProductInvoiceId()
+    {
+        set_time_limit(0);
+        DispatchedProduct::with('waybillItem')/*->where('invoice_id', NULL)*/->chunkById(200, function (Collection $dispatch_products) {
+            foreach ($dispatch_products as $dispatch_product) {
+                $waybill_item = $dispatch_product->waybillItem;
+                $quantity_supplied = $dispatch_product->quantity_supplied;
+                $waybill_item->remitted += $quantity_supplied;
+                $waybill_item->save();
+
+                // $dispatch_product->invoice_id = $dispatch_product->waybillItem->invoice_id;
+                // $dispatch_product->invoice_item_id = $dispatch_product->waybillItem->invoice_item_id;
+                // $dispatch_product->item_id = $dispatch_product->waybillItem->item_id;
+                // $dispatch_product->save();
+            }
+        }, $column = 'id');
+        return 'true';
     }
     public function totalDispatchedProduct(Request $request)
     {

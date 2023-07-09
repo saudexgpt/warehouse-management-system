@@ -81,7 +81,7 @@
                     <th>Quantity</th>
                     <th>Supplied</th>
                     <th>Balance</th>
-                    <th>Quantity Reversed</th>
+                    <th>Reversed</th>
                     <th>Rate</th>
                     <th>Per</th>
                     <th>Amount</th>
@@ -159,7 +159,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="7" align="right">
+                    <td colspan="8" align="right">
                       <label>Subtotal</label>
                     </td>
                     <td align="right">
@@ -167,7 +167,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="7" align="right">
+                    <td colspan="8" align="right">
                       <label>Discount</label>
                     </td>
                     <td align="right">
@@ -175,7 +175,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="7" align="right">
+                    <td colspan="8" align="right">
                       <label>Grand Total</label>
                     </td>
                     <td align="right">
@@ -185,7 +185,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="8" align="right"><label>In Words: {{ inWords(invoice.amount).toUpperCase() + ' NAIRA ONLY' }}</label></td>
+                    <td colspan="9" align="right"><label>In Words: {{ inWords(invoice.amount).toUpperCase() + ' NAIRA ONLY' }}</label></td>
                   </tr>
                 </tbody>
               </table>

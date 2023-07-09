@@ -13,11 +13,17 @@
         </span>
 
       </div>
-      <div class="box-body">
+      <div v-loading="load" class="box-body">
         <el-col :xs="24" :sm="12" :md="12">
           <label for="">Select Warehouse</label>
-          <el-select v-model="form.warehouse_index" placeholder="Select Warehouse" class="span" filterable @input="fetchItemStocks">
-            <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="index" :label="warehouse.name" />
+          <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" class="span" filterable @input="fetchItemStocks">
+            <el-option
+              v-for="(warehouse, index) in warehouses"
+              :key="index"
+              :value="warehouse.id"
+              :label="warehouse.name"
+              :disabled="warehouse.id !== 7"
+            />
 
           </el-select>
 
@@ -96,9 +102,11 @@ const returnedProducts = new Resource('stock/returns');
 const approveReturnedProducts = new Resource('stock/returns/approve-products');
 const confirmItemReturned = new Resource('audit/confirm/returned-products');
 export default {
+  name: 'Returns',
   components: { AddNewReturns, EditReturns },
   data() {
     return {
+      load: false,
       dialogVisible: false,
       warehouses: [],
       returned_products: [],
@@ -135,7 +143,8 @@ export default {
       // params: {},
       form: {
         warehouse_index: '',
-        warehouse_id: '',
+        // warehouse_id: '',
+        warehouse_id: 7,
       },
       in_warehouse: '',
       returnedProduct: {},
@@ -173,8 +182,7 @@ export default {
       const params = app.params;
       app.warehouses = params.warehouses;
       if (app.warehouses.length > 0) {
-        app.form.warehouse_id = app.warehouses[0];
-        app.form.warehouse_index = 0;
+        app.form.warehouse_id = 7;
         app.fetchItemStocks();
       }
       // necessaryParams.list()
@@ -189,12 +197,14 @@ export default {
       //   });
     },
     confirmReturnedItem(id) {
-      // const app = this;
+      const app = this;
       const form = { id: id };
       const message = 'Click okay to confirm action';
       if (confirm(message)) {
+        app.load = true;
         confirmItemReturned.update(id, form)
           .then(response => {
+            app.load = false;
             if (response.confirmed === 'success'){
               document.getElementById(id).innerHTML = response.confirmed_by;
             }
@@ -206,11 +216,10 @@ export default {
       const loader = returnedProducts.loaderShow();
 
       const param = app.form;
-      param.warehouse_id = app.warehouses[param.warehouse_index].id;
       returnedProducts.list(param)
         .then(response => {
           app.returned_products = response.returned_products;
-          app.in_warehouse = 'in ' + app.warehouses[param.warehouse_index].name;
+          // app.in_warehouse = 'in ' + app.warehouses[param.warehouse_index].name;
           loader.hide();
         })
         .catch(error => {
@@ -268,14 +277,15 @@ export default {
       if (parseInt(param.approved_quantity) <= balance) {
         if (parseInt(param.approved_quantity) > 0) {
           app.dialogVisible = false;
-          const loader = approveReturnedProducts.loaderShow();
+          app.load = true;
           approveReturnedProducts.store(param)
             .then(response => {
-              app.returned_products[app.selected_row_index - 1] = response.returned_product;
-              loader.hide();
+              // app.returned_products[app.selected_row_index - 1] = response.returned_product;
+              app.fetchItemStocks();
+              app.load = false;
             })
             .catch(error => {
-              loader.hide();
+              app.load = false;
               console.log(error.message);
             });
         } else {

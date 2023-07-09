@@ -133,7 +133,18 @@ class VehiclesController extends Controller
         $vehicle_drivers = VehicleDriver::with(['vehicle', 'driver'])->get();
         return response()->json(compact('vehicle_drivers'), 200);
     }
+    public function unAssignDriver(VehicleDriver $vehicle_driver)
+    {
 
+        $warehouse_id = $vehicle_driver->vehicle->warehouse_id;
+        $vehicle_driver->delete();
+        $vehicles = Vehicle::with(['warehouse', 'vehicleType', 'vehicleDrivers.driver.user', 'expenses' => function ($q) {
+            $q->orderBy('id', 'DESC');
+        }, 'conditions' => function ($q) {
+            $q->orderBy('id', 'DESC');
+        }])->where('warehouse_id', $warehouse_id)->get();
+        return response()->json(compact('vehicles'), 200);
+    }
     public function assignDriver(Request $request)
     {
         $driver_id = $request->driver_id;

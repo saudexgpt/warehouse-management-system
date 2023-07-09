@@ -40,7 +40,7 @@
           />
         </div>
         <div v-else class="box-body">
-          <el-form ref="form" :model="form" label-width="120px">
+          <el-form ref="form" v-loading="loadForm" :model="form" label-width="120px">
             <el-row :gutter="5" class="padded">
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>Invoice Number</label>
@@ -63,6 +63,7 @@
                     :key="warehouse_index"
                     :value="warehouse.id"
                     :label="warehouse.name"
+                    :disabled="warehouse.id !== 1"
                   />
                 </el-select>
               </el-col>
@@ -135,7 +136,8 @@
                           </td>
                           <td>
                             <el-select
-                              v-model="invoice_item.item_index"
+                              v-model="invoice_item.item"
+                              value-key="id"
                               placeholder="Select Product"
                               filterable
                               class="span"
@@ -144,14 +146,14 @@
                               <el-option
                                 v-for="(item, item_index) in params.items"
                                 :key="item_index"
-                                :value="item_index"
+                                :value="item"
                                 :label="item.name"
                               />
                             </el-select>
                             <div v-loading="invoice_item.load">
                               <br><small class="label label-primary">Physical Stock: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
 
-                              <br><small class="label label-danger">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
+                              <br><small class="label label-warning">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
 
                               <br><small class="label label-success">Available for Order: {{ invoice_item.stock_balance }} {{ invoice_item.type }}</small>
                             </div>
@@ -171,12 +173,21 @@
                             <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                           </td>
                           <td>
-                            <el-input
+                            {{ currency }} {{ Number(invoice_item.rate).toLocaleString() }}
+                            <br>
+                            <el-switch
+                              v-model="invoice_item.is_promo"
+                              active-text="Is Promo"
+                              inactive-text="Not Promo"
+                              @change="setItemAsPromo(index, invoice_item.is_promo);"
+                            />
+                            <!-- <el-input
                               v-model="invoice_item.rate"
                               type="number"
                               outline
+                              readonly
                               @input="calculateTotal(index)"
-                            />
+                            /> -->
                           </td>
                           <td>{{ invoice_item.type }}</td>
                           <!-- <td>
@@ -205,7 +216,7 @@
                           </td> -->
                           <td align="right">
                             <el-input v-model="invoice_item.amount" type="hidden" outline />
-                            {{ Number(invoice_item.amount).toLocaleString() }}
+                            {{ currency }} {{ Number(invoice_item.amount).toLocaleString() }}
                           </td>
                         </tr>
                         <tr v-if="fill_fields_error">
@@ -219,7 +230,7 @@
                           <td colspan="5" align="right">
                             <label>Subtotal</label>
                           </td>
-                          <td align="right">{{ Number(form.subtotal).toLocaleString() }}</td>
+                          <td align="right">{{ currency }} {{ Number(form.subtotal).toLocaleString() }}</td>
                         </tr>
                         <tr>
                           <td colspan="5" align="right">
@@ -242,14 +253,14 @@
                               </el-dropdown-menu>
                             </el-dropdown>
                           </td>
-                          <td align="right">{{ Number(form.discount).toLocaleString() }}</td>
+                          <td align="right">{{ currency }} {{ Number(form.discount).toLocaleString() }}</td>
                         </tr>
                         <tr>
                           <td colspan="5" align="right">
                             <label>Grand Total</label>
                           </td>
                           <td align="right">
-                            <label style="color: green">{{ Number(form.amount).toLocaleString() }}</label>
+                            <label style="color: green">{{ currency }} {{ Number(form.amount).toLocaleString() }}</label>
                           </td>
                         </tr>
                         <tr>
@@ -258,7 +269,7 @@
                             <textarea
                               v-model="form.notes"
                               class="form-control"
-                              rows="5"
+                              rows="3"
                               placeholder="Type extra note on this invoice here..."
                             />
                           </td>
@@ -316,6 +327,7 @@ export default {
           return date > d;
         },
       },
+      currency: '₦',
       upload_type: 'normal',
       // customers: [],
       // customer_types: [],
@@ -324,6 +336,7 @@ export default {
       userCreating: false,
       fill_fields_error: false,
       show_product_list: false,
+      loadForm: false,
       batches_of_items_in_stock: [],
       disable_submit: false,
       form: {
@@ -361,7 +374,7 @@ export default {
         notes: '',
         invoice_items: [
           {
-            item_index: '',
+            item: '',
             item_id: '',
             quantity: 0,
             type: '',
@@ -427,9 +440,8 @@ export default {
     checkPermission,
     checkRole,
     showItemsInCartons,
-    addLine(index) {
+    rowIsEmpty() {
       this.fill_fields_error = false;
-
       const checkEmptyLines = this.invoice_items.filter(
         (detail) =>
           detail.item_id === '' ||
@@ -438,21 +450,28 @@ export default {
           detail.tax === null ||
           detail.total === 0,
       );
-
-      if (checkEmptyLines.length >= 1 && this.invoice_items.length > 0) {
+      if (checkEmptyLines.length >= 1) {
         this.fill_fields_error = true;
         // this.invoice_items[index].seleted_category = true;
+        return true;
+      }
+      false;
+    },
+    addLine(index) {
+      if (this.rowIsEmpty() && this.invoice_items.length > 0) {
         return;
       } else {
         // if (this.invoice_items.length > 0)
         //     this.invoice_items[index].grade = '';
         this.invoice_items.push({
-          item_index: null,
+          item: null,
           load: false,
           item_id: '',
           quantity: 0,
           type: '',
+          item_rate: null,
           rate: null,
+          is_promo: false,
           amount: 0,
           batches: [],
           batches_of_items_in_stock: [],
@@ -476,16 +495,38 @@ export default {
       const app = this;
       app.$store.dispatch('customer/fetch');
     },
+    stockIsZero() {
+      let isZero = 0;
+      this.invoice_items.forEach(item => {
+        const stock_balance = item.stock_balance;
+        const quantity = item.quantity;
+        if (stock_balance < 1) {
+          isZero++;
+        }
+        if (stock_balance < quantity) {
+          isZero++;
+        }
+      });
+      return isZero;
+    },
     submitNewInvoice() {
       const app = this;
+      if (this.stockIsZero() > 0) {
+        app.$alert('Please remove all entries with insufficient stock');
+        return;
+      }
+      if (this.rowIsEmpty()) {
+        app.$alert('Please fill in all fields on each row');
+        return;
+      }
       var form = app.form;
-      const checkEmptyFielads =
+      const checkEmptyFields =
         form.warehouse_id === '' ||
         form.customer_id === '' ||
         form.invoice_date === '' ||
         form.currency_id === '';
-      if (!checkEmptyFielads) {
-        const load = createInvoice.loaderShow();
+      if (!checkEmptyFields) {
+        app.loadForm = true;
         form.invoice_items = app.invoice_items;
         app.disable_submit = true;
         createInvoice
@@ -501,10 +542,10 @@ export default {
             app.invoice_items = app.form.invoice_items;
             app.disable_submit = false;
             app.$router.push({ name: 'Invoices' });
-            load.hide();
+            app.loadForm = false;
           })
           .catch((error) => {
-            load.hide();
+            app.loadForm = false;
             console.log(error.message);
           });
       } else {
@@ -518,13 +559,14 @@ export default {
     },
     fetchItemDetails(index) {
       const app = this;
-      const item_index = app.invoice_items[index].item_index;
-      const item = app.params.items[item_index];
+      const item = app.invoice_items[index].item;
+      app.invoice_items[index].item_rate = item.price.sale_price;
       app.invoice_items[index].rate = item.price.sale_price;
       app.invoice_items[index].item_id = item.id;
       app.invoice_items[index].type = item.package_type;
       app.invoice_items[index].quantity_per_carton = item.quantity_per_carton;
       app.invoice_items[index].no_of_cartons = 0;
+      app.invoice_items[index].quantity = 1;
       // let tax = 0;
       // for (let a = 0; a < item.taxes.length; a++) {
       //   tax += parseFloat(item.taxes[a].rate);
@@ -540,14 +582,22 @@ export default {
         item_id: item_id,
       };
       app.invoice_items[index].load = true;
+      app.disable_submit = false;
       fetchProductBatches.list(param).then((response) => {
         app.invoice_items[index].load = false;
-        app.invoice_items[index].batches_of_items_in_stock =
-          response.batches_of_items_in_stock;
-        app.invoice_items[index].batches = [];
-        app.invoice_items[index].total_stocked = (response.total_balance) ? response.total_balance.total_balance : 0;
-        app.invoice_items[index].total_invoiced_quantity = (response.total_invoiced_quantity) ? response.total_invoiced_quantity.total_invoiced : 0;
-        app.invoice_items[index].stock_balance = app.invoice_items[index].total_stocked - app.invoice_items[index].total_invoiced_quantity;
+
+        const total_stocked = (response.total_balance) ? response.total_balance.total_balance : 0;
+        const total_invoiced_quantity = (response.total_invoiced_quantity) ? response.total_invoiced_quantity.total_invoiced : 0;
+
+        app.invoice_items[index].total_stocked = total_stocked;
+        app.invoice_items[index].total_invoiced_quantity = total_invoiced_quantity;
+        const stock_balance = total_stocked - total_invoiced_quantity;
+
+        app.invoice_items[index].stock_balance = (stock_balance < 0) ? 0 : stock_balance;
+
+        if (stock_balance < 1) {
+          app.disable_submit = true;
+        }
       });
     },
     showItemsInStock(index) {
@@ -560,8 +610,7 @@ export default {
       const app = this;
       if (index !== null) {
         const quantity = app.invoice_items[index].quantity;
-        const quantity_per_carton =
-          app.invoice_items[index].quantity_per_carton;
+        const quantity_per_carton = app.invoice_items[index].quantity_per_carton;
         if (quantity_per_carton > 0) {
           const no_of_cartons = quantity / quantity_per_carton;
           app.invoice_items[index].no_of_cartons = no_of_cartons; // + parseFloat(tax);
@@ -602,16 +651,26 @@ export default {
       // Get total amount for this item without tax
       if (index !== null) {
         const invoice_item = app.invoice_items[index];
-        const item = app.params.items[invoice_item.item_index].name;
+        const item = app.invoice_items[index].item;
         const quantity = invoice_item.quantity;
         const available_stock = invoice_item.total_stocked - invoice_item.total_invoiced_quantity;
-
+        app.disable_submit = false;
         if (quantity > available_stock) {
+          app.disable_submit = true;
           app.$alert(`${item} stock balance is less than ${quantity}. Please enter a value within range`);
           app.invoice_items[index].quantity = 0;
           app.calculateTotal(index);
         }
       }
+    },
+    setItemAsPromo(index, value) {
+      const app = this;
+      const item_rate = app.invoice_items[index].item_rate;
+      app.invoice_items[index].rate = item_rate;
+      if (value === true) {
+        app.invoice_items[index].rate = 0;
+      }
+      app.calculateTotal(index);
     },
 
   },

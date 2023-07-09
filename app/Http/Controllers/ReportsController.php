@@ -791,6 +791,7 @@ class ReportsController extends Controller
                     'packaging' => $item->package_type,
                     'physical_quantity' => '',
                     'sign' => '',
+                    'comments' => $inbound->comments
                 ];
             }
         }
@@ -809,6 +810,7 @@ class ReportsController extends Controller
                     'packaging' => $item->package_type,
                     'physical_quantity' => '',
                     'sign' => '',
+                    'comments' => ''
                 ];
             }
         }
@@ -827,6 +829,7 @@ class ReportsController extends Controller
                     'packaging' => $item->package_type,
                     'physical_quantity' => '',
                     'sign' => '',
+                    'comments' => ''
                 ];
             }
         }
@@ -844,6 +847,7 @@ class ReportsController extends Controller
                     'packaging' => $item->package_type,
                     'physical_quantity' => '',
                     'sign' => '',
+                    'comments' => 'EXPIRED'
                 ];
             }
         }
@@ -905,7 +909,7 @@ class ReportsController extends Controller
                     $p->where('supplied', '>', 0);
                 });
             })
-            ->select('quantity', 'batch_no', 'goods_received_note', 'created_at')
+            ->select('quantity', 'batch_no', 'goods_received_note', 'comments', 'created_at')
             ->orderby('created_at')
             ->get();
         $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')

@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Stock;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice\InvoiceItem;
+use App\Models\Invoice\WaybillItem;
 use App\Models\Stock\ExpiredProduct;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStock;
 use App\Models\Stock\ItemStockSubBatch;
+use App\Models\Stock\StockCount;
 use App\Models\Warehouse\Warehouse;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 
 class ItemStocksController extends Controller
@@ -61,26 +64,30 @@ class ItemStocksController extends Controller
         //
         $warehouse_id = $request->warehouse_id;
         $item_id = $request->item_id;
-        $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
+        // $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
 
         $total_balance = ItemStockSubBatch::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('confirmed_by IS NOT NULL')->select(\DB::raw('SUM(balance) as total_balance'))->first();
 
         // this is the quantity of products reserved for supply at the point of waybill generation
-        $total_invoiced_quantity = ItemStockSubBatch::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('confirmed_by IS NOT NULL')->select(\DB::raw('SUM(reserved_for_supply) as total_invoiced'))->first();
+        // $total_invoiced_quantity = ItemStockSubBatch::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('confirmed_by IS NOT NULL')->select(\DB::raw('SUM(reserved_for_supply) as total_invoiced'))->first();
 
-        // $total_invoiced_quantity = InvoiceItem::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('quantity - quantity_supplied > 0')->select(\DB::raw('SUM(quantity - quantity_supplied) as total_invoiced'))->first();
+        $total_invoiced_quantity = WaybillItem::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('quantity - remitted - quantity_reversed > 0')->select(\DB::raw('SUM(quantity - remitted - quantity_reversed) as total_invoiced'))->first();
 
-        return response()->json(compact('batches_of_items_in_stock', 'total_balance', 'total_invoiced_quantity'));
+        return response()->json(compact(/*'batches_of_items_in_stock', */'total_balance', 'total_invoiced_quantity'), 200);
     }
 
-    /*public function productBatches(Request $request)
+    public function productStockBalanceByExpiryDate(Request $request)
     {
-        //
+
         $warehouse_id = $request->warehouse_id;
         $item_id = $request->item_id;
-        $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->select('*', \DB::raw('(balance - reserved_for_supply) as balance'))->orderBy('expiry_date')->get();
+        $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])
+            ->whereRaw('balance - reserved_for_supply > 0')
+            ->select('*', \DB::raw('(balance - reserved_for_supply) as balance'))
+            ->orderBy('expiry_date')
+            ->get();
         return response()->json(compact('batches_of_items_in_stock'));
-    }*/
+    }
 
 
 
@@ -310,5 +317,49 @@ class ItemStocksController extends Controller
             return response()->json(null, 204);
         }
         return response()->json('Entry cannot be deleted. Some transactions are tied to it', 500);
+    }
+    public function fetchStockCounts(Request $request)
+    {
+        $warehouse_id = $request->warehouse_id;
+        $date = date('Y-m', strtotime($request->date));
+        $stock_counts = StockCount::with('item', 'counter')->where(['warehouse_id' => $warehouse_id, 'date' => $date])->get();
+        return response()->json(compact('stock_counts'), 200);
+    }
+    public function prepareStockCount(Request $request)
+    {
+        $date = date('Y-m', strtotime($request->date));
+        $warehouse_id = $request->warehouse_id;
+        // $items_id = $request->item_ids;
+        $item_batch_query = ItemStockSubBatch::query();
+        $item_batch_query->groupBy('item_id')->where('warehouse_id', $warehouse_id)->select('*', \DB::raw('SUM(balance) as total_balance'));
+        // if ($items_id !== 'all') {
+        //     $item_batch_query->whereIn('item_id', $items_id);
+        // }
+
+        $item_batch_query->chunk(200, function (Collection $batches) use ($date) {
+            foreach ($batches as $batch) {
+                StockCount::updateOrCreate(
+                    ['warehouse_id' => $batch->warehouse_id, 'item_id' => $batch->item_id, 'date' => $date],
+                    ['stock_balance' => $batch->total_balance]
+                );
+                // $stock_count = new StockCount();
+                // $stock_count->warehouse_id = $batch->warehouse_id;
+                // $stock_count->item_id = $batch->item_id;
+                // $stock_count->batch_no = $batch->batch_no;
+                // $stock_count->expiry_date = $batch->expiry_date;
+                // $stock_count->stock_balance = $batch->total_balance;
+                // $stock_count->save();
+            }
+        });
+        $stock_counts = StockCount::with('item')->where('warehouse_id', $warehouse_id)->where('date', $date)->get();
+        return response()->json(compact('stock_counts'), 200);
+    }
+    public function countStock(Request $request, StockCount $stock_count)
+    {
+        $user = $this->getUser();
+        $stock_count->count_by = $user->id;
+        $stock_count->count_quantity = $request->count_quantity;
+        $stock_count->save();
+        return 'done';
     }
 }
