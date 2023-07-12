@@ -2,6 +2,9 @@
   <div>
     <h4>This document is to help load the truck with products listed below. When the truck is loaded, proceed to generate the final waybill for supply based on what was loaded.</h4>
     <el-button class="no-print" type="danger" @click="print()">Print Draft For Loading</el-button>
+    <div class="watermark">
+      Draft copy. Not for supply!!!
+    </div>
     <table class="table table-binvoiceed">
       <thead>
         <tr>
@@ -57,9 +60,6 @@
         </tr>
       </tbody>
     </table>
-    <div class="watermark">
-      Draft copy. Not for supply!!!
-    </div>
   </div>
 </template>
 <script>

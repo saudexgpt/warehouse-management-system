@@ -116,20 +116,20 @@
                             <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                           </td>
                           <td>
-                            {{ currency }} {{ Number(invoice_item.rate).toLocaleString() }}
+                            <!-- {{ currency }} {{ Number(invoice_item.rate).toLocaleString() }}
                             <br>
                             <el-switch
                               v-model="invoice_item.is_promo"
                               active-text="Is Promo"
                               inactive-text="Not Promo"
                               @change="setItemAsPromo(index, invoice_item.is_promo);"
-                            />
-                            <!-- <el-input
+                            /> -->
+                            <el-input
                               v-model="invoice_item.rate"
                               type="number"
                               outline
                               @input="calculateTotal(index)"
-                            /> -->
+                            />
                           </td>
                           <td>{{ invoice_item.type }}</td>
                           <td align="right">
@@ -547,8 +547,14 @@ export default {
       app.invoice_items[index].quantity_per_carton = item.quantity_per_carton;
       app.invoice_items[index].no_of_cartons = 0;
       app.invoice_items[index].quantity = 1;
+
       app.setProductBatches(index, app.form.warehouse_id, item.id);
       app.calculateTotal(index);
+
+      this.invoice_items.unshift({});
+      setTimeout(() => {
+        this.invoice_items.splice(0, 1);
+      }, 100);
     },
     setProductBatches(index, warehouse_id, item_id) {
       const app = this;
@@ -572,10 +578,6 @@ export default {
         if (stock_balance < 1) {
           app.disable_submit = true;
         }
-        app.addLine();
-        setTimeout(() => {
-          app.removeLine(app.invoice_items.length - 1);
-        }, 500);
       }).catch(error => {
         console.log(error);
       });

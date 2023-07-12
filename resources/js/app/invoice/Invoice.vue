@@ -10,7 +10,8 @@
         <el-col :xs="24" :sm="8" :md="8">
           <label for>Select Warehouse</label>
           <el-select
-            v-model="form.warehouse_index"
+            v-model="selected_warehouse"
+            value-key="id"
             placeholder="Select Warehouse"
             class="span"
             filterable
@@ -19,7 +20,7 @@
             <el-option
               v-for="(warehouse, index) in params.warehouses"
               :key="index"
-              :value="index"
+              :value="warehouse"
               :label="warehouse.name"
             />
           </el-select>
@@ -275,8 +276,8 @@ export default {
       page: {
         option: 'list',
       },
+      selected_warehouse: '',
       form: {
-        warehouse_index: '',
         warehouse_id: '',
         from: '',
         to: '',
@@ -386,7 +387,7 @@ export default {
       const { limit, page } = app.form;
       app.options.perPage = limit;
       const param = app.form;
-      param.warehouse_id = app.warehouses[param.warehouse_index].id;
+      param.warehouse_id = app.selected_warehouse.id;
       var extra_tableTitle = '';
       if (app.form.from !== '' && app.form.to !== '') {
         extra_tableTitle = ' from ' + app.form.from + ' to ' + app.form.to;
@@ -394,7 +395,7 @@ export default {
       app.table_title =
         app.form.status.toUpperCase() +
         ' Invoices  in ' +
-        app.warehouses[param.warehouse_index].name +
+        app.selected_warehouse.name +
         extra_tableTitle;
       fetchInvoices
         .list(param)

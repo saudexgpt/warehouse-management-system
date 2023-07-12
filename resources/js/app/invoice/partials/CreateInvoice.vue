@@ -63,9 +63,23 @@
                     :key="warehouse_index"
                     :value="warehouse.id"
                     :label="warehouse.name"
-                    :disabled="warehouse.id !== 1"
                   />
                 </el-select>
+                <!-- <el-select
+                  v-model="form.warehouse_id"
+                  placeholder="Select Warehouse"
+                  filterable
+                  class="span"
+                  @input="show_product_list = true"
+                >
+                  <el-option
+                    v-for="(warehouse, warehouse_index) in params.warehouses"
+                    :key="warehouse_index"
+                    :value="warehouse.id"
+                    :label="warehouse.name"
+                    :disabled="warehouse.id !== 1"
+                  />
+                </el-select> -->
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>
@@ -173,21 +187,20 @@
                             <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                           </td>
                           <td>
-                            {{ currency }} {{ Number(invoice_item.rate).toLocaleString() }}
+                            <!-- {{ currency }} {{ Number(invoice_item.rate).toLocaleString() }}
                             <br>
                             <el-switch
                               v-model="invoice_item.is_promo"
                               active-text="Is Promo"
                               inactive-text="Not Promo"
                               @change="setItemAsPromo(index, invoice_item.is_promo);"
-                            />
-                            <!-- <el-input
+                            /> -->
+                            <el-input
                               v-model="invoice_item.rate"
                               type="number"
                               outline
-                              readonly
                               @input="calculateTotal(index)"
-                            /> -->
+                            />
                           </td>
                           <td>{{ invoice_item.type }}</td>
                           <!-- <td>

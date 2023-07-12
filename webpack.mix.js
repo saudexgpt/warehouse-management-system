@@ -35,21 +35,7 @@ mix.webpackConfig(config);
 
 mix
   .js('resources/js/app.js', 'public/js')
-  .extract([
-    'vue',
-    'axios',
-    'vuex',
-    'vue-router',
-    'vue-i18n',
-    'element-ui',
-    'echarts',
-    'highlight.js',
-    'sortablejs',
-    'dropzone',
-    'xlsx',
-    'tui-editor',
-    'codemirror',
-  ])
+  .extract()
   .options({
     processCssUrls: false,
   })

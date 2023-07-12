@@ -366,12 +366,13 @@ class InvoicesController extends Controller
         }
         $user = $this->getUser();
         $warehouse_id = $request->warehouse_id;
-        $date_from = Carbon::now()->startOfMonth();
-        $date_to = Carbon::now()->endOfMonth();
         $invoices = [];
         if (isset($request->from, $request->to) && $request->from != '' && $request->from != '') {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+
+            $invoiceQuery->where('created_at', '>=', $date_from)
+                ->where('created_at', '<=', $date_to);
         }
         $status = (isset($request->status) && $request->status != '') ? $request->status : 'pending';
 
@@ -379,8 +380,7 @@ class InvoicesController extends Controller
             $q->orderBy('id', 'DESC');
         }])
             ->where(['warehouse_id' => $warehouse_id, 'status' => $status])
-            ->where('created_at', '>=', $date_from)
-            ->where('created_at', '<=', $date_to)
+
             ->orderBy('updated_at', 'DESC')
             ->paginate($limit);
 

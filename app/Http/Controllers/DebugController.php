@@ -66,6 +66,7 @@ class DebugController extends Controller
                 $waybill_item->save();
 
                 // $dispatch_product->invoice_id = $dispatch_product->waybillItem->invoice_id;
+
                 // $dispatch_product->invoice_item_id = $dispatch_product->waybillItem->invoice_item_id;
                 // $dispatch_product->item_id = $dispatch_product->waybillItem->item_id;
                 // $dispatch_product->save();
