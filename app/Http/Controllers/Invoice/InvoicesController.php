@@ -380,7 +380,6 @@ class InvoicesController extends Controller
             $q->orderBy('id', 'DESC');
         }])
             ->where(['warehouse_id' => $warehouse_id, 'status' => $status])
-
             ->orderBy('updated_at', 'DESC')
             ->paginate($limit);
 
