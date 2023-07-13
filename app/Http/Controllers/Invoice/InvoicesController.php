@@ -715,6 +715,7 @@ class InvoicesController extends Controller
     public function showWaybill(Waybill $waybill)
     {
         //
+        $date = date('Y-m-d', strtotime($waybill->created_at));
         $waybill =  $waybill->with([
             'invoices.customer.user',
             'waybillItems' => function ($q) {
@@ -722,6 +723,9 @@ class InvoicesController extends Controller
             },
             'waybillItems.invoice.customer.user',
             'waybillItems.item.stocks',
+            'waybillItems.invoiceItem.batches' => function ($q) use ($date) {
+                $q->where('created_at', 'LIKE', '%' . $date . '%');
+            },
             'waybillItems.invoiceItem.batches.itemStockBatch',
             'dispatcher.vehicle.vehicleDrivers.driver.user',
             'trips',
