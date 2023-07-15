@@ -47,6 +47,7 @@ class TransferRequestWaybillItem extends Model
         $waybill_item->quantity = $transfer_request_item->quantity_for_supply;
         $waybill_item->type = $transfer_request_item->type;
         $waybill_item->save();
+        return $waybill_item;
         // }
     }
 }

@@ -26,6 +26,10 @@ class TransferRequestItemBatch extends Model
     {
         return $this->belongsTo(TransferRequestItem::class);
     }
+    public function waybillItem()
+    {
+        return $this->belongsTo(TransferRequestWaybillItem::class, 'waybill_item_id', 'id');
+    }
     public function itemStockBatch()
     {
         return $this->belongsTo(ItemStockSubBatch::class, 'item_stock_sub_batch_id', 'id');

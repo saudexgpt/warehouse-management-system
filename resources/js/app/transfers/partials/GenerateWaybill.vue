@@ -1,32 +1,55 @@
 <template>
   <div class="app-container">
     <span v-if="params">
-      <router-link v-if="checkPermission(['manage waybill'])" :to="{name:'TransferWaybills'}" class="btn btn-default"> View Waybills</router-link>
+      <router-link
+        v-if="checkPermission(['manage waybill'])"
+        :to="{ name: 'Waybills' }"
+        class="btn btn-default no-print"
+      >
+        View Waybills</router-link>
     </span>
     <div>
       <div v-if="params" class="box">
-        <div class="box-header">
+        <div class="box-header no-print">
           <h4 class="box-title">Generate Waybill</h4>
         </div>
         <div class="box-body">
           <el-form ref="form" :model="form" label-width="120px">
-            <el-row :gutter="5" class="padded">
+            <el-row :gutter="5" class="padded no-print">
               <el-col :xs="24" :sm="12" :md="12">
                 <label for="">Select Warehouse</label>
-                <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable class="span" @change="fetchUndeliveredInvoices()">
+                <el-select
+                  v-model="form.warehouse_id"
+                  placeholder="Select Warehouse"
+                  filterable
+                  class="span"
+                  @change="fetchUndeliveredInvoices()"
+                >
                   <el-option
                     v-for="(warehouse, warehouse_index) in params.warehouses"
                     :key="warehouse_index"
                     :value="warehouse.id"
                     :label="warehouse.name"
                   />
-
                 </el-select>
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for="">Search Request</label>
-                <el-select v-model="selected_invoice" placeholder="Select Request" filterable class="span" multiple collapse-tags @input="displayInvoiceitems()">
-                  <el-option v-for="(invoice, invoice_index) in transfer_requests" :key="invoice_index" :value="invoice_index" :label="(invoice.request_warehouse) ? invoice.request_warehouse.name + '[ '+ invoice.request_number + '] ' : invoice.request_number " />
+                <el-select
+                  v-model="selected_invoice"
+                  placeholder="Select Invoice"
+                  filterable
+                  class="span"
+                  multiple
+                  collapse-tags
+                  @input="displayInvoiceitems()"
+                >
+                  <el-option
+                    v-for="(invoice, invoice_index) in invoices"
+                    :key="invoice_index"
+                    :value="invoice_index"
+                    :label="(invoice.request_warehouse) ? invoice.request_warehouse.name + '[ '+ invoice.request_number + '] ' : invoice.request_number"
+                  />
                 </el-select>
               </el-col>
               <!-- <el-col :xs="24" :sm="2" :md="2">
@@ -37,29 +60,28 @@
               </el-col> -->
             </el-row>
             <el-row :gutter="2" class="padded">
-              <el-col>
-                <div style="overflow: auto">
-                  <label for="">Products</label>
-                  <table v-loading="loading" class="table table-binvoiceed">
+              <el-col v-loading="loading">
+                <!-- <keep-alive> -->
+                <div v-if="invoice_items.length > 0" style="overflow: auto">
+                  <h4>This document is to carry exact information of items that has already been loaded in a truck and ready for supply. DO NOT Submit until you are done loading.</h4>
+                  <table class="table table-binvoiceed">
                     <thead>
                       <tr>
                         <th />
                         <th>Product</th>
                         <th>Order</th>
-                        <!-- <th>Batch(es)</th> -->
-                        <th>Specify Batch(es)</th>
+                        <!-- <th>Specify Batch(es)</th> -->
                         <th>Supplied</th>
                         <th>Balance</th>
+                        <th>Batches</th>
                         <th>To Supply</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td colspan="3" />
-                        <td><label>BN / Quantity</label></td>
-                        <td colspan="3" />
-                      </tr>
-                      <tr v-for="(invoice_item, index) in form.invoice_items" :key="index">
+                      <tr
+                        v-for="(invoice_item, index) in invoice_items"
+                        :key="index"
+                      >
                         <td>{{ index + 1 }}</td>
                         <td>
                           {{ invoice_item.item.name }}
@@ -70,83 +92,166 @@
 
                             <br><small class="label label-success">Total Available: {{ invoice_item.total_batch_balance }} {{ invoice_item.item.package_type }}</small>
                           </div>
+
                         </td>
-                        <td>{{ invoice_item.quantity }} {{ formatPackageType(invoice_item.item.package_type) }}</td>
                         <td>
-                          <el-select
-                            v-model="invoice_item.batches"
-                            placeholder="Specify product batch for this supply"
-                            filterable
-                            class="span"
-                            multiple
-                            collapse-tags
-                          >
-                            <el-option
-                              v-for="(batch, batch_index) in invoice_item.item.stocks"
-                              :key="batch_index"
-                              :value="batch.id"
-                              :label="batch.batch_no + ' | ' + batch.expiry_date"
-                              disabled
-                            >
-                              <span
-                                style="float: left"
-                              >{{ batch.batch_no + ' | ' + batch.expiry_date }}</span>
-                              <span
-                                style="float: right; color: #8492a6; font-size: 13px"
-                              >({{ batch.balance - batch.reserved_for_supply }})</span>
-                            </el-option>
-                          </el-select>
+                          {{ invoice_item.quantity }}
+                          {{
+                            formatPackageType(invoice_item.item.package_type)
+                          }}
                         </td>
 
-                        <td>{{ invoice_item.quantity_supplied+' ('+invoice_item.delivery_status+')' }}</td>
-                        <td><div class="alert alert-danger">{{ invoice_item.quantity - invoice_item.quantity_supplied }}</div></td>
                         <td>
-                          <div v-if="invoice_item.supply_bal > 0">
-                            <input
+                          {{
+                            invoice_item.quantity_supplied +
+                              ' (' +
+                              invoice_item.delivery_status +
+                              ')'
+                          }}
+                        </td>
+                        <td>
+                          <div class="alert alert-danger">
+                            {{
+                              invoice_item.quantity -
+                                invoice_item.quantity_supplied
+                            }}
+                          </div>
+                        </td>
+                        <td>
+                          <el-button
+                            round
+                            type="primary"
+                            @click="selectProductBatch(index, invoice_item)"
+                          >Select Batches</el-button>
+                          <!-- <el-select
+                                v-model="invoice_item.batches"
+                                placeholder="Specify product batch for this supply"
+                                filterable
+                                class="span"
+                                multiple
+                                collapse-tags
+                              >
+                                <el-option
+                                  v-for="(batch, batch_index) in invoice_item.item
+                                    .batches"
+                                  :key="batch_index"
+                                  :value="batch.id"
+                                  :label="
+                                    batch.batch_no + ' | ' + batch.expiry_date
+                                  "
+                                >
+                                  <span style="float: left">{{
+                                    batch.batch_no + ' | ' + batch.expiry_date
+                                  }}</span>
+                                  <span
+                                    style="
+                                  float: right;
+                                  color: #8492a6;
+                                  font-size: 13px;
+                                "
+                                  >&nbsp;({{
+                                    batch.balance - batch.reserved_for_supply
+                                  }})</span>
+                                </el-option>
+                              </el-select> -->
+                        </td>
+                        <td>
+                          <div>
+                            {{ invoice_item.quantity_for_supply }}
+                            <!-- <input
+                                  v-model="invoice_item.quantity_for_supply"
+                                  class="form-control"
+                                  placeholder="Set Quantity for Supply"
+                                  type="number"
+                                  :max="invoice_item.supply_bal"
+                                  min="0"
+                                  @blur="checkForOverflow(invoice_item.supply_bal, index)"
+                                > -->
+                            <!-- <el-select
                               v-model="invoice_item.quantity_for_supply"
-                              class="form-control"
                               placeholder="Set Quantity for Supply"
-                              type="number"
-                              :max="invoice_item.supply_bal"
-                              min="0"
-                              @blur="checkForOverflow(invoice_item.supply_bal, index)"
+                              filterable
+                              class="span"
                             >
+                              <el-option value="0" label="0" />
+                              <el-option
+                                v-for="(quantity,
+                                quantity_index) in invoice_item.supply_bal"
+                                :key="quantity_index"
+                                :value="quantity"
+                                :label="quantity"
+                              />
+                            </el-select> -->
                           </div>
                         </td>
                       </tr>
                     </tbody>
-
                   </table>
                 </div>
-              </el-col>
-            </el-row>
-            <el-row>
-              <el-form ref="form" :model="form" label-position="left" label-width="130px" style="max-width: 600px;">
 
-                <el-form-item label="Waybill No." prop="waybill_no">
-                  <el-input v-model="form.waybill_no" required />
-                </el-form-item>
-                <!-- <el-form-item v-else label="Waybill No." prop="waybill_no">
-                  <el-input v-model="form.waybill_no" required />
-                </el-form-item> -->
-                <!-- <el-form-item v-if="available_vehicles.length > 0" label="Dispatch Vehicle" prop="vehicle_id">
-                  <el-select v-model="form.vehicle_id" placeholder="Select Vehicle" filterable class="span">
-                    <el-option v-for="(vehicle, index) in available_vehicles" :key="index" :value="vehicle.id" :label="vehicle.plate_no.toUpperCase()" />
-                  </el-select>
-                </el-form-item>
-                <el-form-item v-else>
-                  <span class="label label-danger">No vehicles available</span>
-                </el-form-item> -->
-              </el-form>
-            </el-row>
-            <el-row v-if="form.waybill_no" :gutter="2" class="padded">
-              <el-col :xs="24" :sm="6" :md="6">
-                <el-button round type="success" :disabled="disabled" @click="generateWaybill()"><i class="el-icon-plus" />
-                  Generate Waybill
-                </el-button>
+                <el-row v-if="form.waybill_no" :gutter="2" class="padded">
+                  <el-col :xs="24" :sm="6" :md="6">
+                    <!-- <el-input v-model="form.waybill_no" required readonly /> -->
+                    <el-button
+                      type="success"
+                      :disabled="disabled"
+                      @click="generateWaybill()"
+                    ><i class="el-icon-upload" />
+                      Submit
+                    </el-button>
+                  </el-col>
+                </el-row>
+
               </el-col>
             </el-row>
           </el-form>
+          <el-dialog
+            v-if="selected_invoice_item !== null"
+            title="Set Product Batch Quantity to be supplied. Consider First In First Out (FIFO) Principle"
+            :visible.sync="showBatchSelection"
+            :close-on-click-modal="false"
+            :close-on-press-escape="false"
+            :show-close="false"
+          >
+            <div class="form-container">
+              <label>Total batch quantity should not be more than {{ selected_invoice_item.quantity - selected_invoice_item.quantity_supplied }} {{ selected_invoice_item.item.package_type }} for {{ selected_invoice_item.item.name }}</label>
+              <table class="table table-binvoiceed">
+                <thead>
+                  <tr>
+                    <th>Batch No</th>
+                    <th>Expiry Date</th>
+                    <th>Balance</th>
+                    <th>Enter Quantity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(stock, stock_index) in selected_invoice_item.batches" :key="stock_index">
+                    <td>{{ stock.batch_no }}</td>
+                    <td>{{ stock.expiry_date }}</td>
+                    <td>{{ stock.balance }} {{ selected_invoice_item.item.package_type }}</td>
+                    <td><input v-model="stock.supply_quantity" type="number" @input="setSupplyQuantity(selected_invoice_item, stock_index)"></td>
+                  </tr>
+                  <tr>
+                    <td colspan="4" align="right">
+                      <h4>
+                        Order Quantity: {{ selected_invoice_item.supply_bal }}<br>
+                        Total Supply Quantity: {{ total_supplied }}<br>
+                        Remaining Quantity: {{ selected_invoice_item.supply_bal - total_supplied }}
+                      </h4>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th colspan="4" align="right">
+                      <aside>
+                        <!-- <el-button round type="danger" @click="showBatchSelection = false">Cancel</el-button> -->
+                        <el-button round type="primary" style="width: 100%" @click="updateQuantityForSupply(selected_invoice_item)">Continue</el-button>
+                      </aside>
+                    </th>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </el-dialog>
         </div>
       </div>
     </div>
@@ -154,43 +259,49 @@
 </template>
 
 <script>
-import moment from 'moment';
+// import moment from 'moment';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
-
 import Resource from '@/api/resource';
 // const createInvoice = new Resource('invoice/general/store');
 // const necessaryParams = new Resource('fetch-necessary-params');
+
 const unDeliveredInvoices = new Resource('transfers/waybill/undelivered-invoices');
 // const availableVehicles = new Resource('invoice/waybill/fetch-available-vehicles');
 const storeWaybillResource = new Resource('transfers/waybill/store');
-const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
-  // name: 'GenerateWaybill',
-
+  name: 'GenerateWaybill',
   data() {
     return {
-      // params: {},
       form: {
         warehouse_id: '',
         waybill_no: '',
         dispatch_company: 'GREEN LIFE LOGISTICS',
         status: 'pending',
         invoice_ids: [],
-        invoice_items: [],
       },
-      transfer_requests: [],
+      invoices: [],
       selected_invoice: [],
       invoice_items: [],
       waybill_items: [],
       available_vehicles: [],
-      batches_of_items_in_stock: [],
-      // rules: {
-      //   // vehicle_id: [{ required: true, message: 'Vehicle is required', trigger: 'change' }],
-      //   waybill_no: [{ required: true, message: 'Waybill Number is required', trigger: 'blur' }],
-      // },
+      rules: {
+        // vehicle_id: [{ required: true, message: 'Vehicle is required', trigger: 'change' }],
+        waybill_no: [
+          {
+            required: true,
+            message: 'Waybill Number is required',
+            trigger: 'blur',
+          },
+        ],
+      },
       loading: false,
+      loadBatch: false,
       disabled: false,
+      showBatchSelection: false,
+      selected_index: null,
+      selected_invoice_item: null,
+      total_supplied: 0,
     };
   },
   computed: {
@@ -198,127 +309,146 @@ export default {
       return this.$store.getters.params;
     },
   },
-  mounted() {
+  created() {
     this.fetchNecessaryParams();
   },
   methods: {
-    moment,
+    // moment,
     checkPermission,
     checkRole,
-    setProductBatches(item_id) {
+    selectProductBatch(index, invoice_item) {
       const app = this;
-      const param = {
-        warehouse_id: app.form.warehouse_id,
-        item_id: item_id,
-      };
-      fetchProductBatches.list(param).then((response) => {
-        return response.batches_of_items_in_stock;
-      });
+      app.showBatchSelection = true;
+      app.selected_index = index;
+      app.selected_invoice_item = invoice_item;
+      app.total_supplied = invoice_item.total_supplied;
     },
-    checkForOverflow(limit, index) {
+    setSupplyQuantity(selectedInvoiceItem, stockIndex) {
       const app = this;
-      const value = app.form.invoice_items[index].quantity_for_supply;
-      const product = app.form.invoice_items[index].item.name;
-      const package_type = app.form.invoice_items[index].item.package_type;
-      if (value > limit) {
-        app.form.invoice_items[index].quantity_for_supply = limit;
-        app.$alert('Make sure you DO NOT exceed ' + limit + ' ' + package_type + ' for ' + product);
+      const for_supply = selectedInvoiceItem.supply_bal;
+      let total_supply_quantity = 0;
+      let count = 0;
+      app.selected_invoice_item.batches.forEach(stock => {
+        if (count === stockIndex){
+          const balance = parseInt(stock.balance);
+          const supply_quantity = parseInt(stock.supply_quantity);
+          // check whether batch balance is less than inputed quantity
+          if (balance < supply_quantity) {
+            app.$alert(`Batch quantity should not be more than ${supply_quantity}`);
+            stock.supply_quantity = parseInt(balance);
+          }
+          // check whether total supply quantity is more than order quantity
+          if ((parseInt(total_supply_quantity) + parseInt(stock.supply_quantity)) > for_supply) {
+            app.$alert(`Total supply quantity is more than Order quantity of ${for_supply}. Kindly correct.`);
+            stock.supply_quantity = 0;
+          }
+        }
+        total_supply_quantity += parseInt(stock.supply_quantity);
+        count++;
+      });
+      app.total_supplied = parseInt(total_supply_quantity);
+      app.selected_invoice_item.total_supplied = parseInt(total_supply_quantity);
+      if (app.selected_invoice_item.total_supplied > for_supply) {
+        app.$alert(`Total supply quantity is more than Order quantity of ${for_supply}. Kindly correct.`);
+      }
+      // this.selected_invoice_item = null;
+      // setTimeout(() => {
+      //   this.selected_invoice_item = invoice_item;
+      // }, 100);
+    },
+    updateQuantityForSupply(selectedInvoiceItem) {
+      const app = this;
+      const for_supply = selectedInvoiceItem.supply_bal;
+      const total_supply_quantity = app.total_supplied;
+      if (total_supply_quantity > for_supply) {
+        app.$alert(`Total supply quantity is more than Order quantity of ${for_supply}. Please fix to continue.`);
+      } else {
+        selectedInvoiceItem.quantity_for_supply = total_supply_quantity;
+        app.selected_invoice_item = selectedInvoiceItem;
+        app.invoice_items[app.selected_index] = app.selected_invoice_item;
+        app.showBatchSelection = false;
       }
     },
+    // setProductBatches(batchId, quantity) {
+    //   // const app = this;
+    //   // const invoice_item = app.selected_invoice_item;
+    // },
     fetchUndeliveredInvoices(index) {
       const app = this;
       var form = app.form;
-      const loader = unDeliveredInvoices.loaderShow();
-      unDeliveredInvoices.list(form)
-        .then(response => {
-          app.transfer_requests = response.transfer_requests;
-          app.form.waybill_no = response.waybill_no;
-          loader.hide();
-          // app.fetchAvailableDrivers();
-        });
+      app.loading = true;
+      // const loading = unDeliveredInvoices.loaderShow();
+      unDeliveredInvoices.list(form).then((response) => {
+        app.invoices = response.transfer_requests;
+        app.form.waybill_no = response.waybill_no;
+        app.loading = false;
+        // loading.hide();
+        // app.fetchAvailableDrivers();
+      });
     },
     fetchNecessaryParams() {
       const app = this;
       app.$store.dispatch('app/setNecessaryParams');
     },
-    // fetchNecessaryParams() {
-    //   const app = this;
-    //   necessaryParams.list()
-    //     .then(response => {
-    //       app.params = response.params;
-    //     });
-    // },
-    // displayInvoiceitems() {
-    //   const app = this;
-    //   var selected_invoice = app.selected_invoice;
-    //   var invoice_items = [];
-    //   var invoice_ids = [];
-    //   // app.loading = true;
-    //   for (let index = 0; index < selected_invoice.length; index++) {
-    //     const element = selected_invoice[index];
-    //     invoice_items.push(...app.transfer_requests[element].transfer_request_items);
-    //     invoice_ids.push(app.transfer_requests[element].id);
-    //   }
-    //   // console.log(invoice_items);
-    //   invoice_items.forEach((invoice_item) => {
-    //     var total_batch_balance = 0;
-    //     var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied;
-    //     var stocks = invoice_item.item.stocks;
-
-    //     stocks.forEach((stock_batch) => {
-    //       total_batch_balance +=
-    //         parseInt(stock_batch.balance) -
-    //         parseInt(stock_batch.reserved_for_supply);
-    //     });
-
-    //     invoice_item.supply_bal = supply_bal;
-    //     invoice_item.quantity_for_supply = supply_bal;
-    //     if (supply_bal > total_batch_balance) {
-    //       invoice_item.supply_bal = total_batch_balance;
-    //       invoice_item.quantity_for_supply = total_batch_balance;
-    //     }
-    //     invoice_item.total_batch_balance = total_batch_balance;
-    //   });
-    //   app.invoice_items = invoice_items;
-    //   app.form.invoice_ids = invoice_ids;
-    //   // app.loading = false;
-    // },
     displayInvoiceitems() {
       const app = this;
       var selected_invoice = app.selected_invoice;
       var invoice_items = [];
       var invoice_ids = [];
-      app.loading = true;
+      // app.loading = true;
       for (let index = 0; index < selected_invoice.length; index++) {
         const element = selected_invoice[index];
-        invoice_items.push(...app.transfer_requests[element].transfer_request_items);
-        invoice_ids.push(app.transfer_requests[element].id);
+        invoice_items.push(...app.invoices[element].transfer_request_items);
+        invoice_ids.push(app.invoices[element].id);
       }
-      invoice_items.forEach(invoice_item => {
+      // console.log(invoice_items);
+      invoice_items.forEach((invoice_item) => {
         var total_batch_balance = 0;
         var reserved_for_supply = 0;
         var physical_stock = 0;
 
         var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied;
-        invoice_item.item.stocks.forEach(batch => {
-          total_batch_balance += parseInt(batch.balance - batch.reserved_for_supply);
-          reserved_for_supply += parseInt(batch.reserved_for_supply);
-          physical_stock += parseInt(batch.balance);
-        });
+        var stocks = invoice_item.item.stocks;
+        const batches = [];
+        stocks.forEach((stock_batch) => {
+          batches.push({
+            batch_no: stock_batch.batch_no,
+            expiry_date: stock_batch.expiry_date,
+            balance: stock_batch.balance - stock_batch.reserved_for_supply,
+            supply_quantity: 0,
 
+          });
+          total_batch_balance +=
+            parseInt(stock_batch.balance) -
+            parseInt(stock_batch.reserved_for_supply);
+          reserved_for_supply += parseInt(stock_batch.reserved_for_supply);
+
+          physical_stock += parseInt(stock_batch.balance);
+        });
+        invoice_item.batches = batches;
         invoice_item.supply_bal = supply_bal;
-        invoice_item.quantity_for_supply = supply_bal;
+        invoice_item.quantity_for_supply = 0;
+        invoice_item.total_supplied = 0;
         if (supply_bal > total_batch_balance) {
           invoice_item.supply_bal = total_batch_balance;
-          invoice_item.quantity_for_supply = total_batch_balance;
         }
         invoice_item.total_batch_balance = total_batch_balance;
         invoice_item.reserved_for_supply = reserved_for_supply;
         invoice_item.physical_stock = physical_stock;
       });
-      app.form.invoice_items = invoice_items;
+      app.invoice_items = invoice_items;
       app.form.invoice_ids = invoice_ids;
-      app.loading = false;
+      // app.loading = false;
+    },
+    checkForOverflow(limit, index) {
+      const app = this;
+      const value = app.invoice_items[index].quantity_for_supply;
+      const product = app.invoice_items[index].item.name;
+      const package_type = app.invoice_items[index].item.package_type;
+      if (value > limit) {
+        app.invoice_items[index].quantity_for_supply = limit;
+        app.$alert('Make sure you DO NOT exceed ' + limit + ' ' + package_type + ' for ' + product);
+      }
     },
     // fetchAvailableDrivers(){
     //   const app = this;
@@ -330,71 +460,85 @@ export default {
     //     });
     // },
     generateWaybill() {
-      const invoice_items = this.form.invoice_items;
+      const invoice_items = this.invoice_items;
 
       if (invoice_items.length < 1) {
-        this.$alert('Please select at least one invoice request to generate a waybill');
+        this.$alert('Please select at least one invoice to generate a waybill');
         return false;
       }
+      let itemQuantityCheck = 0;
       invoice_items.forEach(element => {
+        itemQuantityCheck += parseInt(element.quantity_for_supply);
         if (element.supply_bal < element.quantity_for_supply) {
           this.$alert('To continue, kindly reduce ' + element.item.name + ' quantity to ' + element.supply_bal);
           return false;
         }
       });
+      if (itemQuantityCheck < 1) {
+        this.$alert('You are not permitted to generate empty waybill. Kindly enter at least one product quantity');
+        return false;
+      }
       this.$refs['form'].validate((valid) => {
         if (valid) {
-          this.$confirm('Cross check your selection before submitting. Continue?', 'Warning', {
-            confirmButtonText: 'OK',
-            cancelButtonText: 'Cancel',
-            type: 'warning',
-          }).then(() => {
-            const loader = storeWaybillResource.loaderShow();
-
-            this.disabled = true;
-            storeWaybillResource
-              .store(this.form)
-              .then(response => {
-                if (response.status) {
-                  this.error_message = response.status + response.message;
-                } else {
-                  this.$message({
-                    message: 'Waybill created successfully.',
-                    type: 'success',
-                    duration: 5 * 1000,
-                  });
-                  loader.hide();
-                  this.$router.replace('waybill');
-                }
-              })
-              .catch(error => {
-                console.log(error.message);
-                this.disabled = false;
-              })
-              .finally(() => {
-                this.creatingWaybill = false;
-                this.disabled = false;
-              });
-          }).catch(() => {
-            // this.$message({
-            //   type: 'info',
-            //   message: 'Delete canceled',
-            // });
-          });
+          this.$confirm(
+            'Check through your selection before submitting. Continue?',
+            'Warning',
+            {
+              confirmButtonText: 'Yes, Submit',
+              cancelButtonText: 'Cancel',
+              type: 'warning',
+            },
+          )
+            .then(() => {
+              // const loading = storeWaybillResource.loaderShow();
+              this.loading = true;
+              this.form.invoice_items = invoice_items;
+              this.disabled = true;
+              storeWaybillResource
+                .store(this.form)
+                .then((response) => {
+                  if (response.status) {
+                    this.error_message = response.status + response.message;
+                  } else {
+                    this.$message({
+                      message: 'Waybill created successfully.',
+                      type: 'success',
+                      duration: 5 * 1000,
+                    });
+                    this.$router.replace('waybill');
+                  }
+                  this.loading = false;
+                })
+                .catch((error) => {
+                  this.loading = false;
+                  console.log(error.message);
+                  this.disabled = false;
+                })
+                .finally(() => {
+                  this.loading = false;
+                  this.creatingWaybill = false;
+                  this.disabled = false;
+                });
+            })
+            .catch(() => {
+              // this.$message({
+              //   type: 'info',
+              //   message: 'Delete canceled',
+              // });
+            });
         } else {
           console.log('error submit!!');
           return false;
         }
       });
     },
-    formatPackageType(type){
+    formatPackageType(type) {
       // var formated_type = type + 's';
       // if (type === 'Box') {
       //   formated_type = type + 'es';
       // }
       return type;
     },
-
   },
 };
 </script>

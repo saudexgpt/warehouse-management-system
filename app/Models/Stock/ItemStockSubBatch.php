@@ -155,6 +155,9 @@ class ItemStockSubBatch extends Model
         $dispatched_product->item_stock_sub_batch_id = $item_stock_batch->id;
         $dispatched_product->transfer_request_waybill_id = $waybill_item->transfer_request_waybill_id;
         $dispatched_product->transfer_request_waybill_item_id = $waybill_item->id;
+        $dispatched_product->transfer_request_id = $waybill_item->transfer_request_id;
+        $dispatched_product->transfer_request_item_id = $waybill_item->transfer_request_item_id;
+        $dispatched_product->item_id = $waybill_item->item_id;
         $dispatched_product->quantity_supplied = $quantity;
         $dispatched_product->status = 'on transit';
         $dispatched_product->save();
@@ -200,19 +203,39 @@ class ItemStockSubBatch extends Model
     //         $this->performFirstInFirstOutDelivery($warehouse_id, $waybill_item, $item_id, $waybill_quantity);
     //     endforeach;
     // }
-    public function sendTransferItemInStockForDelivery($waybill_items)
+    public function sendTransferItemInStockForDelivery($waybill_items_ids)
     {
-        foreach ($waybill_items as $waybill_item) {
+        $invoice_item_batches = TransferRequestItemBatch::with('waybillItem', 'itemStockBatch')->whereIn('waybill_item_id', $waybill_items_ids)->where('quantity', '>', 0)->get();
+        if ($invoice_item_batches->count() > 0) {
+            foreach ($invoice_item_batches as $invoice_item_batch) {
+                $waybill_item = $invoice_item_batch->waybillItem;
+                $warehouse_id = $waybill_item->supply_warehouse_id;
 
-            $warehouse_id = $waybill_item->supply_warehouse_id;
-            $waybill_quantity = $waybill_item->quantity;
-            $item_id = $waybill_item->item_id;
-            $waybill_quantity = $this->performFirstInFirstOutTransferDelivery($warehouse_id, $waybill_item, $item_id, $waybill_quantity);
+                $for_supply = $invoice_item_batch->quantity;
+                $item_stock_batch = $invoice_item_batch->itemStockBatch;
+
+
+
+                $item_stock_batch->reserved_for_supply -= $for_supply;
+                $item_stock_batch->in_transit += $for_supply;
+                $item_stock_batch->balance -=  $for_supply;
+                $item_stock_batch->save();
+
+                $invoice_item_batch->quantity = 0;
+                $invoice_item_batch->save();
+
+                $this->dispatchTransferProduct($warehouse_id, $item_stock_batch, $waybill_item, $for_supply);
+
+                $waybill_item->remitted += $for_supply;
+                $waybill_item->save();
+
+                $for_supply = 0;
+            }
         }
     }
     public function sendItemInStockForDelivery($waybill_items_ids)
     {
-        $invoice_item_batches = InvoiceItemBatch::with('waybillItem')->whereIn('waybill_item_id', $waybill_items_ids)->where('quantity', '>', 0)->get();
+        $invoice_item_batches = InvoiceItemBatch::with('waybillItem', 'itemStockBatch')->whereIn('waybill_item_id', $waybill_items_ids)->where('quantity', '>', 0)->get();
         if ($invoice_item_batches->count() > 0) {
             foreach ($invoice_item_batches as $invoice_item_batch) :
                 $waybill_item = $invoice_item_batch->waybillItem;

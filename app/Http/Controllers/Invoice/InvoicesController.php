@@ -407,7 +407,9 @@ class InvoicesController extends Controller
             },
             'invoiceItems.item.stocks' => function ($p) use ($warehouse_id) {
                 $p->groupBy('expiry_date', 'batch_no')
-                    ->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id)->whereRaw('confirmed_by IS NOT NULL')
+                    ->whereRaw('balance - reserved_for_supply > 0')
+                    ->where('warehouse_id', $warehouse_id)
+                    ->whereRaw('confirmed_by IS NOT NULL')
                     ->orderBy('expiry_date')
                     ->orderBy('batch_no')
                     ->select('*', \DB::raw('(SUM(balance) - SUM(reserved_for_supply)) as balance'));
@@ -822,11 +824,12 @@ class InvoicesController extends Controller
                         // $item_sub_batch = ItemStockSubBatch::find($batch);
                         $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
                         $invoice_item_batch = new InvoiceItemBatch();
+                        $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
+                        $invoice_item_batch->invoice_item_id = $invoice_item->id;
+                        $invoice_item_batch->waybill_item_id = $waybill_item->id;
+                        $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
+
                         if ($supply_quantity <= $real_balance) {
-                            $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
-                            $invoice_item_batch->invoice_item_id = $invoice_item->id;
-                            $invoice_item_batch->waybill_item_id = $waybill_item->id;
-                            $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
                             $invoice_item_batch->to_supply = $supply_quantity;
                             $invoice_item_batch->quantity = $supply_quantity;
                             $invoice_item_batch->save();
@@ -835,10 +838,6 @@ class InvoicesController extends Controller
                             $supply_quantity = 0;
                             break;
                         } else {
-                            $invoice_item_batch->invoice_id = $invoice_item->invoice_id;
-                            $invoice_item_batch->invoice_item_id = $invoice_item->id;
-                            $invoice_item_batch->waybill_item_id = $waybill_item->id;
-                            $invoice_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
                             $invoice_item_batch->to_supply = $real_balance;
                             $invoice_item_batch->quantity = $real_balance;
                             $invoice_item_batch->save();

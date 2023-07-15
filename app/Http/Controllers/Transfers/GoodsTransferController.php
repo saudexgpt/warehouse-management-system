@@ -79,12 +79,18 @@ class GoodsTransferController extends Controller
         $transfer_requests = TransferRequest::with(['requestWarehouse', 'transferRequestItems' => function ($q) {
             $q->where('supply_status', '!=', 'Complete');
         }, 'transferRequestItems.item.stocks' => function ($p) use ($warehouse_id) {
-            $p->whereRaw('balance - reserved_for_supply > 0')
+            $p->groupBy('expiry_date', 'batch_no')
+                ->whereRaw('balance - reserved_for_supply > 0')
                 ->whereRaw('confirmed_by IS NOT NULL')
+                ->where('warehouse_id', $warehouse_id)
                 ->orderBy('expiry_date')
                 ->orderBy('batch_no')
-                ->where('warehouse_id', $warehouse_id);
-        }])->where('supply_warehouse_id', $warehouse_id)->where('full_waybill_generated', 0)->orderBy('id', 'DESC')->get();
+                ->select('*', \DB::raw('(SUM(balance) - SUM(reserved_for_supply)) as balance'));
+        }])
+            ->where('supply_warehouse_id', $warehouse_id)
+            ->where('full_waybill_generated', 0)
+            ->orderBy('id', 'DESC')
+            ->get();
         return response()->json(compact('transfer_requests', 'waybill_no'), 200);
     }
 
@@ -175,73 +181,62 @@ class GoodsTransferController extends Controller
             $transfer_request_item->save();
         }
     }
-    private function createTransferRequestItemBatches($transfer_request_item, $batches, $quantity)
+    private function createTransferRequestItemBatches($waybill_item, $transfer_request_item, $batches)
     {
-
+        $item_id = $transfer_request_item->item_id;
+        $warehouse_id = $waybill_item->supply_warehouse_id;
         // $quantity = $transfer_request_item->quantity;
         // $quantity = $transfer_request_item->quantity_supplied;
         // If a specific batch was set when raising the invoice, we set it here
-        // if (!empty($batches)) {
-        //     foreach ($batches as $batch) {
-        //         $item_sub_batch = ItemStockSubBatch::find($batch);
-        //         $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
-        //         if ($quantity <= $real_balance) {
-        //             $transfer_request_item_batch = new TransferRequestItemBatch();
-        //             $transfer_request_item_batch->transfer_request_id = $transfer_request_item->transfer_request_id;
-        //             $transfer_request_item_batch->transfer_request_item_id = $transfer_request_item->id;
-        //             $transfer_request_item_batch->item_stock_sub_batch_id = $batch;
-        //             $transfer_request_item_batch->to_supply = $quantity;
-        //             $transfer_request_item_batch->quantity = $quantity;
-        //             $transfer_request_item_batch->save();
+        if (!empty($batches)) {
+            foreach ($batches as $batch) {
+                $batch_no = $batch->batch_no;
+                $expiry_date = $batch->expiry_date;
+                $supply_quantity = $batch->supply_quantity;
+                if ($supply_quantity > 0) {
+                    $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])
+                        ->where('batch_no', $batch_no)
+                        ->where('expiry_date', $expiry_date)
+                        ->whereRaw('balance - reserved_for_supply > 0')
+                        ->whereRaw('confirmed_by IS NOT NULL')
+                        ->orderBy('expiry_date')
+                        ->orderBy('batch_no')
+                        ->get();
+                    if ($batches_of_items_in_stock->isNotEmpty()) {
+                        foreach ($batches_of_items_in_stock as $item_sub_batch) {
+                            if ($supply_quantity < 1) {
+                                break;
+                            }
+                            $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
 
-        //             $item_sub_batch->reserved_for_supply += $quantity;
-        //             $item_sub_batch->save();
-        //             $quantity = 0;
-        //             break;
-        //         } else {
-        //             $transfer_request_item_batch = new TransferRequestItemBatch();
-        //             $transfer_request_item_batch->transfer_request_id = $transfer_request_item->transfer_request_id;
-        //             $transfer_request_item_batch->transfer_request_item_id = $transfer_request_item->id;
-        //             $transfer_request_item_batch->item_stock_sub_batch_id = $batch;
-        //             $transfer_request_item_batch->to_supply = $real_balance;
-        //             $transfer_request_item_batch->quantity = $real_balance;
-        //             $transfer_request_item_batch->save();
-        //             $item_sub_batch->reserved_for_supply += $real_balance;
-        //             $item_sub_batch->save();
-        //             $quantity -= $real_balance;
-        //         }
-        //     }
-        // }
+                            $transfer_request_item_batch = new TransferRequestItemBatch();
+                            $transfer_request_item_batch->transfer_request_id = $transfer_request_item->transfer_request_id;
 
-        if ($quantity > 0) {
-            // If a specific batch was NOT set when raising the invoice, we make it automatic here using FIFO (First In First Out) principle
-            $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $transfer_request_item->supply_warehouse_id, 'item_id' => $transfer_request_item->item_id])->whereRaw('balance - reserved_for_supply > 0')->orderBy('expiry_date')->orderBy('id')->get();
+                            $transfer_request_item_batch->waybill_item_id = $waybill_item->id;
 
-            foreach ($batches_of_items_in_stock as $item_sub_batch) {
-                $real_balance = $item_sub_batch->balance - $item_sub_batch->reserved_for_supply;
-                if ($quantity <= $real_balance) {
-                    $transfer_request_item_batch = new TransferRequestItemBatch();
-                    $transfer_request_item_batch->transfer_request_id = $transfer_request_item->transfer_request_id;
-                    $transfer_request_item_batch->transfer_request_item_id = $transfer_request_item->id;
-                    $transfer_request_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
-                    $transfer_request_item_batch->to_supply = $quantity;
-                    $transfer_request_item_batch->quantity = $quantity;
-                    $transfer_request_item_batch->save();
-                    $item_sub_batch->reserved_for_supply += $quantity;
-                    $item_sub_batch->save();
-                    $quantity = 0;
-                    break;
-                } else {
-                    $transfer_request_item_batch = new TransferRequestItemBatch();
-                    $transfer_request_item_batch->transfer_request_id = $transfer_request_item->transfer_request_id;
-                    $transfer_request_item_batch->transfer_request_item_id = $transfer_request_item->id;
-                    $transfer_request_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
-                    $transfer_request_item_batch->to_supply = $real_balance;
-                    $transfer_request_item_batch->quantity = $real_balance;
-                    $transfer_request_item_batch->save();
-                    $item_sub_batch->reserved_for_supply += $real_balance;
-                    $item_sub_batch->save();
-                    $quantity -= $real_balance;
+                            $transfer_request_item_batch->transfer_request_item_id = $transfer_request_item->id;
+
+                            $transfer_request_item_batch->item_stock_sub_batch_id = $item_sub_batch->id;
+                            if ($supply_quantity <= $real_balance) {
+
+                                $transfer_request_item_batch->to_supply = $supply_quantity;
+                                $transfer_request_item_batch->quantity = $supply_quantity;
+                                $transfer_request_item_batch->save();
+
+                                $item_sub_batch->reserved_for_supply += $supply_quantity;
+                                $item_sub_batch->save();
+                                $supply_quantity = 0;
+                                break;
+                            } else {
+                                $transfer_request_item_batch->to_supply = $real_balance;
+                                $transfer_request_item_batch->quantity = $real_balance;
+                                $transfer_request_item_batch->save();
+                                $item_sub_batch->reserved_for_supply += $real_balance;
+                                $item_sub_batch->save();
+                                $supply_quantity -= $real_balance;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -264,7 +259,7 @@ class GoodsTransferController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Models\TransferRequest\TransferRequest  $transfer_request
+     * @param  \App\Models\Transfers\TransferRequest  $transfer_request
      * @return \Illuminate\Http\Response
      */
     public function changeTransferRequestStaus(Request $request, TransferRequest $transfer_request)
@@ -367,35 +362,30 @@ class GoodsTransferController extends Controller
         $partial_waybill_generated = [];
         foreach ($transfer_request_items as $transfer_request_item) {
             $batches = $transfer_request_item->batches;
+            if (!empty($batches)) {
+                $transfer_request_item_update = TransferRequestItem::find($transfer_request_item->id);
+                $original_quantity = $transfer_request_item_update->quantity;
+                $quantity_supplied = $transfer_request_item_update->quantity_supplied;
+                $for_supply = (int) $transfer_request_item->quantity_for_supply;
+                if ($for_supply > 0) {
+                    if ($original_quantity > $quantity_supplied) {
+                        if (($original_quantity - $quantity_supplied) >= $for_supply) {
+                            $actual_supply_quantity = $for_supply;
+                            $transfer_request_item_update->quantity_supplied += $actual_supply_quantity;
+                            $transfer_request_item_update->save();
+                            // $this->createTransferRequestItemBatches($transfer_request_item_update, $batches, $actual_supply_quantity);
 
-            $transfer_request_item_update = TransferRequestItem::find($transfer_request_item->id);
-            $original_quantity = $transfer_request_item_update->quantity;
-            $quantity_supplied = $transfer_request_item_update->quantity_supplied;
-            $for_supply = (int) $transfer_request_item->quantity_for_supply;
-            if ($for_supply > 0) {
-                if ($original_quantity > $quantity_supplied) {
-                    if ($original_quantity >= $for_supply) {
-                        $transfer_request_item_update->quantity_supplied += $for_supply;
-                        $transfer_request_item_update->save();
-                        // $this->createTransferRequestItemBatches($transfer_request_item_update, $batches, $for_supply);
+                            $waybill_item = $waybill_item_obj->createTransferRequestWaybillItems($waybill->id, $warehouse_id, $transfer_request_item, $actual_supply_quantity);
 
-                        $waybill_item_obj->createTransferRequestWaybillItems($waybill->id, $warehouse_id, $transfer_request_item);
+                            $this->createTransferRequestItemBatches($waybill_item, $transfer_request_item_update, $batches);
+                        }
                     }
                 }
+
+                if ($original_quantity > $transfer_request_item_update->quantity_supplied) {
+                    $partial_waybill_generated[] = $transfer_request_item->transfer_request_id;
+                }
             }
-
-            if ($original_quantity > $transfer_request_item_update->quantity_supplied) {
-                $partial_waybill_generated[] = $transfer_request_item->transfer_request_id;
-            }
-
-            // $item_in_stock_obj = new ItemStockSubBatch();
-            // $item_balance = $item_in_stock_obj->fetchBalanceOfItemsInStock($warehouse_id, $transfer_request_item->item_id);
-
-            // $quantity_for_supply = $transfer_request_item->quantity_for_supply;
-            // // check whether the balance is up to what was raised in the invoice
-            // if ($quantity_for_supply > $item_balance) {
-            //     $message .= $transfer_request_item->item->name . ' remains only ' . $item_balance . ' ' . $transfer_request_item->item->package_type . ' in stock.<br>';
-            // }
         }
 
         // if ($message !== '') {
@@ -452,7 +442,8 @@ class GoodsTransferController extends Controller
                 // ball out if an item on the list is more than what is in stock
                 return response()->json(compact('message'), 500);
             }
-            $item_in_stock_obj->sendTransferItemInStockForDelivery($waybill->waybillItems);
+            $waybill_items_ids = $waybill->waybillItems->pluck('id');
+            $item_in_stock_obj->sendTransferItemInStockForDelivery($waybill_items_ids);
             // let's update the invoice items for this waybill
         }
         // update waybill status

@@ -487,12 +487,18 @@ export default {
         this.$alert('Please select at least one invoice to generate a waybill');
         return false;
       }
+      let itemQuantityCheck = 0;
       invoice_items.forEach(element => {
+        itemQuantityCheck += parseInt(element.quantity_for_supply);
         if (element.supply_bal < element.quantity_for_supply) {
           this.$alert('To continue, kindly reduce ' + element.item.name + ' quantity to ' + element.supply_bal);
           return false;
         }
       });
+      if (itemQuantityCheck < 1) {
+        this.$alert('You are not permitted to generate empty waybill. Kindly enter at least one product quantity');
+        return false;
+      }
       this.$refs['form'].validate((valid) => {
         if (valid) {
           this.$confirm(
