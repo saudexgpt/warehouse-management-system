@@ -1051,11 +1051,10 @@ class InvoicesController extends Controller
         $vehicle = ($waybill->dispatcher) ? $waybill->dispatcher->vehicle : '';
         $status = $request->status;
         if ($status === 'in transit') {
-            list($out_of_stock_count, $message) = $item_in_stock_obj->checkStockBalanceForEachWaybillItem($waybill->waybillItems);
-            if ($out_of_stock_count > 0) {
-                // ball out if an item on the list is more than what is in stock
-                return response()->json(compact('message'), 500);
-            }
+            // list($out_of_stock_count, $message) = $item_in_stock_obj->checkStockBalanceForEachWaybillItem($waybill->waybillItems);
+            // if ($out_of_stock_count > 0) {
+            //     return response()->json(compact('message'), 500);
+            // }
             // change vehicle status to 'in transit'
             if ($vehicle) {
                 $this->setVehicleAvailability($vehicle, 'in transit');

@@ -437,11 +437,10 @@ class GoodsTransferController extends Controller
         $status = $request->status;
         // update items in stock based on waybill status
         if ($status === 'in transit') {
-            list($out_of_stock_count, $message) = $item_in_stock_obj->checkStockBalanceForEachTransferWaybillItem($waybill->waybillItems);
-            if ($out_of_stock_count > 0) {
-                // ball out if an item on the list is more than what is in stock
-                return response()->json(compact('message'), 500);
-            }
+            // list($out_of_stock_count, $message) = $item_in_stock_obj->checkStockBalanceForEachTransferWaybillItem($waybill->waybillItems);
+            // if ($out_of_stock_count > 0) {
+            //     return response()->json(compact('message'), 500);
+            // }
             $waybill_items_ids = $waybill->waybillItems->pluck('id');
             $item_in_stock_obj->sendTransferItemInStockForDelivery($waybill_items_ids);
             // let's update the invoice items for this waybill
