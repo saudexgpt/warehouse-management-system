@@ -39,13 +39,13 @@ class ItemStocksController extends Controller
             $q->orderBy('name');
         }, 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->where(function ($q) {
             $q->where('balance', '>', '0');
-            $q->orWhere('in_transit', '>', '0');
+            // $q->orWhere('in_transit', '>', '0');
         })->where('expiry_date', '>=', $date)
             ->orderBy('expiry_date')->get();
 
         $expired_products = ItemStockSubBatch::with(['warehouse', 'item' => function ($q) {
             $q->orderBy('name');
-        }, 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->whereRaw('balance - reserved_for_supply > 0')->where('expiry_date', '<', $date)
+        }, 'stocker'])->where('warehouse_id', $warehouse_id)->whereRaw('balance > 0')->where('expiry_date', '<', $date)
             ->orderBy('expiry_date')->get();
 
         // $expired_products = ExpiredProduct::with(['item'])->groupBy(['batch_no'])->where('warehouse_id', $warehouse_id)->select('*', \DB::raw('SUM(quantity) as quantity'))->get();
@@ -321,7 +321,7 @@ class ItemStocksController extends Controller
     public function fetchStockCounts(Request $request)
     {
         $warehouse_id = $request->warehouse_id;
-        $date = date('Y-m', strtotime($request->date));
+        $date = date('Y-m-d', strtotime($request->date));
         $stock_counts = StockCount::with('item', 'counter')->where(['warehouse_id' => $warehouse_id, 'date' => $date])->get();
         return response()->json(compact('stock_counts'), 200);
     }
@@ -361,5 +361,23 @@ class ItemStocksController extends Controller
         $stock_count->count_quantity = $request->count_quantity;
         $stock_count->save();
         return 'done';
+    }
+    public function saveStockCount(Request $request)
+    {
+        $sub_batches = json_decode(json_encode($request->sub_batches));
+        $user = $this->getUser();
+        $warehouse_id = $request->warehouse_id;
+        $date = date('Y-m-d', strtotime($request->date));
+        foreach ($sub_batches as $batch) {
+            $item_id = $batch->item_id;
+            $batch_no = $batch->batch_no;
+            $quantity = $batch->quantity;
+            $expiry_date = date('Y-m-d', strtotime($batch->expiry_date));
+            StockCount::updateOrCreate(
+                ['warehouse_id' => $warehouse_id, 'item_id' => $item_id, 'batch_no' => $batch_no, 'date' => $date, 'expiry_date' => $expiry_date,],
+                ['count_quantity' => $quantity, 'count_by' => $user->id]
+            );
+        }
+        return response()->json([], 204);
     }
 }

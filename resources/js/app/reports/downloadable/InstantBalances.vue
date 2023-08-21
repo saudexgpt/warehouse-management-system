@@ -4,22 +4,46 @@
       <el-row :gutter="10">
         <el-col v-if="params.warehouses.length > 0" :xs="24" :sm="8" :md="8">
           <label for="">Select Warehouse</label>
-          <el-select v-model="warehouse_index" placeholder="Select Warehouse" class="span" filterable @input="fetchItemStocks">
+          <el-select
+            v-model="warehouse_index"
+            placeholder="Select Warehouse"
+            class="span"
+            filterable
+            @input="fetchItemStocks"
+          >
             <el-option value="all" label="All Warehouses" />
-            <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="index" :label="warehouse.name" />
+            <el-option
+              v-for="(warehouse, index) in warehouses"
+              :key="index"
+              :value="index"
+              :label="warehouse.name"
+            />
 
           </el-select>
 
         </el-col>
-        <!-- <el-col :xs="24" :sm="6" :md="6">
-          <label for="">Filter by: </label>
-          <el-select v-model="view_by" placeholder="Select Option" class="span" @input="fetchItemStocks">
-            <el-option v-for="(view_option, index) in view_options" :key="index" :value="view_option.key" :label="view_option.name" />
-
+        <el-col :xs="24" :sm="68" :md="8">
+          <label for="">Filter by Product: </label>
+          <el-select
+            v-model="form.item_id"
+            placeholder="Select Product"
+            filterable
+            class="span"
+          >
+            <el-option value="all" label="All Products" />
+            <el-option
+              v-for="(item, item_index) in params.items"
+              :key="item_index"
+              :value="item.id"
+              :label="item.name"
+            >
+              <span v-if="item.category_id !== 26">
+                {{ item.name }}
+              </span>
+            </el-option>
           </el-select>
-
-        </el-col> -->
-        <el-col :xs="24" :sm="10" :md="10">
+        </el-col>
+        <el-col :xs="24" :sm="8" :md="8">
           <br>
           <el-popover
             placement="right"
@@ -96,12 +120,12 @@ export default {
   components: {
     Pagination,
   },
-  props: {
-    params: {
-      type: Object,
-      default: () => ([]),
-    },
-  },
+  // props: {
+  //   params: {
+  //     type: Object,
+  //     default: () => ([]),
+  //   },
+  // },
   data() {
     return {
       warehouses: [],
@@ -121,7 +145,7 @@ export default {
           balance: 'BALANCE',
           uom: 'UOM',
         },
-        filterByColumn: true,
+        // filterByColumn: true,
         pagination: {
           dropdown: true,
           chunk: 200,
@@ -129,7 +153,7 @@ export default {
         perPage: 10,
         // editableColumns:['name', 'category.name', 'sku'],
         sortable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
-        filterable: ['warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'],
+        filterable: [/* 'warehouse', 'product_name', 'brought_forward', 'quantity_in', 'quantity_out', 'quantity_expired', 'balance'*/],
       },
       page: {
         option: 'list',
@@ -137,6 +161,7 @@ export default {
       downloadLoading: false,
       form: {
         warehouse_id: '',
+        item_id: '',
         from: '',
         to: '',
         panel: '',
@@ -159,7 +184,11 @@ export default {
       ],
     };
   },
-
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   mounted() {
     this.warehouses = this.params.warehouses;
     this.warehouse_index = 0;

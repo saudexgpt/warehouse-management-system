@@ -124,7 +124,7 @@
       </el-row>
     </div>
     <div v-if="page.option !=='list'">
-      <a class="btn btn-danger no-print" @click="page.option='list'">Go Back</a>
+      <a class="btn btn-danger no-print" @click="getWaybills(); page.option='list';">Go Back</a>
       <waybill-details v-if="page.option==='waybill_details'" :waybill-id="waybill.id" :page="page" :company-name="params.company_name" :company-contact="params.company_contact" :currency="currency" />
 
       <edit-waybill v-if="page.option==='edit_waybill'" :waybill-id="waybill.id" :page="page" :params="params" :currency="currency" @update="updateTable" />

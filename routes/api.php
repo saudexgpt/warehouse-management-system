@@ -26,6 +26,11 @@ $router->group(['prefix' => 'report'], function () use ($router) {
     $router->get('instant-balances', 'ApiController@instantBalances');
     $router->get('unsupplied-invoices', 'ApiController@unsuppliedInvoices');
     $router->get('all-generated-invoices', 'ApiController@allInvoicesRaised');
+
+    $router->get('products-in-stock', 'ApiController@productInStock');
+    $router->get('expired-products', 'ApiController@expiredProducts');
+    $router->get('returned-products', 'ApiController@returnedProducts');
+    $router->get('stock-counts', 'ApiController@stockCount');
 });
 
 
@@ -339,6 +344,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
             $router->get('/', 'ItemStocksController@fetchStockCounts');
             $router->post('prepare', 'ItemStocksController@prepareStockCount');
+            $router->post('save', 'ItemStocksController@saveStockCount');
             $router->put('save-count/{stock_count}', 'ItemStocksController@countStock');
         });
         ///////////////////manage item Category//////////////////////////////////
@@ -355,6 +361,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         ///////////////////manage returned products//////////////////////////////////
         $router->group(['prefix' => 'returns'], function () use ($router) {
             $router->get('/', 'ReturnsController@index')->middleware('permission:view returned products|manage returned products');
+            $router->get('/approved', 'ReturnsController@approvedReturnedProducts')->middleware('permission:view returned products|manage returned products');
+
             $router->group(['middleware' => 'permission:manage returned products'], function () use ($router) {
                 $router->post('store', 'ReturnsController@store');
                 $router->put('update/{returned_product}', 'ReturnsController@update');

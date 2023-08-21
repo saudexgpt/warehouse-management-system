@@ -50,13 +50,13 @@
                 {{ row.quantity }} {{ formatPackageType(row.item.package_type) }}
                 <br><small v-html="showItemsInCartons(row.quantity, row.item.quantity_per_carton)" />
               </div>
-              <div slot="in_transit" slot-scope="{row}" class="alert alert-warning">
+              <!-- <div slot="in_transit" slot-scope="{row}" class="alert alert-warning">
                 {{ row.in_transit }} {{ formatPackageType(row.item.package_type) }}
                 <br><small v-html="showItemsInCartons(row.in_transit, row.item.quantity_per_carton)" />
-              </div>
+              </div> -->
               <div slot="supplied" slot-scope="{row}" class="alert alert-danger">
-                {{ row.supplied }} {{ formatPackageType(row.item.package_type) }}
-                <br><small v-html="showItemsInCartons(row.supplied, row.item.quantity_per_carton)" />
+                {{ (parseInt(row.supplied) + parseInt(row.in_transit)) }} {{ formatPackageType(row.item.package_type) }}
+                <br><small v-html="showItemsInCartons((parseInt(row.supplied) + parseInt(row.in_transit)), row.item.quantity_per_carton)" />
               </div>
               <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
                 <a @click="showReservationTransactions(row)">
@@ -74,11 +74,11 @@
               </div>
               <div slot="expiry_date" slot-scope="{row}" :class="expiryFlag(moment(row.expiry_date).format('x'))">
                 <span>
-                  {{ moment(row.expiry_date).fromNow() }}
+                  {{ moment(row.expiry_date).format('ll') }}
                 </span>
               </div>
               <div slot="created_at" slot-scope="{row}">
-                {{ moment(row.created_at).fromNow() }}
+                {{ moment(row.created_at).format('ll') }}
               </div>
               <div slot="confirmer.name" slot-scope="{row}">
                 <div :id="row.id">
@@ -156,7 +156,7 @@
 
               </div> -->
               <div slot="balance" slot-scope="{row}" class="alert alert-danger">
-                {{ row.balance - row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
+                {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
 
               </div>
               <div slot="expiry_date" slot-scope="{row}">
@@ -238,7 +238,7 @@ export default {
       warehouses: [],
       items_in_stock: [],
       expired_products: [],
-      columns: ['action', 'confirmer.name', 'item.name', 'batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', /* 'expired',*/ 'in_stock', 'reserved_for_supply', 'balance', 'created_at', 'stocker.name'],
+      columns: ['action', 'stocker.name', 'confirmer.name', 'item.name', 'batch_no', 'quantity', /* 'in_transit'*/ 'supplied', /* 'expired',*/ 'reserved_for_supply', 'balance', 'in_stock', 'created_at', 'expiry_date'],
 
       options: {
         headings: {
@@ -247,9 +247,9 @@ export default {
           'item.name': 'Product',
           batch_no: 'Batch No.',
           quantity: 'QTY Stocked',
-          in_transit: 'On Trans',
+          // in_transit: 'On Trans',
           supplied: 'Supplied',
-          reserved_for_supply: 'For Supply',
+          reserved_for_supply: 'Waybill Reserved',
           in_stock: 'PHYS. Stock',
           balance: 'Main Bal.',
           expiry_date: 'Expires',
@@ -269,7 +269,7 @@ export default {
         sortable: ['item.name', 'batch_no', 'expiry_date'/* 'item.name', 'batch_no', 'quantity', 'in_transit', 'supplied', 'balance', 'expiry_date', 'created_at'*/],
         filterable: ['stocker.name', 'item.name', 'batch_no', 'expiry_date', 'created_at'],
       },
-      expired_columns: ['confirmer.name', 'item.name', 'batch_no', 'balance', /* 'destroyed', 'balance', */'expiry_date', 'action'],
+      expired_columns: ['item.name', 'batch_no', 'balance', /* 'destroyed', 'balance', */'expiry_date', 'action'],
 
       expired_options: {
         headings: {
@@ -556,8 +556,8 @@ export default {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Confirmed By', 'Product', 'Batch No.', 'Expires', 'Quantity', 'In Transit', 'Supplied', 'Physical Stock', 'Reserved for Supply', 'Main Balance', 'Created', 'Stocked By'];
-        const filterVal = ['confirmer.name', 'item.name', 'batch_no', 'expiry_date', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance', 'created_at', 'stocker.name'];
+        const tHeader = ['Stocked By', 'Confirmed By', 'Product', 'Batch No.', 'Quantity', 'In Transit', 'Supplied', 'Physical Stock', 'Reserved for Supply', 'Main Balance', 'Created', 'Expires'];
+        const filterVal = ['stocker.name', 'confirmer.name', 'item.name', 'batch_no', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance', 'created_at', 'expiry_date'];
         const list = this.items_in_stock;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({

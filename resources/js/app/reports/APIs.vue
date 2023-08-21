@@ -3,16 +3,38 @@
     <el-alert :closable="false" type="error"><h4>Set your preferences to get the specific parameters for your query</h4></el-alert>
     <hr>
     <el-row :gutter="10">
-      <el-col :xs="24" :sm="12" :md="12">
+      <el-col :xs="24" :sm="8" :md="8">
         <label for="">Select Warehouse</label>
         <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" class="span" filterable @input="setStrParam">
-          <!-- <el-option value="all" label="All" /> -->
+          <el-option value="all" label="All Warehouses" />
           <el-option v-for="(warehouse, index) in params.warehouses" :key="index" :value="warehouse.id" :label="warehouse.name" />
 
         </el-select>
 
       </el-col>
-      <el-col :xs="24" :sm="12" :md="12">
+      <el-col :xs="24" :sm="12" :md="8">
+        <label for="">Select Products</label>
+        <el-select
+          v-model="form.item_id"
+          placeholder="Select Product"
+          filterable
+          class="span"
+          @input="setStrParam"
+        >
+          <el-option value="all" label="All Products" />
+          <el-option
+            v-for="(item, item_index) in params.items"
+            :key="item_index"
+            :value="item.id"
+            :label="item.name"
+          >
+            <span v-if="item.category_id !== 26">
+              {{ item.name }}
+            </span>
+          </el-option>
+        </el-select>
+      </el-col>
+      <el-col :xs="24" :sm="12" :md="8">
         <br>
         <el-popover
           placement="right"
@@ -59,6 +81,48 @@
       <el-col :span="24">
         <div>
           <span>
+            <h3>Products In Stock</h3>
+            <el-input :value="`${baseUrl}/report/products-in-stock/${strParams}`" class="form-control" readonly>
+              <template #append>
+                <el-button @click="copyToClipboard(`${baseUrl}/report/products-in-stock/${strParams}`)">Copy API</el-button>
+              </template>
+            </el-input>
+
+          </span>
+          <hr>
+        </div>
+      </el-col>
+      <el-col :span="24">
+        <div>
+          <span>
+            <h3>Expired Products</h3>
+            <el-input :value="`${baseUrl}/report/expired-products/${strParams}`" class="form-control" readonly>
+              <template #append>
+                <el-button @click="copyToClipboard(`${baseUrl}/report/expired-products/${strParams}`)">Copy API</el-button>
+              </template>
+            </el-input>
+
+          </span>
+          <hr>
+        </div>
+      </el-col>
+      <el-col :span="24">
+        <div>
+          <span>
+            <h3>Returned Products</h3>
+            <el-input :value="`${baseUrl}/report/returned-products/${strParams}`" class="form-control" readonly>
+              <template #append>
+                <el-button @click="copyToClipboard(`${baseUrl}/report/returned-products/${strParams}`)">Copy API</el-button>
+              </template>
+            </el-input>
+
+          </span>
+          <hr>
+        </div>
+      </el-col>
+      <el-col :span="24">
+        <div>
+          <span>
             <h3>All Generated Invoices</h3>
             <el-input :value="`${baseUrl}/report/all-generated-invoices/${strParams}`" class="form-control" readonly>
               <template #append>
@@ -84,6 +148,20 @@
           <hr>
         </div>
       </el-col>
+      <el-col :span="24">
+        <div>
+          <span>
+            <h3>Stock Counts</h3>
+            <el-input :value="`${baseUrl}/report/stock-counts/${strParams}`" class="form-control" readonly>
+              <template #append>
+                <el-button @click="copyToClipboard(`${baseUrl}/report/stock-counts/${strParams}`)">Copy API</el-button>
+              </template>
+            </el-input>
+
+          </span>
+          <hr>
+        </div>
+      </el-col>
     </el-row>
   </el-card>
 </template>
@@ -96,7 +174,8 @@ export default {
     return {
       strParams: '',
       form: {
-        warehouse_id: 1,
+        warehouse_id: '',
+        item_id: '',
         from: '',
         to: '',
         is_download: 'yes',
@@ -148,7 +227,7 @@ export default {
     },
     setStrParam(){
       const app = this;
-      app.strParams = `?from=${app.form.from}&to=${app.form.to}&warehouse_id=${app.form.warehouse_id}&is_download=${app.form.is_download}`;
+      app.strParams = `?from=${app.form.from}&to=${app.form.to}&warehouse_id=${app.form.warehouse_id}&item_id=${app.form.item_id}&is_download=${app.form.is_download}`;
     },
     copyToClipboard(text) {
       navigator.clipboard.writeText(text);

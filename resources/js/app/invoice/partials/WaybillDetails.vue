@@ -341,6 +341,9 @@ export default {
         .then(response => {
           app.loading = false;
           app.waybill = response.waybill;
+          if (app.form.status === 'in transit') {
+            app.print_waybill = true;
+          }
         });
     },
     changeWaybillStatus(){
@@ -351,10 +354,8 @@ export default {
         param.status = app.form.status;
         changeWaybillStatusResource.update(param.id, param)
           .then(response => {
-            app.waybill.status = app.form.status;
-            if (app.form.status === 'in transit') {
-              app.print_waybill = true;
-            }
+            // app.waybill.status = app.form.status;
+            app.fetchWaybill();
           });
       }
     },

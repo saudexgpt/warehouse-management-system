@@ -29,45 +29,53 @@
 
         </el-col>
         <br><br><br><br>
-        <v-client-table v-model="returned_products" :columns="columns" :options="options">
-          <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
-            <!-- {{ row.quantity }} -->
-            {{ row.quantity }} {{ row.item.package_type }}
+        <el-tabs v-model="activeActivity">
+          <el-tab-pane label="Unapproved" name="unapproved">
 
-          </div>
-          <div slot="quantity_approved" slot-scope="{row}" class="alert alert-info">
-            <!-- {{ row.quantity_approved }} -->
-            {{ row.quantity_approved }} {{ row.item.package_type }}
+            <v-client-table v-model="returned_products" :columns="columns" :options="options">
+              <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
+                <!-- {{ row.quantity }} -->
+                {{ row.quantity }} {{ row.item.package_type }}
 
-          </div>
-          <div slot="expiry_date" slot-scope="{row}" :class="'alert alert-'+ expiryFlag(moment(row.expiry_date).format('x'))">
-            <span>
-              {{ moment(row.expiry_date).calendar() }}
-            </span>
-          </div>
-          <div slot="created_at" slot-scope="{row}">
-            {{ moment(row.created_at).calendar() }}
-
-          </div>
-          <div slot="confirmer.name" slot-scope="{row}">
-            <div :id="row.id">
-              <div v-if="row.confirmed_by == null">
-                <a v-if="checkPermission(['audit confirm actions']) && row.stocked_by !== userId" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(row.id);"><i class="fa fa-check" /> </a>
               </div>
-              <div v-else>
-                {{ row.confirmer.name }}
+              <div slot="quantity_approved" slot-scope="{row}" class="alert alert-info">
+                <!-- {{ row.quantity_approved }} -->
+                {{ row.quantity_approved }} {{ row.item.package_type }}
+
               </div>
-            </div>
-          </div>
-          <div slot="action" slot-scope="props">
-            <span>
-              <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
+              <div slot="expiry_date" slot-scope="{row}" :class="'alert alert-'+ expiryFlag(moment(row.expiry_date).format('x'))">
+                <span>
+                  {{ moment(row.expiry_date).calendar() }}
+                </span>
+              </div>
+              <div slot="created_at" slot-scope="{row}">
+                {{ moment(row.created_at).calendar() }}
 
-              <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)"><i class="fa fa-check" /> </a>
-            </span>
-          </div>
+              </div>
+              <div slot="confirmer.name" slot-scope="{row}">
+                <div :id="row.id">
+                  <div v-if="row.confirmed_by == null">
+                    <a v-if="checkPermission(['audit confirm actions']) && row.stocked_by !== userId" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(row.id);"><i class="fa fa-check" /> </a>
+                  </div>
+                  <div v-else>
+                    {{ row.confirmer.name }}
+                  </div>
+                </div>
+              </div>
+              <div slot="action" slot-scope="props">
+                <span>
+                  <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
 
-        </v-client-table>
+                  <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)"><i class="fa fa-check" /> </a>
+                </span>
+              </div>
+
+            </v-client-table>
+          </el-tab-pane>
+          <el-tab-pane label="Approved" name="approved">
+            <approved-returned-products />
+          </el-tab-pane>
+        </el-tabs>
 
       </div>
       <el-dialog
@@ -92,6 +100,7 @@ import moment from 'moment';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 
+import ApprovedReturnedProducts from './ApprovedReturnedProducts';
 import AddNewReturns from './partials/AddNewReturns';
 import EditReturns from './partials/EditReturns';
 import Resource from '@/api/resource';
@@ -103,14 +112,15 @@ const approveReturnedProducts = new Resource('stock/returns/approve-products');
 const confirmItemReturned = new Resource('audit/confirm/returned-products');
 export default {
   name: 'Returns',
-  components: { AddNewReturns, EditReturns },
+  components: { ApprovedReturnedProducts, AddNewReturns, EditReturns },
   data() {
     return {
+      activeActivity: 'unapproved',
       load: false,
       dialogVisible: false,
       warehouses: [],
       returned_products: [],
-      columns: ['action', 'confirmer.name', 'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'expiry_date', 'reason', 'date_returned'],
+      columns: ['action', 'confirmer.name', 'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {

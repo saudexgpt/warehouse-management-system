@@ -14,9 +14,9 @@
           <h4 class="box-title">Generate Waybill</h4>
         </div>
         <div class="box-body">
-          <el-form ref="form" :model="form" label-width="120px">
-            <el-row :gutter="5" class="padded no-print">
-              <el-col :xs="24" :sm="12" :md="12">
+          <el-form ref="form" v-model="form" label-width="120px">
+            <el-row :gutter="10" class="padded">
+              <el-col v-loading="loadInvoices" :xs="24" :sm="24" :md="8">
                 <label for="">Select Warehouse</label>
                 <el-select
                   v-model="form.warehouse_id"
@@ -32,43 +32,26 @@
                     :label="warehouse.name"
                   />
                 </el-select>
-              </el-col>
-              <el-col :xs="24" :sm="12" :md="12">
-                <label for="">Search Invoice</label>
+                <label for="">Search Invoice</label><br>
                 <small>(Only confirmed invoice by auditors will be displayed for waybilling)</small>
-                <el-select
-                  v-model="selected_invoice"
-                  placeholder="Select Invoice"
-                  filterable
-                  class="span"
-                  multiple
-                  collapse-tags
-                  @input="displayInvoiceitems()"
-                >
-                  <el-option
-                    v-for="(invoice, invoice_index) in invoices"
-                    :key="invoice_index"
-                    :value="invoice_index"
-                    :label="
-                      invoice.customer
-                        ? invoice.customer.user.name +
-                          '[ ' +
-                          invoice.invoice_number +
-                          '] '
-                        : invoice.invoice_number
-                    "
-                  />
-                </el-select>
+                <el-input v-model="searchString" placeholder="Search Invoice" @input="searchInvoice">
+                  <el-button slot="append" icon="el-icon-search" @click="searchInvoice" />
+                </el-input>
+                <div style="height: 450px; overflow: auto; background: #f0f0f0; margin-top: 10px;">
+                  <div>
+                    <el-checkbox-group v-model="selected_invoice" @change="displayInvoiceitems">
+                      <el-checkbox
+                        v-for="(invoice, invoice_index) in filtered_invoices"
+                        :key="invoice_index"
+                        :label="invoice"
+                        border
+                      >{{ (invoice.customer) ? invoice.invoice_number + ' [' + invoice.customer.user.name + '] '
+                        : invoice.invoice_number }}</el-checkbox>
+                    </el-checkbox-group>
+                  </div>
+                </div>
               </el-col>
-              <!-- <el-col :xs="24" :sm="2" :md="2">
-                <br>
-                <el-button type="success" @click="displayInvoiceitems()"><i class="el-icon-plus" />
-                  Generate Waybill
-                </el-button>
-              </el-col> -->
-            </el-row>
-            <el-row :gutter="2" class="padded">
-              <el-col v-loading="loading">
+              <el-col v-loading="loading" :xs="24" :sm="24" :md="16">
                 <el-tabs>
                   <el-tab-pane label="Draft For Loading">
                     <!-- <keep-alive> -->
@@ -302,6 +285,7 @@ export default {
         invoice_ids: [],
       },
       invoices: [],
+      filtered_invoices: [],
       selected_invoice: [],
       invoice_items: [],
       waybill_items: [],
@@ -317,12 +301,14 @@ export default {
         ],
       },
       loading: false,
+      loadInvoices: false,
       loadBatch: false,
       disabled: false,
       showBatchSelection: false,
       selected_index: null,
       selected_invoice_item: null,
       total_supplied: 0,
+      searchString: '',
     };
   },
   computed: {
@@ -331,12 +317,30 @@ export default {
     },
   },
   created() {
+    // this.fetchUndeliveredInvoices();
     this.fetchNecessaryParams();
   },
   methods: {
     // moment,
     checkPermission,
     checkRole,
+    searchInvoice(str) {
+      const app = this;
+      const query = str.toLowerCase();
+      const invoices = app.invoices;
+      // var new_filter = [];
+      // eslint-disable-next-line no-array-constructor
+      // const new_filter = new Array();
+      if (query && query.trim() !== '') {
+        const new_filter = invoices.filter(invoice => invoice.invoice_number.toLowerCase().indexOf(query) > -1);
+
+        this.filtered_invoices = new_filter;
+        // });
+      } else {
+        // if nothing is typed, restore the full list
+        this.filtered_invoices = app.invoices;
+      }
+    },
     selectProductBatch(index, invoice_item) {
       const app = this;
       app.showBatchSelection = true;
@@ -397,12 +401,13 @@ export default {
     fetchUndeliveredInvoices(index) {
       const app = this;
       var form = app.form;
-      app.loading = true;
+      app.loadInvoices = true;
       // const loading = unDeliveredInvoices.loaderShow();
       unDeliveredInvoices.list(form).then((response) => {
         app.invoices = response.invoices;
+        app.filtered_invoices = app.invoices;
         app.form.waybill_no = response.waybill_no;
-        app.loading = false;
+        app.loadInvoices = false;
         // loading.hide();
         // app.fetchAvailableDrivers();
       });
@@ -411,18 +416,15 @@ export default {
       const app = this;
       app.$store.dispatch('app/setNecessaryParams');
     },
-    displayInvoiceitems() {
+    displayInvoiceitems(value) {
       const app = this;
-      var selected_invoice = app.selected_invoice;
+      var selected_invoice = value;
       var invoice_items = [];
       var invoice_ids = [];
-      // app.loading = true;
-      for (let index = 0; index < selected_invoice.length; index++) {
-        const element = selected_invoice[index];
-        invoice_items.push(...app.invoices[element].invoice_items);
-        invoice_ids.push(app.invoices[element].id);
-      }
-      // console.log(invoice_items);
+      selected_invoice.forEach(invoice => {
+        invoice_items.push(...invoice.invoice_items);
+        invoice_ids.push(invoice.id);
+      });
       invoice_items.forEach((invoice_item) => {
         var total_batch_balance = 0;
         var reserved_for_supply = 0;

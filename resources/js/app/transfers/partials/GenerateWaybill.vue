@@ -1,12 +1,7 @@
 <template>
   <div class="app-container">
     <span v-if="params">
-      <router-link
-        v-if="checkPermission(['manage waybill'])"
-        :to="{ name: 'Waybills' }"
-        class="btn btn-default no-print"
-      >
-        View Waybills</router-link>
+      <router-link v-if="checkPermission(['manage waybill'])" :to="{name:'TransferWaybills'}" class="btn btn-default"> View Waybills</router-link>
     </span>
     <div>
       <div v-if="params" class="box">

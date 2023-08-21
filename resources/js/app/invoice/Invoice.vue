@@ -7,7 +7,7 @@
         class="btn btn-default"
       >Create New Invoice</router-link>
       <el-row :gutter="10">
-        <el-col :xs="24" :sm="8" :md="8">
+        <!-- <el-col :xs="24" :sm="8" :md="8">
           <label for>Select Warehouse</label>
           <el-select
             v-model="selected_warehouse"
@@ -24,7 +24,7 @@
               :label="warehouse.name"
             />
           </el-select>
-        </el-col>
+        </el-col> -->
         <el-col :xs="24" :sm="6" :md="6">
           <label for>Filter by:</label>
           <el-select
@@ -312,6 +312,7 @@ export default {
   },
   mounted() {
     this.fetchNecessaryParams();
+    this.getInvoices();
   },
   beforeDestroy() {},
   methods: {
@@ -394,8 +395,8 @@ export default {
       }
       app.table_title =
         app.form.status.toUpperCase() +
-        ' Invoices  in ' +
-        app.selected_warehouse.name +
+        ' Invoices ' +
+        // app.selected_warehouse.name +
         extra_tableTitle;
       fetchInvoices
         .list(param)

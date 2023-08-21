@@ -20,6 +20,16 @@ class ReturnsController extends Controller
         // ->select('*',\DB::raw('SUM(quantity) as total_quantity'))->get();
         return response()->json(compact('returned_products'));
     }
+    public function approvedReturnedProducts(Request $request)
+    {
+        //
+        $warehouse_id = $request->warehouse_id;
+        $returned_products = ReturnedProduct::with(['warehouse', 'item', 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->whereRaw('quantity = quantity_approved')->orderBy('id', 'DESC')->paginate($request->limit);
+
+        // $items_in_stock = ItemStock::with(['warehouse', 'item'])->groupBy('item_id')->having('warehouse_id', $warehouse_id)
+        // ->select('*',\DB::raw('SUM(quantity) as total_quantity'))->get();
+        return response()->json(compact('returned_products'));
+    }
     public function store(Request $request)
     {
         //

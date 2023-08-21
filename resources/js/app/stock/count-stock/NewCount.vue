@@ -1,96 +1,185 @@
 <template>
   <div class="app-container">
-    <div>
-      <el-row :gutter="10">
-        <el-col :xs="24" :sm="12" :md="12">
-          <label for="">Select Warehouse</label>
-          <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" class="span" filterable>
-            <el-option v-for="(warehouse, index) in params.warehouses" :key="index" :value="warehouse.id" :label="warehouse.name" />
+    <div class="box">
+      <div class="box-header">
+        <h4 class="box-title">Count Stock</h4>
+      </div>
+      <div v-loading="load" class="box-body">
+        <aside>
+          <el-form ref="form" :model="form" label-width="120px">
+            <el-row :gutter="5" class="padded">
+              <el-col :xs="24" :sm="12" :md="12">
+                <label for="">Select Warehouse</label>
+                <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable class="span">
+                  <el-option v-for="(warehouse, index) in params.warehouses" :key="index" :value="warehouse.id" :label="warehouse.name" :disabled="warehouse.id === 7" />
 
-          </el-select>
+                </el-select>
 
-        </el-col>
-        <el-col :xs="24" :sm="10" :md="10">
-          <label for="">Select Date</label><br>
-          <el-date-picker
-            v-model="form.date"
-            type="month"
-            placeholder="Pick a month"
-            format="yyyy-MM"
-            value-format="yyyy-MM"
-            :picker-options="pickerOptions"
-          />
-          <el-button type="primary" round @click="prepareStockCount()">Continue</el-button>
+              <!-- <label for="">Select Product</label>
+                <el-select v-model="form.item_id" placeholder="Select Product" filterable class="span">
+                  <el-option v-for="(item, index) in params.items" :key="index" :value="item.id" :label="item.name" />
 
-        </el-col>
-      </el-row>
-      <br>
+                </el-select> -->
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="12">
+                <label for="">Select Date</label><br>
+                <el-date-picker
+                  v-model="form.date"
+                  type="date"
+                  placeholder="Pick a date"
+                  format="yyyy-MM-dd"
+                  value-format="yyyy-MM-dd"
+                  :picker-options="pickerOptions"
+                />
 
-      <v-client-table
-        v-model="stock_counts"
-        v-loading="load"
-        element-loading-text="Preparing products for stock count..."
-        :columns="columns"
-        :options="options"
-      >
-        <div slot="count_quantity" slot-scope="{row}">
-          <span>
-            <input v-model="row.count_quantity" class="form-control" type="number" placeholder="Enter quantity of products counted" @input="convertQuantity(row, $event)" @change="countStock(row.id, $event)">
-          </span>
-          <code :id="row.id" v-html="showItemsInCartons(row.count_quantity, row.item.quantity_per_carton, row.item.package_type)" />
-        </div>
-      </v-client-table>
+              </el-col>
+            </el-row>
+          </el-form>
+        </aside>
+        <el-row v-if="form.warehouse_id !== '' && form.date !== ''" :gutter="2" class="padded">
+          <el-col>
+            <div style="overflow: auto">
+              <label for="">Sub Batches</label>
+              <table class="table table-binvoiceed">
+                <thead>
+                  <tr>
+                    <th />
+                    <th>Product</th>
+                    <th>Batch No.</th>
+                    <!-- <th>GRN</th> -->
+                    <th>Quantity</th>
+                    <th>Expiry Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(sub_batch, index) in sub_batches" :key="index">
+                    <td>
+                      <span>
+                        <a v-if="sub_batches.length > 1" class="btn btn-danger btn-flat fa fa-trash" @click="removeLine(index)" />
+                        <a class="btn btn-info btn-flat fa fa-plus" @click="addLine()" />
+                      </span>
+                    </td>
+                    <td>
+                      <el-select
+                        v-model="sub_batch.item"
+                        value-key="id"
+                        placeholder="Select Product"
+                        filterable
+                        class="span"
+                        @input="fetchItemDetails(index)"
+                      >
+                        <el-option
+                          v-for="(item, item_index) in params.items"
+                          :key="item_index"
+                          :value="item"
+                          :label="item.name"
+                        />
+
+                      </el-select>
+                    </td>
+                    <td>
+                      <el-input v-model="sub_batch.batch_no" type="text" outline placeholder="Batch No." />
+                    </td>
+                    <!-- <td>
+                      <el-input v-model="sub_batch.goods_received_note" type="text" outline placeholder="GRN" />
+                    </td> -->
+                    <td>
+                      <el-input v-model="sub_batch.quantity" type="number" outline placeholder="Quantity" min="1">
+                        <span slot="append">{{ sub_batch.type }}</span>
+                      </el-input>
+                      <br><code v-html="showItemsInCartons(sub_batch.quantity, sub_batch.quantity_per_carton, sub_batch.type)" />
+                    </td>
+                    <td>
+                      <el-date-picker v-model="sub_batch.expiry_date" type="date" outline format="yyyy/MM/dd" value-format="yyyy-MM-dd" />
+                    </td>
+                  </tr>
+                  <tr v-if="fill_fields_error">
+                    <td colspan="6"><label class="label label-danger">Please fill all empty fields before adding another row</label></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </el-col>
+          <el-col :xs="24" :sm="24" :md="24">
+            <el-button type="success" @click="addProductToStock"><i class="el-icon-upload" />
+              Submit
+            </el-button>
+          </el-col>
+        </el-row>
+      </div>
     </div>
   </div>
 </template>
+
 <script>
 import moment from 'moment';
-import checkPermission from '@/utils/permission';
-import showItemsInCartons from '@/utils/functions';
-import checkRole from '@/utils/role';
 import Resource from '@/api/resource';
+import showItemsInCartons from '@/utils/functions';
+
 export default {
-  name: 'NewCount',
+  name: 'AddNewProduct',
+  components: { },
+  props: {
+    itemsInStock: {
+      type: Array,
+      default: () => ([]),
+    },
+
+    page: {
+      type: Object,
+      default: () => ({
+        option: 'add_new',
+      }),
+    },
+
+  },
   data() {
     return {
       pickerOptions: {
         disabledDate(date) {
           var d = new Date(); // today
-          // d.setDate(d.getMonth());
-          const month1 = date.getMonth();
-          const month2 = d.getMonth();
-          return month1 !== month2;
+          const pastDate = d.setDate(d.getDate());
+          return date.getTime() > pastDate;
         },
       },
-      stock_counts: [],
-      columns: ['item.name', 'count_quantity'],
-
-      options: {
-        headings: {
-          'item.name': 'Product',
-          count_quantity: 'Count Quantity',
-
-          // id: 'S/N',
-        },
-        pagination: {
-          dropdown: true,
-          chunk: 10,
-        },
-        filterByColumn: true,
-        texts: {
-          filter: 'Search:',
-        },
-        // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['item.name'],
-        filterable: ['item.name'],
-      },
-      page: {
-        option: 'list',
-      },
+      bulkUpload: false,
+      fill_fields_error: false,
       form: {
         warehouse_id: '',
-        date: new Date(),
+        date: '',
+        item_id: '',
+        quantity: '',
+        goods_received_note: '',
+        batch_no: '',
+        sub_batches: [
+          {
+            quantity: '',
+            batch_no: '',
+            item_id: '',
+            expiry_date: '',
+            goods_received_note: null,
+          },
+        ],
+
       },
+      empty_form: {
+        warehouse_id: '',
+        item_id: '',
+        quantity: '',
+        goods_received_note: '',
+        batch_no: '',
+        sub_batches: [
+          {
+            quantity: '',
+            batch_no: '',
+            item_id: '',
+            expiry_date: '',
+            goods_received_note: null,
+          },
+        ],
+
+      },
+      sub_batches: [],
       load: false,
 
     };
@@ -100,49 +189,88 @@ export default {
       return this.$store.getters.params;
     },
   },
+  watch: {
+    sub_batches() {
+      this.blockRemoval = this.sub_batches.length <= 1;
+    },
+
+  },
+  mounted() {
+    this.addLine();
+  },
   methods: {
     moment,
-    checkPermission,
-    checkRole,
     showItemsInCartons,
-    prepareStockCount() {
+    fetchItemDetails(index) {
       const app = this;
-      app.load = true;
+      const item = app.sub_batches[index].item;
+      app.sub_batches[index].item_id = item.id;
+      app.sub_batches[index].type = item.package_type;
+      app.sub_batches[index].quantity_per_carton = item.quantity_per_carton;
+    },
+    isRowEmpty() {
+      const checkEmptyLines = this.sub_batches.filter(detail => detail.quantity === '' || detail.batch_no === '' || detail.expiry_date === '' || detail.item_id === ''/* || detail.goods_received_note === ''*/);
 
-      const param = app.form;
-      const stockCountResource = new Resource('stock/count/prepare');
-      stockCountResource.store(param)
+      if (checkEmptyLines.length) {
+        return true;
+      }
+      return false;
+    },
+    addLine() {
+      this.fill_fields_error = false;
+      if (this.isRowEmpty()) {
+        this.fill_fields_error = true;
+        return;
+      } else {
+        this.sub_batches.push({
+          item: null,
+          item_id: '',
+          quantity: '',
+          batch_no: '',
+          expiry_date: '',
+          goods_received_note: '',
+        });
+      }
+    },
+    removeLine(detailId) {
+      this.fill_fields_error = false;
+      if (!this.blockRemoval) {
+        this.sub_batches.splice(detailId, 1);
+      }
+    },
+    addProductToStock() {
+      const app = this;
+      if (this.isRowEmpty()) {
+        app.$alert('Please fill all empty fields before you submit');
+        return;
+      }
+      app.load = true;
+      var form = app.form;
+      // form.expiry_date = app.moment(form.expiry_date).format('LLL');
+      form.sub_batches = app.sub_batches;
+
+      const createProduct = new Resource('stock/count/save');
+      createProduct.store(form)
         .then(response => {
-          app.stock_counts = response.stock_counts;
+          app.form = app.empty_form;
+          app.sub_batches = [{
+            quantity: '',
+            batch_no: '',
+            expiry_date: '',
+            goods_received_note: null,
+          }];
+          app.$message({ message: 'Action Successful!', type: 'success' });
+          app.itemsInStock.push(response.item_in_stock);
+          app.$emit('update', response);
           app.load = false;
         })
         .catch(error => {
           app.load = false;
-          console.log(error.message);
+          alert(error.message);
         });
     },
-    convertQuantity(row, event) {
-      const app = this;
-      const quantity = event.target.value;
-      const conversion = app.showItemsInCartons(quantity, row.item.quantity_per_carton, row.item.package_type);
-      document.getElementById(row.id).innerHTML = conversion;
-    },
-    countStock(id, event) {
-      const quantity = event.target.value;
-      if (quantity !== null && quantity !== 'null') {
-        const param = { count_quantity: quantity };
-        const stockCountResource = new Resource('stock/count/save-count');
-        stockCountResource.update(id, param)
-          .then(response => {
-          // app.stock_counts = response.stock_counts;
-          // app.load = false;
-          })
-          .catch(error => {
-          // app.load = false;
-            console.log(error.message);
-          });
-      }
-    },
+
   },
 };
 </script>
+

@@ -50,7 +50,7 @@
               <td>{{ waybill_item.invoice.invoice_number }}</td>
               <td>{{ waybill_item.item.name }}</td>
               <!-- <td>{{ waybill_item.item.description }}</td> -->
-              <td>{{ waybill_item.quantity+' '+waybill_item.type }}<br>
+              <td>{{ waybill_item.remitted+' '+waybill_item.type }}<br>
                 <code v-html="showItemsInCartons(waybill_item.quantity, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
               </td>
               <td>

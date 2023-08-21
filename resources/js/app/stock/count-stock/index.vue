@@ -15,10 +15,10 @@
           <label for="">Select Date</label><br>
           <el-date-picker
             v-model="form.date"
-            type="month"
+            type="date"
             placeholder="Pick a month"
-            format="yyyy-MM"
-            value-format="yyyy-MM"
+            format="yyyy-MM-dd"
+            value-format="yyyy-MM-dd"
             :picker-options="pickerOptions"
           />
           <el-button type="primary" round @click="fetchStockCount()">Fetch</el-button>
@@ -56,7 +56,7 @@
           </div>
         </div>
         <div slot="created_at" slot-scope="{row}">
-          {{ moment(row.created_at).fromNow() }}
+          {{ moment(row.created_at).format('ll') }}
         </div>
         <div slot="action" slot-scope="props">
           <div v-if="props.row.is_warehouse_transfered === 0">
@@ -85,12 +85,12 @@ export default {
       pickerOptions: {
         disabledDate(date) {
           var d = new Date(); // today
-          d.setDate(d.getDate()); // one year from now
-          return date > d;
+          const pastDate = d.setDate(d.getDate());
+          return date.getTime() > pastDate;
         },
       },
       stock_counts: [],
-      columns: ['action', 'item.name', 'stock_balance', 'count_quantity', 'difference', 'date', /* 'batch_no', 'expiry_date', */'created_at', 'counter.name'],
+      columns: ['action', 'item.name', 'count_quantity', /* 'stock_balance', 'difference', */'date', 'batch_no', 'expiry_date', 'created_at', 'counter.name'],
 
       options: {
         headings: {

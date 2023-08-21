@@ -365,7 +365,7 @@ class InvoicesController extends Controller
             });
         }
         $user = $this->getUser();
-        $warehouse_id = $request->warehouse_id;
+        // $warehouse_id = $request->warehouse_id;
         $invoices = [];
         if (isset($request->from, $request->to) && $request->from != '' && $request->from != '') {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
@@ -379,7 +379,7 @@ class InvoicesController extends Controller
         $invoices = $invoiceQuery->with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer',  'invoiceItems.item', 'histories' => function ($q) {
             $q->orderBy('id', 'DESC');
         }])
-            ->where(['warehouse_id' => $warehouse_id, 'status' => $status])
+            ->where([/*'warehouse_id' => $warehouse_id,*/'status' => $status])
             ->orderBy('updated_at', 'DESC')
             ->paginate($limit);
 
@@ -389,7 +389,7 @@ class InvoicesController extends Controller
     {
         //
         $user = $this->getUser();
-        $warehouse_id = $request->warehouse_id;
+        $warehouse_id = (isset($request->warehouse_id) && $request->warehouse_id != '') ? $request->warehouse_id : 1;
         $waybill_no = $this->nextReceiptNo('waybill');
         /*$invoices = Invoice::get();
         foreach ($invoices as $invoice) {
@@ -417,7 +417,7 @@ class InvoicesController extends Controller
         ])
             ->where('warehouse_id', $warehouse_id)
             ->where('status', '!=', 'delivered')
-            ->where('full_waybill_generated', '0')
+            // ->where('full_waybill_generated', '0')
             ->whereRaw('confirmed_by IS NOT NULL')
             ->orderBy('id', 'DESC')
             ->get();
@@ -921,10 +921,10 @@ class InvoicesController extends Controller
         $invoice_numbers = '';
         foreach ($invoice_ids as $invoice_id) {
             $invoice = Invoice::find($invoice_id);
-            $invoice->full_waybill_generated = '1';
-            if (in_array($invoice_id, $partial_waybill_generated)) {
+            $invoice->full_waybill_generated = '0';
+            if (!in_array($invoice_id, $partial_waybill_generated)) {
 
-                $invoice->full_waybill_generated = '0';
+                $invoice->full_waybill_generated = '1';
             }
             $invoice->save();
             $invoice_numbers = $invoice_numbers . $invoice->invoice_number . ', ';
@@ -999,7 +999,7 @@ class InvoicesController extends Controller
             $reserved_batches = $waybill_item->batches;
             $batches =  new Collection();
             foreach ($reserved_batches as $reserved_batch) {
-                $old_supply = $reserved_batch->old_supply_quantity;
+                $old_supply = (int) $reserved_batch->old_supply_quantity;
                 $new_supply_quantity = $reserved_batch->supply_quantity;
                 $batch_no = $reserved_batch->batch_no;
                 $expiry_date = $reserved_batch->expiry_date;
@@ -1064,6 +1064,8 @@ class InvoicesController extends Controller
             $item_in_stock_obj->sendItemInStockForDelivery($waybill_items_ids);
             // let's update the invoice items for this waybill
         }
+        // we want to automatically change the status to delivered once the waybill has been moved to transtit
+        $status = 'delivered';
         // update waybill status
         $waybill->status = $status;
         $waybill->save();
@@ -1086,9 +1088,12 @@ class InvoicesController extends Controller
 
                 $invoice->status = $status;
                 // check for partial supplies
-                $incomplete_invoice_item = $invoice->invoiceItems()->whereRaw('quantity - quantity_supplied >')->get();
+                $incomplete_invoice_item = $invoice->invoiceItems()->whereRaw('quantity - quantity_supplied > 0')->get();
                 if ($incomplete_invoice_item->isNotEmpty()) {
                     $invoice->status = 'partially supplied';
+                    $invoice->full_waybill_generated = '0';
+
+                    $invoice->status = 'pending';
                 }
                 $invoice->save();
                 //log this action to invoice history
