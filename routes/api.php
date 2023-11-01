@@ -126,6 +126,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->get('all-partially-treated-invoices', 'ReportsController@allPartiallyTreatedInvoices');
 
             $router->get('all-invoice-raised', 'ReportsController@allInvoicesRaised');
+            $router->get('all-waybilled-invoices', 'ReportsController@allWaybilledInvoices');
         });
         $router->get('audit-trails', 'ReportsController@auditTrails')->middleware('permission:view reports');
         $router->get('notification/mark-as-read', 'ReportsController@markAsRead');
@@ -174,6 +175,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->post('store', 'InvoicesController@store')->middleware('permission:create invoice');
 
             $router->post('bulk-upload', 'InvoicesController@bulkUpload')->middleware('permission:create invoice');
+
+            $router->get('edit/{invoice}', 'InvoicesController@edit')->middleware('permission:update invoice');
             $router->put('update/{invoice}', 'InvoicesController@update')->middleware('permission:update invoice');
 
             $router->delete('delete/{invoice}', 'InvoicesController@destroy')->middleware('permission:delete invoice');
@@ -188,6 +191,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->get('show/{waybill}', 'InvoicesController@showWaybill')->middleware('permission:view waybill|manage waybill');
 
             $router->get('undelivered-invoices', 'InvoicesController@unDeliveredInvoices')->middleware('permission:generate waybill|manage waybill');
+            $router->get('undelivered-invoices-search', 'InvoicesController@unDeliveredInvoicesSearch')->middleware('permission:generate waybill|manage waybill');
+            $router->get('waybill-selected-invoices', 'InvoicesController@waybillSelectedInvoices')->middleware('permission:generate waybill|manage waybill');
 
             $router->get('expenses', 'InvoicesController@waybillExpenses')->middleware('permission:manage waybill cost');
 
@@ -395,14 +400,16 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
     ////////////////////////////////////LOGISTICS/////////////////////////////////////////////
     $router->group(['prefix' => 'logistics', 'namespace' => 'Logistics'], function () use ($router) {
         $router->group(['prefix' => 'drivers'], function () use ($router) {
+
+            $router->get('/', 'DriversController@index');
             $router->group(['middleware' => 'permission:manage drivers'], function () use ($router) {
-                $router->get('/', 'DriversController@index');
                 $router->delete('delete/{driver}', 'DriversController@destroy');
             });
         });
         $router->group(['prefix' => 'vehicles'], function () use ($router) {
+
+            $router->get('/', 'VehiclesController@index');
             $router->group(['middleware' => 'permission:manage vehicles'], function () use ($router) {
-                $router->get('/', 'VehiclesController@index');
                 $router->post('store', 'VehiclesController@store');
                 $router->put('update/{vehicle}', 'VehiclesController@update');
                 $router->delete('delete/{vehicle}', 'VehiclesController@destroy');
@@ -413,16 +420,18 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             });
         });
         $router->group(['prefix' => 'vehicle-types'], function () use ($router) {
+
+            $router->get('/', 'VehicleTypesController@index');
             $router->group(['middleware' => 'permission:manage vehicles'], function () use ($router) {
-                $router->get('/', 'VehicleTypesController@index');
                 $router->post('store', 'VehicleTypesController@store');
                 $router->put('update/{vehicleType}', 'VehicleTypesController@update');
                 $router->delete('delete/{vehicleType}', 'VehicleTypesController@destroy');
             });
         });
         $router->group(['prefix' => 'vehicle-expenses'], function () use ($router) {
+
+            $router->get('/', 'VehicleExpensesController@index');
             $router->group(['middleware' => 'permission:manage vehicle expenses'], function () use ($router) {
-                $router->get('/', 'VehicleExpensesController@index');
                 $router->post('store', 'VehicleExpensesController@store');
                 $router->put('approve/{vehicleExpense}', 'VehicleExpensesController@approval')->middleware('permission:approve vehicle expenses');
                 $router->post('add-automobile-engineer', 'VehicleExpensesController@addAutomobileEngineer');
@@ -431,8 +440,9 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             });
         });
         $router->group(['prefix' => 'vehicle-conditions'], function () use ($router) {
+
+            $router->get('/', 'VehicleConditionsController@index');
             $router->group(['middleware' => 'permission:manage vehicle conditions'], function () use ($router) {
-                $router->get('/', 'VehicleConditionsController@index');
                 $router->post('store', 'VehicleConditionsController@store');
             });
         });

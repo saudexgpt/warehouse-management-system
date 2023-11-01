@@ -59,13 +59,13 @@
                 format="yyyy/MM/dd"
                 value-format="yyyy-MM-dd"
               />
-              <!-- <label for="">Quantity</label>
+              <label v-if="itemInStock.confirmed_by === null">Quantity</label>
               <el-input
+                v-if="itemInStock.confirmed_by === null"
                 v-model="form.quantity"
                 placeholder="Quantity"
                 class="span"
-                @change="checkUpdatedQuantity()"
-              /> -->
+              />
             </el-col>
           </el-row>
           <el-row :gutter="2" class="padded">
@@ -95,10 +95,6 @@ export default {
     params: {
       type: Object,
       default: () => ({}),
-    },
-    itemsInStock: {
-      type: Array,
-      default: () => [],
     },
     itemInStock: {
       type: Object,
@@ -132,30 +128,30 @@ export default {
     moment,
     editProduct() {
       const app = this;
-      const itemInStock = app.itemInStock;
-      if (app.form.quantity >= app.initial_stock || itemInStock.balance === app.initial_stock) {
-        const load = updateProduct.loaderShow();
-        var form = app.form;
-        form.expiry_date = app.moment(form.expiry_date).format('LLL');
-        updateProduct
-          .update(form.id, form)
-          .then(response => {
-            app.$message({
-              message: 'Product Updated Successfully!!!',
-              type: 'success',
-            });
-
-            app.$emit('update', response.item_in_stock);
-            app.page.option = 'list'; // return to list of items
-            load.hide();
-          })
-          .catch(error => {
-            load.hide();
-            alert(error.message);
+      // const itemInStock = app.itemInStock;
+      // if (app.form.quantity >= app.initial_stock || itemInStock.balance === app.initial_stock) {
+      const load = updateProduct.loaderShow();
+      var form = app.form;
+      form.expiry_date = app.moment(form.expiry_date).format('LLL');
+      updateProduct
+        .update(form.id, form)
+        .then(response => {
+          app.$message({
+            message: 'Product Updated Successfully!!!',
+            type: 'success',
           });
-      } else {
-        app.$alert('The new quantity cannot be less than ' + app.initial_stock);
-      }
+
+          app.$emit('update', response.item_in_stock);
+          app.page.option = 'list'; // return to list of items
+          load.hide();
+        })
+        .catch(error => {
+          load.hide();
+          alert(error.message);
+        });
+      // } else {
+      //   app.$alert('The new quantity cannot be less than ' + app.initial_stock);
+      // }
     },
     checkUpdatedQuantity() {
       const app = this;

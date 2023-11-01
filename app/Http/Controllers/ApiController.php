@@ -25,8 +25,8 @@ class ApiController extends Controller
             // ->orderBy('users.name')
             ->select('customers.id as id', 'name', 'email', 'phone', 'address', 'type');
         // $customers = $userQuery->get();
-        $customers = $userQuery->lazy();
-        // foreach ($userQuery->lazy() as $flight) {
+        $customers = $userQuery->get();
+        // foreach ($userQuery->get() as $flight) {
         //     $customers[] = $flight;
         // }
         return response()->json(compact('customers'), 200);
@@ -71,12 +71,12 @@ class ApiController extends Controller
             $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '<=', $date_to);
         }
 
-        $invoice_items = $invoiceItemQuery->lazy();
+        $invoice_items = $invoiceItemQuery->get();
         $start_date = date('d-m-Y H:i:s', strtotime($date_from));
         $end_date = date('d-m-Y H:i:s', strtotime($date_to));
         return response()->json(compact('start_date', 'end_date', 'invoice_items'), 200);
     }
-    public function allInvoicesRaised(Request $request)
+    public function allWaybilledInvoices(Request $request)
     {
 
         set_time_limit(0);
@@ -113,16 +113,58 @@ class ApiController extends Controller
         if (isset($request->from, $request->to) && $request->from !== '' && $request->to !== '') {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
-            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '>=', $date_from);
-            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '<=', $date_to);
+            $invoiceItemQuery = $invoiceItemQuery->where('waybill_items.created_at', '>=', $date_from);
+            $invoiceItemQuery = $invoiceItemQuery->where('waybill_items.created_at', '<=', $date_to);
         }
-
-        $invoice_items = $invoiceItemQuery->lazy();
+        $invoiceItemQuery->orderBy('waybill_items.id', 'DESC');
+        $invoice_items = $invoiceItemQuery->get();
         $start_date = date('d-m-Y H:i:s', strtotime($date_from));
         $end_date = date('d-m-Y H:i:s', strtotime($date_to));
         return response()->json(compact('start_date', 'end_date', 'invoice_items'), 200);
     }
+    public function allInvoicesRaised(Request $request)
+    {
 
+        set_time_limit(0);
+        $date_from = Carbon::now()->startOfYear();
+        $date_to = Carbon::now()->endOfYear();
+        $invoiceItemQuery = InvoiceItem::query();
+
+        $invoiceItemQuery = $invoiceItemQuery->join('invoices', 'invoice_items.invoice_id', 'invoices.id')
+            ->join('customers', 'invoices.customer_id', 'customers.id')
+            ->join('users', 'customers.user_id', 'users.id')
+            ->join('items', 'invoice_items.item_id', 'items.id')
+            ->join('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
+            ->selectRaw(
+                'warehouses.name as warehouse,
+                users.name as customer,
+                invoice_number,
+                items.name as product,
+                invoice_items.type as uom,
+                invoice_items.rate,
+                invoice_items.amount,
+                invoice_items.quantity,
+                invoice_items.quantity_supplied,
+                invoice_items.quantity_reversed,
+                invoice_items.created_at'
+            );
+
+        if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.warehouse_id', $request->warehouse_id);
+        }
+
+        if (isset($request->from, $request->to) && $request->from !== '' && $request->to !== '') {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '>=', $date_from);
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '<=', $date_to);
+        }
+        $invoiceItemQuery->orderBy('invoice_items.id', 'DESC');
+        $invoice_items = $invoiceItemQuery->get();
+        $start_date = date('d-m-Y H:i:s', strtotime($date_from));
+        $end_date = date('d-m-Y H:i:s', strtotime($date_to));
+        return response()->json(compact('start_date', 'end_date', 'invoice_items'), 200);
+    }
     // private function getProductTransaction($item_id, $date_from, $date_to, $warehouse_id)
     // {
 
@@ -174,7 +216,7 @@ class ApiController extends Controller
     //         })
     //         ->select(\DB::raw('SUM(quantity) as total_inbound'))
     //         ->orderby('created_at')
-    //         ->lazy();
+    //         ->get();
     //     $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
     //         ->groupBy(['item_stock_sub_batches.item_id'])
     //         ->where('dispatched_products.warehouse_id', $warehouse_id)
@@ -182,7 +224,7 @@ class ApiController extends Controller
     //         ->where('dispatched_products.created_at', '>=', $date_from)
     //         ->where('dispatched_products.created_at', '<=', $date_to)
     //         // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-    //         ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('dispatched_products.created_at')->lazy();
+    //         ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('dispatched_products.created_at')->get();
     //     $outbounds2 = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
     //         ->groupBy(['item_stock_sub_batches.item_id'])
     //         ->where('supply_warehouse_id', $warehouse_id)
@@ -190,7 +232,7 @@ class ApiController extends Controller
     //         ->where('transfer_request_dispatched_products.created_at', '>=', $date_from)
     //         ->where('transfer_request_dispatched_products.created_at', '<=', $date_to)
     //         // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-    //         ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->lazy();
+    //         ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
 
     //     // $expired_product = ExpiredProduct::groupBy(['batch_no'])->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])->where('expiry_date', '>=', $date_from)->where('expiry_date', '<=', $date_to)->select('*', \DB::raw('SUM(quantity) as total_quantity'))->first();
 
@@ -198,7 +240,7 @@ class ApiController extends Controller
     //     $expired_products = ItemStockSubBatch::groupBy(['item_id'])->where(['item_id' => $item_id, 'expired_from' => $warehouse_id])->where('created_at', '>=', $date_from)
     //         ->where('created_at', '<=', $date_to)
     //         ->select(\DB::raw('SUM(quantity) as total_expired'))
-    //         ->lazy();
+    //         ->get();
 
     //     return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_products);
     // }
@@ -317,7 +359,7 @@ class ApiController extends Controller
         //if ($warehouse_id != 'all') {
         $total_stock_till_date->where('warehouse_id', $warehouse_id);
         //}
-        $total_stock_till_date = $total_stock_till_date->select(\DB::raw('SUM(quantity) as total_quantity'))
+        $total_stock_till_date = $total_stock_till_date->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))
             ->first();
 
 
@@ -353,7 +395,7 @@ class ApiController extends Controller
         // if ($warehouse_id != 'all') {
         $previous_expired_product->where('expired_from', $warehouse_id);
         // }
-        $previous_expired_product = $previous_expired_product->select(\DB::raw('SUM(quantity) as total_quantity'))->first();
+        $previous_expired_product = $previous_expired_product->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))->first();
 
 
 
@@ -370,7 +412,7 @@ class ApiController extends Controller
         // if ($warehouse_id != 'all') {
         $inbounds->where('warehouse_id', $warehouse_id);
         // }
-        $inbounds = $inbounds->select(\DB::raw('SUM(quantity) as total_inbound'))
+        $inbounds = $inbounds->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_inbound'))
             ->orderby('created_at')
             ->get();
 
@@ -410,7 +452,7 @@ class ApiController extends Controller
         // if ($warehouse_id != 'all') {
         $expired_products->where('expired_from', $warehouse_id);
         // }
-        $expired_products = $expired_products->select(\DB::raw('SUM(quantity) as total_expired'))
+        $expired_products = $expired_products->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_expired'))
             ->get();
 
         return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_products);
@@ -433,7 +475,7 @@ class ApiController extends Controller
             $items = Item::where('id', $item_id)->paginate(1);
         } else {
 
-            $items = Item::join('categories', 'categories.id', '=', 'items.category_id')->where('categories.name', '!=', 'Promo')->orderBy('items.name')->select('items.id', 'items.name', 'package_type')->lazy();
+            $items = Item::join('categories', 'categories.id', '=', 'items.category_id')->where('categories.name', '!=', 'Promo')->orderBy('items.name')->select('items.id', 'items.name', 'package_type')->get();
         }
 
 
@@ -528,7 +570,8 @@ class ApiController extends Controller
         $items_in_stock_query = ItemStockSubBatch::query();
 
         $items_in_stock_query->join('warehouses', 'warehouses.id', '=', 'item_stock_sub_batches.warehouse_id')
-            ->join('items', 'items.id', '=', 'item_stock_sub_batches.item_id');
+            ->join('items', 'items.id', '=', 'item_stock_sub_batches.item_id')
+            ->groupBy('batch_no', 'warehouse_id');
         if (isset($request->warehouse_id) && $request->warehouse_id != 'all' && $request->warehouse_id != '') {
 
             $warehouse_id = $request->warehouse_id;
@@ -541,34 +584,42 @@ class ApiController extends Controller
         }
         $items_in_stock_query->where('balance', '>', '0')
             ->where('expiry_date', '>=', $date)
+            ->orderBy('warehouse_id')
             ->orderBy('expiry_date')
-            ->select('warehouses.name as warehouse', 'items.name as product', 'batch_no', 'goods_received_note as grn', 'quantity as quantity_in', \DB::raw('(in_transit + supplied) as quantity_out'), 'balance', 'expiry_date', 'item_stock_sub_batches.created_at');
+            ->select('warehouses.name as warehouse', 'items.name as product', 'batch_no', 'goods_received_note as grn', \DB::raw('SUM(quantity) as quantity_in'), \DB::raw('(SUM(in_transit) + SUM(supplied)) as quantity_out'), \DB::raw('SUM(balance) as total_balance'), 'expiry_date', 'item_stock_sub_batches.created_at');
         // $items_in_stock = $items_in_stock_query->get();
-        $items_in_stock = $items_in_stock_query->lazy();
+        $items_in_stock = $items_in_stock_query->get();
         return response()->json(compact('items_in_stock'));
     }
     public function expiredProducts(Request $request)
     {
         $date = date('Y-m-d', strtotime('now'));
+        $date_from = Carbon::now()->startOfYear();
+        $date_to = Carbon::now()->endOfYear();
+        if (isset($request->from, $request->to)) {
+            $date_from = date('Y-m-d', strtotime($request->from));
+            $date_to = date('Y-m-d', strtotime($request->to));
+        }
         $items_in_stock_query = ItemStockSubBatch::query();
 
-        $items_in_stock_query->join('warehouses', 'warehouses.id', '=', 'item_stock_sub_batches.warehouse_id')
+        $items_in_stock_query->join('warehouses', 'warehouses.id', '=', 'item_stock_sub_batches.expired_from')
             ->join('items', 'items.id', '=', 'item_stock_sub_batches.item_id');
-        if (isset($request->warehouse_id) && $request->warehouse_id != 'all' && $request->warehouse_id != 'all') {
-
-            $warehouse_id = $request->warehouse_id;
-            $items_in_stock_query->where('warehouse_id', $warehouse_id);
-        }
+        // if (isset($request->warehouse_id) && $request->warehouse_id != 'all' && $request->warehouse_id != 'all') {
+        //     $warehouse_id = $request->warehouse_id;
+        //     $items_in_stock_query->where('warehouse_id', $warehouse_id);
+        // }
         if (isset($request->item_id) && $request->item_id != 'all' && $request->item_id != '') {
 
             $item_id = $request->item_id;
             $items_in_stock_query->where('item_id', $item_id);
         }
-        $items_in_stock_query->where('balance', '>', '0')
-            ->where('expiry_date', '<', $date)
+        $items_in_stock_query->where('expired_from', '!=', null)
+            ->orderBy('warehouse_id')
             ->orderBy('expiry_date')
-            ->select('warehouses.name as warehouse', 'items.name as product', 'batch_no', 'goods_received_note as grn', 'quantity as quantity_stocked', 'balance as expired_quantity', 'expiry_date', 'item_stock_sub_batches.created_at');
-        $expired_products = $items_in_stock_query->lazy();
+            ->where('item_stock_sub_batches.created_at', '>=', $date_from)
+            ->where('item_stock_sub_batches.created_at', '<=', $date_to)
+            ->select('warehouses.name as warehouse', 'items.name as product', 'batch_no', 'goods_received_note as grn', 'quantity as expired_quantity', 'expiry_date', 'item_stock_sub_batches.created_at');
+        $expired_products = $items_in_stock_query->get();
         return response()->json(compact('expired_products'));
     }
     public function returnedProducts(Request $request)
@@ -583,7 +634,7 @@ class ApiController extends Controller
             $returns_query->where('item_id', $item_id);
         }
         $returns_query->select('warehouses.name as warehouse', 'items.name as product', 'returned_products.*');
-        $returned_products = $returns_query->lazy();
+        $returned_products = $returns_query->get();
         return response()->json(compact('returned_products'));
     }
     public function stockCount(Request $request)
@@ -610,7 +661,7 @@ class ApiController extends Controller
         $count_query->where('date', '>=', $date_from)
             ->where('date', '<=', $date_to);
         $count_query->select('warehouses.name as warehouse', 'items.name as product', 'batch_no', 'expiry_date', 'count_quantity', 'date as count_date', 'stock_counts.created_at');
-        $stoct_counts = $count_query->lazy();
+        $stoct_counts = $count_query->get();
         return response()->json(compact('stoct_counts'));
     }
 }

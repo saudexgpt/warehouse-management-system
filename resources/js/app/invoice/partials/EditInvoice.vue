@@ -13,7 +13,21 @@
                 <p>{{ form.invoice_number }}</p>
                 <!-- <el-input v-model="form.invoice_number" type="text" /> -->
                 <label for>Warehouse</label>
-                <p v-if="form.warehouse">{{ form.warehouse.name }}</p>
+                <!-- <p v-if="form.warehouse">{{ form.warehouse.name }}</p> -->
+                <el-select
+                  v-model="form.warehouse_id"
+                  placeholder="Select Warehouse"
+                  filterable
+                  class="span"
+                  @input="show_product_list = true"
+                >
+                  <el-option
+                    v-for="(warehouse, warehouse_index) in params.warehouses"
+                    :key="warehouse_index"
+                    :value="warehouse.id"
+                    :label="warehouse.name"
+                  />
+                </el-select>
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>Customer</label>
@@ -46,7 +60,7 @@
             <div v-if="invoice.waybill_items.length < 1">
               <el-row :gutter="2" class="padded">
                 <el-col>
-                  <div style="overflow: auto">
+                  <div v-loading="load" style="overflow: auto">
                     <label for>PRODUCT DETAILS</label>
                     <table class="table table-binvoiceed">
                       <thead>
@@ -92,9 +106,9 @@
                             </el-select>
                             <div v-loading="invoice_item.load">
                               <div>
-                                <br><small class="label label-primary">Physical Stock: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
+                                <!-- <br><small class="label label-primary">Physical Stock: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
 
-                                <br><small class="label label-warning">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
+                                <br><small class="label label-warning">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small> -->
 
                                 <br><small class="label label-success">Available for Order: {{ invoice_item.stock_balance }} {{ invoice_item.type }}</small>
                               </div>
@@ -301,6 +315,7 @@ export default {
   },
   data() {
     return {
+      load: false,
       pickerOptions: {
         disabledDate(date) {
           var d = new Date(); // today
@@ -410,17 +425,20 @@ export default {
     showItemsInCartons,
     setInvoiceItemsProps() {
       const app = this;
-      const invoice_items = app.invoice.invoice_items;
-      let index = 0;
-      invoice_items.forEach(item => {
-        item.load = false;
-        item.item_rate = item.rate;
-        item.total_stocked = null;
-        item.total_invoiced_quantity = null;
-        item.stock_balance = null;
-        app.invoice_items.push(item);
-        app.setProductBatches(index, item.warehouse_id, item.item_id);
-        index++;
+      app.load = true;
+      const editInvoiceItems = new Resource('invoice/general/edit');
+      editInvoiceItems.get(app.invoice.id).then((response) => {
+        app.load = false;
+        const invoice_items = response.invoice_items;
+        // let index = 0;
+        invoice_items.forEach(invoice_item => {
+          invoice_item.load = false;
+          invoice_item.item_rate = invoice_item.rate;
+          invoice_item.stock_balance = (invoice_item.item.stocks.length > 0) ? invoice_item.item.stocks[0].total_balance : 0;
+          // app.setProductBatches(index, item.warehouse_id, item.item_id);
+          // index++;
+        });
+        app.invoice_items = invoice_items;
       });
     },
     rowIsEmpty() {
@@ -443,15 +461,16 @@ export default {
     stockIsZero() {
       let isZero = 0;
       this.invoice_items.forEach(item => {
-        const stock_balance = item.stock_balance;
-        const quantity = item.quantity;
+        const stock_balance = parseInt(item.stock_balance);
+        const quantity = parseInt(item.quantity);
         if (stock_balance < 1) {
-          isZero++;
+          isZero += 1;
         }
         if (stock_balance < quantity) {
-          isZero++;
+          isZero += 1;
         }
       });
+      console.log(isZero);
       return isZero;
     },
     addLine(index) {
@@ -499,7 +518,7 @@ export default {
     updateInvoice() {
       const app = this;
       var form = app.form;
-      if (this.stockIsZero() > 0) {
+      if (app.stockIsZero() > 0) {
         app.$alert('Please remove all entries with insufficient stock');
         return;
       }
@@ -514,7 +533,7 @@ export default {
         form.currency_id === '' ||
         form.invoice_number === '';
       if (!checkEmptyFields) {
-        const load = editInvoice.loaderShow();
+        app.load = true;
         form.invoice_items = app.invoice_items;
         editInvoice
           .update(form.id, form)
@@ -525,11 +544,11 @@ export default {
             });
             // app.form = app.empty_form;
             app.$emit('update', response.invoice);
-            load.hide();
+            app.load = false;
             app.page.option = 'list';
           })
           .catch((error) => {
-            load.hide();
+            app.load = false;
             console.log(error.message);
           });
       } else {
@@ -549,12 +568,6 @@ export default {
       app.invoice_items[index].quantity = 1;
 
       app.setProductBatches(index, app.form.warehouse_id, item.id);
-      app.calculateTotal(index);
-
-      this.invoice_items.unshift({});
-      setTimeout(() => {
-        this.invoice_items.splice(0, 1);
-      }, 100);
     },
     setProductBatches(index, warehouse_id, item_id) {
       const app = this;
@@ -578,7 +591,13 @@ export default {
         if (stock_balance < 1) {
           app.disable_submit = true;
         }
+        app.calculateTotal(index);
+        app.invoice_items.unshift({});
+        setTimeout(() => {
+          app.invoice_items.splice(0, 1);
+        }, 100);
       }).catch(error => {
+        app.invoice_items[index].load = false;
         console.log(error);
       });
     },

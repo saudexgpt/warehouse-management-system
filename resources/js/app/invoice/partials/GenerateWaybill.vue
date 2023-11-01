@@ -16,7 +16,7 @@
         <div class="box-body">
           <el-form ref="form" v-model="form" label-width="120px">
             <el-row :gutter="10" class="padded">
-              <el-col v-loading="loadInvoices" :xs="24" :sm="24" :md="8">
+              <el-col :xs="24" :sm="24" :md="8">
                 <label for="">Select Warehouse</label>
                 <el-select
                   v-model="form.warehouse_id"
@@ -35,15 +35,15 @@
                 <label for="">Search Invoice</label><br>
                 <small>(Only confirmed invoice by auditors will be displayed for waybilling)</small>
                 <el-input v-model="searchString" placeholder="Search Invoice" @input="searchInvoice">
-                  <el-button slot="append" icon="el-icon-search" @click="searchInvoice" />
+                  <el-button slot="append" icon="el-icon-search" @click="searchRemoteInvoice(true)" />
                 </el-input>
-                <div style="height: 450px; overflow: auto; background: #f0f0f0; margin-top: 10px;">
+                <div v-loading="loadInvoices" style="height: 450px; overflow: auto; background: #f0f0f0; margin-top: 10px;">
                   <div>
                     <el-checkbox-group v-model="selected_invoice" @change="displayInvoiceitems">
                       <el-checkbox
                         v-for="(invoice, invoice_index) in filtered_invoices"
                         :key="invoice_index"
-                        :label="invoice"
+                        :label="invoice.id"
                         border
                       >{{ (invoice.customer) ? invoice.invoice_number + ' [' + invoice.customer.user.name + '] '
                         : invoice.invoice_number }}</el-checkbox>
@@ -227,10 +227,13 @@
                 </thead>
                 <tbody>
                   <tr v-for="(stock, stock_index) in selected_invoice_item.batches" :key="stock_index">
-                    <td>{{ stock.batch_no }}</td>
-                    <td>{{ stock.expiry_date }}</td>
-                    <td>{{ stock.balance }} {{ selected_invoice_item.item.package_type }}</td>
-                    <td><input v-model="stock.supply_quantity" type="number" @input="setSupplyQuantity(selected_invoice_item, stock_index)"></td>
+                    <template v-if="stock.balance > 0">
+
+                      <td>{{ stock.batch_no }}</td>
+                      <td>{{ stock.expiry_date }}</td>
+                      <td>{{ stock.balance }} {{ selected_invoice_item.item.package_type }}</td>
+                      <td><input v-model="stock.supply_quantity" type="number" @input="setSupplyQuantity(selected_invoice_item, stock_index)"></td>
+                    </template>
                   </tr>
                   <tr>
                     <td colspan="4" align="right">
@@ -327,7 +330,9 @@ export default {
     searchInvoice(str) {
       const app = this;
       const query = str.toLowerCase();
-      const invoices = app.invoices;
+      const key = 'invoice_number';
+
+      const invoices = [...new Map(app.invoices.map(item => [item[key], item])).values()];
       // var new_filter = [];
       // eslint-disable-next-line no-array-constructor
       // const new_filter = new Array();
@@ -335,10 +340,13 @@ export default {
         const new_filter = invoices.filter(invoice => invoice.invoice_number.toLowerCase().indexOf(query) > -1);
 
         this.filtered_invoices = new_filter;
+        if (new_filter.length < 1) {
+          app.searchRemoteInvoice(false);
+        }
         // });
       } else {
         // if nothing is typed, restore the full list
-        this.filtered_invoices = app.invoices;
+        this.filtered_invoices = invoices;
       }
     },
     selectProductBatch(index, invoice_item) {
@@ -404,7 +412,7 @@ export default {
       app.loadInvoices = true;
       // const loading = unDeliveredInvoices.loaderShow();
       unDeliveredInvoices.list(form).then((response) => {
-        app.invoices = response.invoices;
+        app.invoices = response.invoices.data;
         app.filtered_invoices = app.invoices;
         app.form.waybill_no = response.waybill_no;
         app.loadInvoices = false;
@@ -412,11 +420,93 @@ export default {
         // app.fetchAvailableDrivers();
       });
     },
+    searchRemoteInvoice(load) {
+      const app = this;
+      if (app.filtered_invoices.length < 1) {
+        var form = app.form;
+        app.loadInvoices = load;
+        const unDeliveredInvoices = new Resource('invoice/waybill/undelivered-invoices-search');
+        const param = {
+          warehouse_id: form.warehouse_id,
+          invoice_no: app.searchString,
+        };
+        unDeliveredInvoices.list(param).then((response) => {
+          app.invoices = response.invoices.concat(app.invoices);
+
+          const key = 'invoice_number';
+          const filtered_invoices = response.invoices.concat(app.filtered_invoices);
+          app.filtered_invoices = [...new Map(filtered_invoices.map(item => [item[key], item])).values()];
+          app.loadInvoices = false;
+        // loading.hide();
+        // app.fetchAvailableDrivers();
+        });
+      }
+    },
     fetchNecessaryParams() {
       const app = this;
       app.$store.dispatch('app/setNecessaryParams');
     },
+
     displayInvoiceitems(value) {
+      const app = this;
+      app.invoice_items = [];
+      app.form.invoice_ids = [];
+      let invoice_ids = [];
+      const selected_invoice_ids = value;
+      if (selected_invoice_ids.length > 0) {
+        invoice_ids = value;
+        const unDeliveredInvoices = new Resource('invoice/waybill/waybill-selected-invoices');
+        const param = {
+          warehouse_id: app.form.warehouse_id,
+          invoice_ids: selected_invoice_ids,
+        };
+        app.loading = true;
+        unDeliveredInvoices.list(param).then((response) => {
+          const invoice_items = response.invoice_items;
+          invoice_items.forEach((invoice_item) => {
+            var total_batch_balance = 0;
+            var reserved_for_supply = 0;
+            var physical_stock = 0;
+
+            var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied;
+            var stocks = invoice_item.item.stocks;
+            const batches = [];
+            stocks.forEach((stock_batch) => {
+              batches.push({
+                batch_no: stock_batch.batch_no,
+                expiry_date: stock_batch.expiry_date,
+                balance: stock_batch.balance - stock_batch.reserved_for_supply,
+                invoice_item_id: invoice_item.id,
+                supply_quantity: 0,
+
+              });
+              total_batch_balance +=
+                parseInt(stock_batch.balance) -
+                parseInt(stock_batch.reserved_for_supply);
+              reserved_for_supply += parseInt(stock_batch.reserved_for_supply);
+
+              physical_stock += parseInt(stock_batch.balance);
+            });
+            invoice_item.batches = batches;
+            invoice_item.supply_bal = supply_bal;
+            invoice_item.quantity_for_supply = 0;
+            invoice_item.total_supplied = 0;
+            if (supply_bal > total_batch_balance) {
+              invoice_item.supply_bal = total_batch_balance;
+            }
+            invoice_item.total_batch_balance = total_batch_balance;
+            invoice_item.reserved_for_supply = reserved_for_supply;
+            invoice_item.physical_stock = physical_stock;
+          });
+          app.invoice_items = invoice_items;
+          app.form.invoice_ids = invoice_ids;
+          app.loading = false;
+          // loading.hide();
+          // app.fetchAvailableDrivers();
+        });
+      }
+    },
+    displayInvoiceitemsOLD(value) {
       const app = this;
       var selected_invoice = value;
       var invoice_items = [];
@@ -438,6 +528,7 @@ export default {
             batch_no: stock_batch.batch_no,
             expiry_date: stock_batch.expiry_date,
             balance: stock_batch.balance - stock_batch.reserved_for_supply,
+            invoice_item_id: invoice_item.id,
             supply_quantity: 0,
 
           });
@@ -501,59 +592,53 @@ export default {
         this.$alert('You are not permitted to generate empty waybill. Kindly enter at least one product quantity');
         return false;
       }
-      this.$refs['form'].validate((valid) => {
-        if (valid) {
-          this.$confirm(
-            'Check through your selection before submitting. Continue?',
-            'Warning',
-            {
-              confirmButtonText: 'Yes, Submit',
-              cancelButtonText: 'Cancel',
-              type: 'warning',
-            },
-          )
-            .then(() => {
-              // const loading = storeWaybillResource.loaderShow();
-              this.loading = true;
-              this.form.invoice_items = invoice_items;
-              this.disabled = true;
-              storeWaybillResource
-                .store(this.form)
-                .then((response) => {
-                  if (response.status) {
-                    this.error_message = response.status + response.message;
-                  } else {
-                    this.$message({
-                      message: 'Waybill created successfully.',
-                      type: 'success',
-                      duration: 5 * 1000,
-                    });
-                    this.$router.replace('waybill');
-                  }
-                  this.loading = false;
-                })
-                .catch((error) => {
-                  this.loading = false;
-                  console.log(error.message);
-                  this.disabled = false;
-                })
-                .finally(() => {
-                  this.loading = false;
-                  this.creatingWaybill = false;
-                  this.disabled = false;
+
+      this.$confirm(
+        'Check through your selection before submitting. Continue?',
+        'Warning',
+        {
+          confirmButtonText: 'Yes, Submit',
+          cancelButtonText: 'Cancel',
+          type: 'warning',
+        },
+      )
+        .then(() => {
+          // const loading = storeWaybillResource.loaderShow();
+          this.loading = true;
+          this.form.invoice_items = invoice_items;
+          this.disabled = true;
+          storeWaybillResource
+            .store(this.form)
+            .then((response) => {
+              if (response.status) {
+                this.error_message = response.status + response.message;
+              } else {
+                this.$message({
+                  message: 'Waybill created successfully.',
+                  type: 'success',
+                  duration: 5 * 1000,
                 });
+                this.$router.replace('waybill');
+              }
+              this.loading = false;
             })
-            .catch(() => {
-              // this.$message({
-              //   type: 'info',
-              //   message: 'Delete canceled',
-              // });
+            .catch((error) => {
+              this.loading = false;
+              console.log(error.message);
+              this.disabled = false;
+            })
+            .finally(() => {
+              this.loading = false;
+              this.creatingWaybill = false;
+              this.disabled = false;
             });
-        } else {
-          console.log('error submit!!');
-          return false;
-        }
-      });
+        })
+        .catch(() => {
+          // this.$message({
+          //   type: 'info',
+          //   message: 'Delete canceled',
+          // });
+        });
     },
     formatPackageType(type) {
       // var formated_type = type + 's';

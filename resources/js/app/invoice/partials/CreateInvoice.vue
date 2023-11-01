@@ -13,11 +13,11 @@
         <div class="box-header">
           <h4 class="box-title">Create New Invoice</h4>
           <span class="pull-right">
-            <a
+            <!-- <a
               v-if="checkPermission(['create invoice']) && upload_type ==='normal'"
               class="btn btn-success"
               @click="upload_type ='bulk'"
-            >Bulk Upload</a>
+            >Bulk Upload</a> -->
             <a
               v-if="checkPermission(['create invoice']) && upload_type ==='bulk'"
               class="btn btn-primary"
@@ -83,17 +83,18 @@
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>
-                  Select Customer (
+                  Select Customer [Multiple Selection Enabled]
                   <a
                     v-if="checkRole(['admin'])"
                     style="color: brown"
                     @click="dialogFormVisible = true"
-                  >Click to Add New Customer</a>)
+                  >(Click to Add New Customer)</a>
                 </label>
                 <el-select
-                  v-model="form.customer_id"
+                  v-model="form.customer_ids"
                   placeholder="Select Customer"
                   filterable
+                  multiple
                   class="span"
                 >
                   <el-option
@@ -165,9 +166,9 @@
                               />
                             </el-select>
                             <div v-loading="invoice_item.load">
-                              <br><small class="label label-primary">Physical Stock: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
+                              <!-- <br><small class="label label-primary">Physical Stock: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
 
-                              <br><small class="label label-warning">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small>
+                              <br><small class="label label-warning">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small> -->
 
                               <br><small class="label label-success">Available for Order: {{ invoice_item.stock_balance }} {{ invoice_item.type }}</small>
                             </div>
@@ -354,7 +355,7 @@ export default {
       disable_submit: false,
       form: {
         warehouse_id: '',
-        customer_id: '',
+        customer_ids: [],
         invoice_number: '',
         status: 'pending',
         invoice_date: '',
@@ -377,7 +378,7 @@ export default {
       },
       empty_form: {
         warehouse_id: '',
-        customer_id: '',
+        customer_ids: [],
         invoice_number: '',
         status: 'pending',
         invoice_date: '',
@@ -511,8 +512,8 @@ export default {
     stockIsZero() {
       let isZero = 0;
       this.invoice_items.forEach(item => {
-        const stock_balance = item.stock_balance;
-        const quantity = item.quantity;
+        const stock_balance = parseInt(item.stock_balance);
+        const quantity = parseInt(item.quantity);
         if (stock_balance < 1) {
           isZero++;
         }
@@ -535,7 +536,7 @@ export default {
       var form = app.form;
       const checkEmptyFields =
         form.warehouse_id === '' ||
-        form.customer_id === '' ||
+        form.customer_ids.length < 1 ||
         form.invoice_date === '' ||
         form.currency_id === '';
       if (!checkEmptyFields) {

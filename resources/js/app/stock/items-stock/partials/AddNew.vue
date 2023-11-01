@@ -4,7 +4,7 @@
       <h4 class="box-title">Add Product to Stock</h4>
       <span class="pull-right">
         <a class="btn btn-danger" @click="page.option = 'list'"> Back</a>
-        <!-- <a class="btn btn-success" @click="bulkUpload = true"> Bulk Upload</a> -->
+        <a class="btn btn-success" @click="bulkUpload = true"> Bulk Upload</a>
       </span>
     </div>
     <div class="box-body">

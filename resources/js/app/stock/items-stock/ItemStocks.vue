@@ -2,7 +2,7 @@
   <div class="app-container">
     <!-- <item-details v-if="page.option== 'view_details'" :item-in-stock="itemInStock" :page="page" /> -->
     <add-new v-if="page.option== 'add_new'" :items-in-stock="items_in_stock" :params="params" :page="page" />
-    <edit-item v-if="page.option=='edit_item'" :items-in-stock="items_in_stock" :item-in-stock="itemInStock" :params="params" :page="page" @update="onEditUpdate" />
+    <edit-item v-if="page.option=='edit_item'" :item-in-stock="itemInStock" :params="params" :page="page" @update="onEditUpdate" />
     <div v-if="page.option=='list'">
       <el-row :gutter="10">
         <el-col :xs="24" :sm="12" :md="12">
@@ -93,7 +93,7 @@
               <div slot="action" slot-scope="props">
                 <a v-if="checkPermission(['manage item stocks', 'update item stocks'])" class="btn btn-primary" @click="itemInStock=props.row; selected_row_index=props.index; page.option = 'edit_item'"><i class="fa fa-edit" /> </a>
                 <div v-if="props.row.is_warehouse_transfered === 0">
-                  <a v-if="checkPermission(['manage item stocks', 'delete item stocks']) && props.row.reserved_for_supply == 0 && props.row.in_transit == 0 && props.row.balance == 0" class="btn btn-danger" @click="confirmDelete(props.index, props)"><i class="fa fa-trash" /> </a>
+                  <a v-if="checkPermission(['manage item stocks', 'delete item stocks']) && props.row.reserved_for_supply === 0 && props.row.in_transit === 0 && props.row.supplied === 0 && props.row.confirmed_by === null" class="btn btn-danger" @click="confirmDelete(props.index, props)"><i class="fa fa-trash" /> </a>
                   <el-dropdown
                     class="avatar-container right-menu-item hover-effect"
                     trigger="click"
@@ -174,7 +174,6 @@
               </div>
               <div v-if="form.warehouse_id !== 8" slot="action" slot-scope="props">
                 <el-dropdown
-                  v-if="props.row.confirmed_by !== null"
                   class="avatar-container right-menu-item hover-effect"
                   trigger="click"
                 >
@@ -187,9 +186,9 @@
                     <el-dropdown-item :id="props.index" divided>Cancel</el-dropdown-item>
                   </el-dropdown-menu>
                 </el-dropdown>
-                <div v-else>
+                <!-- <div v-else>
                   Entry needs to be confirmed by auditor before movement
-                </div>
+                </div> -->
               </div>
             </v-client-table>
 

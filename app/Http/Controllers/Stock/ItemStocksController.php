@@ -66,14 +66,19 @@ class ItemStocksController extends Controller
         $item_id = $request->item_id;
         // $batches_of_items_in_stock = ItemStockSubBatch::with(['confirmer', 'stocker'])->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('balance - reserved_for_supply > 0')->whereRaw('confirmed_by IS NOT NULL')->orderBy('expiry_date')->get();
 
-        $total_balance = ItemStockSubBatch::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('confirmed_by IS NOT NULL')->select(\DB::raw('SUM(balance) as total_balance'))->first();
+        $total_balance = ItemStockSubBatch::groupBy('item_id')
+            ->where('warehouse_id', '!=', 7)
+            ->where('item_id', $item_id)
+            ->whereRaw('confirmed_by IS NOT NULL')
+            ->select(\DB::raw('(SUM(balance) -  SUM(reserved_for_supply)) as total_balance'))
+            ->first();
 
         // this is the quantity of products reserved for supply at the point of waybill generation
         // $total_invoiced_quantity = ItemStockSubBatch::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('confirmed_by IS NOT NULL')->select(\DB::raw('SUM(reserved_for_supply) as total_invoiced'))->first();
 
-        $total_invoiced_quantity = WaybillItem::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('quantity - remitted - quantity_reversed > 0')->select(\DB::raw('SUM(quantity - remitted - quantity_reversed) as total_invoiced'))->first();
+        // $total_invoiced_quantity = WaybillItem::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('quantity - remitted - quantity_reversed > 0')->select(\DB::raw('SUM(quantity - remitted - quantity_reversed) as total_invoiced'))->first();
 
-        return response()->json(compact(/*'batches_of_items_in_stock', */'total_balance', 'total_invoiced_quantity'), 200);
+        return response()->json(compact(/*'batches_of_items_in_stock', */'total_balance', /*'total_invoiced_quantity'*/), 200);
     }
 
     public function productStockBalanceByExpiryDate(Request $request)
@@ -139,55 +144,59 @@ class ItemStocksController extends Controller
         $bulk_data = json_decode(json_encode($request->bulk_data));
         //return $bulk_data;
         $warehouse_id = $request->warehouse_id;
-        // try {
+
         $unsaved_products = [];
         $items_stocked = [];
         foreach ($bulk_data as $data) {
-            $product =  trim($data->PRODUCT);
-            $item = Item::where('name', $product)->first();
-            if ($item) {
-                $item_id = $item->id;
-                $quantity =  $data->QUANTITY;
-                $goods_received_note =  $data->GRN;
-                $expiry_date =  $data->EXPIRY_DATE;
-                $batch_no =  $data->BATCH_NO;
-                $sub_batch_no = $batch_no;
-                if (isset($data->SUB_BATCH_NO)) {
-                    $sub_batch_no = $data->SUB_BATCH_NO;
+            try {
+                $product =  trim($data->PRODUCT);
+                $item = Item::where('name', $product)->first();
+                if ($item) {
+                    $item_id = $item->id;
+                    // $goods_received_note =  $data->GRN;
+                    $expiry_date =  $data->EXPIRY_DATE;
+                    $batch_no =  trim($data->BATCH_NO);
+                    $quantity =  trim($data->QUANTITY);
+                    $sub_batch_no = $batch_no;
+                    if (isset($data->SUB_BATCH_NO)) {
+                        $sub_batch_no = $data->SUB_BATCH_NO;
+                    }
+                    $item_stock_sub_batch = new ItemStockSubBatch();
+                    $item_stock_sub_batch->stocked_by = $user->id;
+                    $item_stock_sub_batch->warehouse_id = $warehouse_id;
+                    $item_stock_sub_batch->item_id = $item_id;
+                    $item_stock_sub_batch->batch_no = $batch_no;
+                    $item_stock_sub_batch->sub_batch_no = $sub_batch_no;
+                    $item_stock_sub_batch->quantity = $quantity;
+                    $item_stock_sub_batch->reserved_for_supply = 0;
+                    $item_stock_sub_batch->in_transit = 0; // initial values set to zero
+                    $item_stock_sub_batch->supplied = 0;
+                    $item_stock_sub_batch->balance = $quantity;
+                    // $item_stock_sub_batch->goods_received_note = $goods_received_note;
+                    $month = date('m', strtotime($expiry_date));
+                    $year = date('Y', strtotime($expiry_date));
+                    $no_of_days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+                    $item_stock_sub_batch->expiry_date = $year . '-' . $month . '-' . $no_of_days_in_month;
+                    $item_stock_sub_batch->save();
+
+                    $items_stocked[] = $this->show($item_stock_sub_batch);
+
+
+
+                    // $title = "Bulk upload of products";
+                    // $description = "Products were added in bulk to stock at " . $item_stock_sub_batch->warehouse->name . " by " . $user->name;
+                    // $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+                    // $this->logUserActivity($title, $description, $roles);
+                } else {
+                    $unsaved_products[] = $data;
                 }
-                $item_stock_sub_batch = new ItemStockSubBatch();
-                $item_stock_sub_batch->stocked_by = $user->id;
-                $item_stock_sub_batch->warehouse_id = $warehouse_id;
-                $item_stock_sub_batch->item_id = $item_id;
-                $item_stock_sub_batch->batch_no = $batch_no;
-                $item_stock_sub_batch->sub_batch_no = $sub_batch_no;
-                $item_stock_sub_batch->quantity = $quantity;
-                $item_stock_sub_batch->reserved_for_supply = 0;
-                $item_stock_sub_batch->in_transit = 0; // initial values set to zero
-                $item_stock_sub_batch->supplied = 0;
-                $item_stock_sub_batch->balance = $quantity;
-                $item_stock_sub_batch->goods_received_note = $goods_received_note;
-                $month = date('m', strtotime($expiry_date));
-                $year = date('Y', strtotime($expiry_date));
-                $no_of_days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-                $item_stock_sub_batch->expiry_date = $year . '-' . $month . '-' . $no_of_days_in_month;
-                $item_stock_sub_batch->save();
-
-                $items_stocked[] = $this->show($item_stock_sub_batch);
-            } else {
+            } catch (\Throwable $th) {
                 $unsaved_products[] = $data;
+                // return $th; //'An error occured in the file. Check for duplicate entries in Batch No and GRN';
             }
-            // print_r($unsaved_products);
         }
-
-        $title = "Bulk upload of products";
-        $description = "Products were added in bulk to stock at " . $item_stock_sub_batch->warehouse->name . " by " . $user->name;
-        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
-        $this->logUserActivity($title, $description, $roles);
         return response()->json(compact('unsaved_products', 'items_stocked'), 200);
-        // } catch (\Throwable $th) {
-        //     return $th; //'An error occured in the file. Check for duplicate entries in Batch No and GRN';
-        // }
+
 
 
         // if ($request->file('bulk_csv_file') != null && $request->file('bulk_csv_file')->isValid()) {
@@ -280,12 +289,24 @@ class ItemStocksController extends Controller
         //
         $user = $this->getUser();
         $initial_stock = $item_in_stock->quantity;
-        if ($initial_stock <= $request->quantity) {
-            $difference_in_stock = $request->quantity - $initial_stock;
-            $item_in_stock->quantity = $request->quantity;
-            $item_in_stock->balance += $difference_in_stock;
-        }
+        $supplied = $item_in_stock->in_transit + $item_in_stock->supplied;
+        // if ($initial_stock <= $request->quantity) {
+        //     $difference_in_stock = $request->quantity - $initial_stock;
+        //     $item_in_stock->quantity = $request->quantity;
+        //     $item_in_stock->balance += $difference_in_stock;
+        // }
 
+        if ($item_in_stock->confirmed_by == NULL) {
+            if ($supplied == 0) {
+                $item_in_stock->quantity = $request->quantity;
+                $item_in_stock->balance = $request->quantity;
+            } else {
+
+                $difference_in_stock = $request->quantity - $initial_stock;
+                $item_in_stock->quantity = $request->quantity;
+                $item_in_stock->balance += $difference_in_stock;
+            }
+        }
         $item_in_stock->warehouse_id = $request->warehouse_id;
         $item_in_stock->item_id = $request->item_id;
         $item_in_stock->batch_no = $request->batch_no;
@@ -310,7 +331,7 @@ class ItemStocksController extends Controller
     public function destroy(ItemStockSubBatch $item_sub_stock)
     {
         //
-        if ($item_sub_stock->reserved_for_supply == 0 && $item_sub_stock->in_transit == 0 && $item_sub_stock->balance == 0) {
+        if ($item_sub_stock->confirmed_by == 0 && $item_sub_stock->in_transit == 0 && $item_sub_stock->supplied == 0 && $item_sub_stock->confirmed_by == NULL) {
 
             $item_sub_stock->delete();
 

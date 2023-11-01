@@ -238,6 +238,11 @@ export default {
       const params = app.params;
       app.warehouses = params.warehouses;
       app.currency = params.currency;
+      if (app.warehouses.length > 0) {
+        app.form.warehouse_id = app.warehouses[0];
+        app.form.warehouse_index = 0;
+        app.getWaybills();
+      }
     },
     // fetchNecessaryParams() {
     //   const app = this;

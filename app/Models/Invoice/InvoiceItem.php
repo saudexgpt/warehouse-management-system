@@ -42,11 +42,10 @@ class InvoiceItem extends Model
         return $this->hasOne(WaybillItem::class);
     }
 
-    public function updateInvoiceItemsForWaybill($waybill_items)
+    public function updateInvoiceItemsForWaybill($waybill_items, $status)
     {
         foreach ($waybill_items as $waybill_item) {
             $invoice_item = $waybill_item->invoiceItem;
-            $status = $waybill_item->waybill->status;
             if ($status != 'delivered') {
                 $total_quantity_supplied = $invoice_item->quantity_supplied; // + $waybill_item->quantity;
                 $invoice_item->supply_status = 'Complete';

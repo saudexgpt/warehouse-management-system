@@ -46,26 +46,29 @@
           </thead>
           <tbody>
             <tr v-for="(waybill_item, index) in waybill.waybill_items" :key="index">
-              <td>{{ index + 1 }}</td>
-              <td>{{ waybill_item.invoice.invoice_number }}</td>
-              <td>{{ waybill_item.item.name }}</td>
-              <!-- <td>{{ waybill_item.item.description }}</td> -->
-              <td>{{ waybill_item.remitted+' '+waybill_item.type }}<br>
-                <code v-html="showItemsInCartons(waybill_item.quantity, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
-              </td>
-              <td>
-                <div v-for="(batch, batch_index) in uniqueBatchNoAndExpiryDates(waybill_item.invoice_item.batches, 'batch')" :key="batch_index">
-                  <small>{{ batch }},<br></small>
-                </div>
-              </td>
-              <td>
-                <div v-for="(expiry_date, expiry_date_index) in uniqueBatchNoAndExpiryDates(waybill_item.invoice_item.batches, 'expiry_date')" :key="expiry_date_index">
-                  {{ moment(expiry_date).format('MMMM Do YYYY') }},<br>
-                </div>
-              </td>
+              <template v-if="waybill_item.remitted > 0">
+
+                <td>{{ index + 1 }}</td>
+                <td>{{ waybill_item.invoice.invoice_number }}</td>
+                <td>{{ waybill_item.item.name }}</td>
+                <!-- <td>{{ waybill_item.item.description }}</td> -->
+                <td>{{ waybill_item.remitted+' '+waybill_item.type }}<br>
+                  <code v-html="showItemsInCartons(waybill_item.quantity, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
+                </td>
+                <td>
+                  <div v-for="(batch, batch_index) in uniqueBatchNoAndExpiryDates(waybill_item.invoice_item.batches, 'batch')" :key="batch_index">
+                    <small>{{ batch }},<br></small>
+                  </div>
+                </td>
+                <td>
+                  <div v-for="(expiry_date, expiry_date_index) in uniqueBatchNoAndExpiryDates(waybill_item.invoice_item.batches, 'expiry_date')" :key="expiry_date_index">
+                    {{ moment(expiry_date).format('MMMM Do YYYY') }},<br>
+                  </div>
+                </td>
               <!-- <td align="right">{{ currency + Number(waybill_item.rate).toLocaleString() }}</td>
               <td>{{ waybill_item.type }}</td>
               <td align="right">{{ currency + Number(waybill_item.amount).toLocaleString() }}</td> -->
+              </template>
             </tr>
             <!-- <tr>
               <td colspan="4" align="right"><label>Subtotal</label></td>

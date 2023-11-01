@@ -18,6 +18,11 @@
           <all-invoice-raised v-if="params != null && activeActivity=='InvoiceRaised'" :params="params" />
           <!-- </keep-alive> -->
         </el-tab-pane>
+        <el-tab-pane label="Waybilled Invoices" name="InvoiceRaised">
+          <!-- <keep-alive> -->
+          <all-waybilled-invoices v-if="params != null && activeActivity=='WaybilledInvoices'" :params="params" />
+          <!-- </keep-alive> -->
+        </el-tab-pane>
         <el-tab-pane label="Instant Balances" name="InstantBalances">
           <!-- <keep-alive> -->
           <instant-balances v-if="params != null && activeActivity=='InstantBalances'" :params="params" />
@@ -64,6 +69,7 @@ import Inbounds from './inbounds';
 import Outbounds from './outbounds';
 import UnsuppliedInvoices from './UnsuppliedInvoices';
 import AllInvoiceRaised from './AllInvoiceRaised';
+import AllWaybilledInvoices from './AllWaybilledInvoices';
 // import UntreatedInvoices from '@/app/invoice/partials/UntreatedInvoices';
 // import PartiallyTreatedInvoices from '@/app/invoice/partials/PartiallyTreatedInvoices';
 import InstantBalances from './InstantBalances';
@@ -77,7 +83,7 @@ export default {
   components: {
     Inbounds, Outbounds, InstantBalances, UnsuppliedInvoices,
     // UntreatedInvoices, PartiallyTreatedInvoices,
-    AllInvoiceRaised, Customers, Products, Fleets, Users,
+    AllInvoiceRaised, AllWaybilledInvoices, Customers, Products, Fleets, Users,
   },
   data() {
     return {

@@ -97,7 +97,7 @@
                     <code v-html="showItemsInCartons(waybill_item.remitted, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
                   </td>
                   <td>{{ waybill_item.quantity_reversed+' '+formatPackageType(waybill_item.type) }}<br>
-                    <code v-html="showItemsInCartons(waybill_item.quantity, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
+                    <code v-html="showItemsInCartons(waybill_item.quantity_reversed, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
                   </td>
                   <td>
                     <div v-for="(batch, batch_index) in uniqueBatchNoAndExpiryDates(waybill_item.invoice_item.batches, 'batch')" :key="batch_index">
@@ -348,6 +348,7 @@ export default {
     },
     changeWaybillStatus(){
       const app = this;
+      // app.waybill = null;
       var param = app.waybill;
       const message = 'Do you really want to update goods delivery status to: ' + app.form.status.toUpperCase() + '?';
       if (confirm(message)) {

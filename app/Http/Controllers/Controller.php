@@ -254,11 +254,18 @@ class Controller extends BaseController
     {
         set_time_limit(0);
         $user = $this->getUser();
-        $all_warehouses = Warehouse::with([/*'itemStocks.item.taxes', 'itemStocks.item.price','vehicles'*/])->where('enabled', 1)->get();
+        // $all_warehouses = Warehouse::with(['vehicles'/*'itemStocks.item.taxes', 'itemStocks.item.price','vehicles'*/])->where('enabled', 1)->get();
+        // if ($user->isAdmin() || $user->isAssistantAdmin()) {
+        //   $warehouses = $all_warehouses;
+        // } else {
+        //   $warehouses = $user->warehouses()->with(['vehicles'/*'itemStocks.item.taxes', 'itemStocks.item.price'*/])->where('enabled', 1)->get();
+        // }
+
+        $all_warehouses = Warehouse::with('vehicles')->where('enabled', 1)->get();
         if ($user->isAdmin() || $user->isAssistantAdmin()) {
             $warehouses = $all_warehouses;
         } else {
-            $warehouses = $user->warehouses()->with([/*'itemStocks.item.taxes', 'itemStocks.item.price', 'vehicles'*/])->where('enabled', 1)->get();
+            $warehouses = $user->warehouses()->with('vehicles')->where('enabled', 1)->get();
         }
         $items = Item::with(['taxes', 'price'])->orderBy('name')->get();
         $currencies = Currency::get();

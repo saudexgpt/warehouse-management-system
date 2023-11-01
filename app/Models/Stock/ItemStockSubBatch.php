@@ -214,22 +214,23 @@ class ItemStockSubBatch extends Model
                 $for_supply = $invoice_item_batch->quantity;
                 $item_stock_batch = $invoice_item_batch->itemStockBatch;
 
+                if ($item_stock_batch->balance > 0) {
 
+                    $item_stock_batch->reserved_for_supply -= $for_supply;
+                    $item_stock_batch->in_transit += $for_supply;
+                    $item_stock_batch->balance -=  $for_supply;
+                    $item_stock_batch->save();
 
-                $item_stock_batch->reserved_for_supply -= $for_supply;
-                $item_stock_batch->in_transit += $for_supply;
-                $item_stock_batch->balance -=  $for_supply;
-                $item_stock_batch->save();
+                    $invoice_item_batch->quantity = 0;
+                    $invoice_item_batch->save();
 
-                $invoice_item_batch->quantity = 0;
-                $invoice_item_batch->save();
+                    $this->dispatchTransferProduct($warehouse_id, $item_stock_batch, $waybill_item, $for_supply);
 
-                $this->dispatchTransferProduct($warehouse_id, $item_stock_batch, $waybill_item, $for_supply);
+                    $waybill_item->remitted += $for_supply;
+                    $waybill_item->save();
 
-                $waybill_item->remitted += $for_supply;
-                $waybill_item->save();
-
-                $for_supply = 0;
+                    $for_supply = 0;
+                }
             }
         }
     }
@@ -245,23 +246,25 @@ class ItemStockSubBatch extends Model
                 $for_supply = $invoice_item_batch->quantity;
                 $item_stock_batch = $invoice_item_batch->itemStockBatch;
 
+                if ($item_stock_batch->balance > 0) {
+                    $item_stock_batch->reserved_for_supply -= $for_supply;
+                    $item_stock_batch->in_transit += $for_supply;
+                    $item_stock_batch->balance -=  $for_supply;
+                    $item_stock_batch->save();
 
 
-                $item_stock_batch->reserved_for_supply -= $for_supply;
-                $item_stock_batch->in_transit += $for_supply;
-                $item_stock_batch->balance -=  $for_supply;
-                $item_stock_batch->save();
+                    $invoice_item_batch->quantity = 0;
+                    $invoice_item_batch->save();
+
+                    $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $for_supply);
+
+                    $waybill_item->remitted += $for_supply;
+                    $waybill_item->save();
+
+                    $for_supply = 0;
+                }
 
 
-                $invoice_item_batch->quantity = 0;
-                $invoice_item_batch->save();
-
-                $this->dispatchProduct($warehouse_id, $item_stock_batch, $waybill_item, $for_supply);
-
-                $waybill_item->remitted += $for_supply;
-                $waybill_item->save();
-
-                $for_supply = 0;
             endforeach;
         }
     }

@@ -874,7 +874,7 @@ class ReportsController extends Controller
                     $p->where('supplied', '>', 0);
                 });
             })
-            ->select(\DB::raw('SUM(quantity) as total_quantity'))
+            ->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))
             ->first();
         $previous_outbound = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
             ->where('dispatched_products.warehouse_id', $warehouse_id)
@@ -896,7 +896,7 @@ class ReportsController extends Controller
         $previous_expired_product = ItemStockSubBatch::groupBy(['item_id'])
             ->where(['item_id' => $item_id, 'warehouse_id' => 8, 'expired_from' => $warehouse_id])
             ->where('created_at', '<', $date_from)
-            ->select(\DB::raw('SUM(quantity) as total_quantity'))
+            ->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))
             ->first();
 
         $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
@@ -909,7 +909,7 @@ class ReportsController extends Controller
                     $p->where('supplied', '>', 0);
                 });
             })
-            ->select('quantity', 'batch_no', 'goods_received_note', 'comments', 'created_at')
+            ->selectRaw('quantity - old_balance_before_recount as quantity, batch_no, goods_received_note, comments, created_at')
             ->orderby('created_at')
             ->get();
         $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
@@ -934,7 +934,8 @@ class ReportsController extends Controller
         // expired warehouse has id of 8
         $expired_products = ItemStockSubBatch::where(['item_id' => $item_id, 'expired_from' => $warehouse_id])->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
-            ->select('quantity', 'batch_no', 'goods_received_note', 'created_at')
+            // ->select('quantity - old_balance_before_recountas quantity', 'batch_no', 'goods_received_note', 'created_at')
+            ->selectRaw('quantity - old_balance_before_recount as quantity, batch_no, goods_received_note, comments, created_at')
             ->get();
 
         return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_products);
@@ -963,7 +964,7 @@ class ReportsController extends Controller
         //if ($warehouse_id != 'all') {
         $total_stock_till_date->where('warehouse_id', $warehouse_id);
         //}
-        $total_stock_till_date = $total_stock_till_date->select(\DB::raw('SUM(quantity) as total_quantity'))
+        $total_stock_till_date = $total_stock_till_date->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))
             ->first();
 
 
@@ -999,7 +1000,7 @@ class ReportsController extends Controller
         // if ($warehouse_id != 'all') {
         $previous_expired_product->where('expired_from', $warehouse_id);
         // }
-        $previous_expired_product = $previous_expired_product->select(\DB::raw('SUM(quantity) as total_quantity'))->first();
+        $previous_expired_product = $previous_expired_product->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))->first();
 
 
 
@@ -1016,7 +1017,7 @@ class ReportsController extends Controller
         // if ($warehouse_id != 'all') {
         $inbounds->where('warehouse_id', $warehouse_id);
         // }
-        $inbounds = $inbounds->select(\DB::raw('SUM(quantity) as total_inbound'))
+        $inbounds = $inbounds->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_inbound'))
             ->orderby('created_at')
             ->get();
 
@@ -1056,7 +1057,7 @@ class ReportsController extends Controller
         // if ($warehouse_id != 'all') {
         $expired_products->where('expired_from', $warehouse_id);
         // }
-        $expired_products = $expired_products->select(\DB::raw('SUM(quantity) as total_expired'))
+        $expired_products = $expired_products->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_expired'))
             ->get();
 
         return array($total_stock_till_date, $previous_outbound, $previous_transfer_outbound, $previous_expired_product, $inbounds, $outbounds, $outbounds2, $expired_products);
@@ -1218,9 +1219,12 @@ class ReportsController extends Controller
         return $tranactions;
     }
 
-    public function allInvoicesRaised(Request $request)
+    public function allWaybilledInvoices(Request $request)
     {
+
         set_time_limit(0);
+        $date_from = Carbon::now()->startOfYear();
+        $date_to = Carbon::now()->endOfYear();
         $invoiceItemQuery = InvoiceItem::query();
 
         $invoiceItemQuery = $invoiceItemQuery->join('invoices', 'invoice_items.invoice_id', 'invoices.id')
@@ -1249,23 +1253,60 @@ class ReportsController extends Controller
             $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.warehouse_id', $request->warehouse_id);
         }
 
-        if (isset($request->from, $request->to)) {
+        if (isset($request->from, $request->to) && $request->from !== '' && $request->to !== '') {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $invoiceItemQuery = $invoiceItemQuery->where('waybill_items.created_at', '>=', $date_from);
+            $invoiceItemQuery = $invoiceItemQuery->where('waybill_items.created_at', '<=', $date_to);
+        }
+        $invoiceItemQuery->orderBy('waybill_items.id', 'DESC');
+        $invoice_items = $invoiceItemQuery->get();
+        $start_date = date('d-m-Y H:i:s', strtotime($date_from));
+        $end_date = date('d-m-Y H:i:s', strtotime($date_to));
+        return response()->json(compact('start_date', 'end_date', 'invoice_items'), 200);
+    }
+    public function allInvoicesRaised(Request $request)
+    {
+
+        set_time_limit(0);
+        $date_from = Carbon::now()->startOfYear();
+        $date_to = Carbon::now()->endOfYear();
+        $invoiceItemQuery = InvoiceItem::query();
+
+        $invoiceItemQuery = $invoiceItemQuery->join('invoices', 'invoice_items.invoice_id', 'invoices.id')
+            ->join('customers', 'invoices.customer_id', 'customers.id')
+            ->join('users', 'customers.user_id', 'users.id')
+            ->join('items', 'invoice_items.item_id', 'items.id')
+            ->join('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
+            ->selectRaw(
+                'warehouses.name as warehouse,
+                users.name as customer,
+                invoice_number,
+                items.name as product,
+                invoice_items.type as uom,
+                invoice_items.rate,
+                invoice_items.amount,
+                invoice_items.quantity,
+                invoice_items.quantity_supplied,
+                invoice_items.quantity_reversed,
+                invoice_items.created_at'
+            );
+
+        if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
+            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.warehouse_id', $request->warehouse_id);
+        }
+
+        if (isset($request->from, $request->to) && $request->from !== '' && $request->to !== '') {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
             $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '>=', $date_from);
             $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '<=', $date_to);
         }
-        $is_download = 'no';
-        if (isset($request->is_download)) {
-            $is_download = $request->is_download;
-        }
-
-        if ($is_download == 'yes') {
-            $invoice_items = $invoiceItemQuery->get();
-        } else {
-            $invoice_items = $invoiceItemQuery->paginate(50);
-        }
-        return response()->json(compact('invoice_items'), 200);
+        $invoiceItemQuery->orderBy('invoice_items.id', 'DESC');
+        $invoice_items = $invoiceItemQuery->get();
+        $start_date = date('d-m-Y H:i:s', strtotime($date_from));
+        $end_date = date('d-m-Y H:i:s', strtotime($date_to));
+        return response()->json(compact('start_date', 'end_date', 'invoice_items'), 200);
     }
     public function unsuppliedInvoices(Request $request)
     {
