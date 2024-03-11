@@ -783,9 +783,9 @@ class ReportsController extends Controller
             ->where('item_id', $item_id)
             ->where('created_at', '<', $date_from)
             ->where(function ($q) {
-                $q->where('confirmed_by', '!=', NULL);
+                $q->whereRaw('confirmed_by IS NOT NULL');
                 $q->orWhere(function ($p) {
-                    $p->where('confirmed_by', NULL);
+                    $p->whereRaw('confirmed_by IS NULL');
                     // $p->where('supplied', '>', 0);
                     $p->whereRaw('supplied + expired > 0');
                 });
@@ -819,9 +819,9 @@ class ReportsController extends Controller
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
             ->where(function ($q) {
-                $q->where('confirmed_by', '!=', NULL);
+                $q->whereRaw('confirmed_by IS NOT NULL');
                 $q->orWhere(function ($p) {
-                    $p->where('confirmed_by', NULL);
+                    $p->whereRaw('confirmed_by IS NULL');
                     // $p->where('supplied', '>', 0);
                     $p->whereRaw('supplied + expired > 0');
                 });
@@ -872,9 +872,9 @@ class ReportsController extends Controller
             ->where('item_id', $item_id)
             ->where('created_at', '<', $date_from)
             ->where(function ($q) {
-                $q->where('confirmed_by', '!=', NULL);
+                $q->whereRaw('confirmed_by IS NOT NULL');
                 $q->orWhere(function ($p) {
-                    $p->where('confirmed_by', NULL);
+                    $p->whereRaw('confirmed_by IS NULL');
                     // $p->where('supplied', '>', 0);
                     $p->whereRaw('supplied + expired > 0');
                 });
@@ -926,9 +926,10 @@ class ReportsController extends Controller
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
             ->where(function ($q) {
-                $q->where('confirmed_by', '!=', NULL);
+                $q->whereRaw('confirmed_by IS NOT NULL');
                 $q->orWhere(function ($p) {
-                    $p->where('confirmed_by', NULL);
+                    $p->whereRaw('confirmed_by IS NULL');
+                    // $p->where('supplied', '>', 0);
                     $p->whereRaw('supplied + expired > 0');
                 });
             });
