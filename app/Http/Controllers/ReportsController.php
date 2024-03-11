@@ -782,7 +782,7 @@ class ReportsController extends Controller
             ->where('warehouse_id', $warehouse_id)
             ->where('item_id', $item_id)
             ->where('created_at', '<', $date_from)
-            ->whereRaw('supplied + expired > 0')
+            // ->whereRaw('supplied + expired > 0')
             // ->where(function ($q) {
             //     $q->whereRaw('confirmed_by IS NOT NULL');
             //     $q->orWhere(function ($p) {
@@ -819,7 +819,7 @@ class ReportsController extends Controller
         $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
-            ->whereRaw('supplied + expired > 0')
+            // ->whereRaw('supplied + expired > 0')
             // ->where(function ($q) {
             //     $q->whereRaw('confirmed_by IS NOT NULL');
             //     $q->orWhere(function ($p) {
@@ -872,8 +872,8 @@ class ReportsController extends Controller
 
         $total_stock_till_date->groupBy('item_id')
             ->where('item_id', $item_id)
-            ->where('created_at', '<', $date_from)
-            ->whereRaw('supplied + expired > 0');
+            ->where('created_at', '<', $date_from);
+        // ->whereRaw('supplied + expired > 0');
         // ->where(function ($q) {
         //     $q->whereRaw('confirmed_by IS NOT NULL');
         //     $q->orWhere(function ($p) {
@@ -927,8 +927,8 @@ class ReportsController extends Controller
 
         $inbounds->where(['item_id' => $item_id])
             ->where('created_at', '>=', $date_from)
-            ->where('created_at', '<=', $date_to)
-            ->whereRaw('supplied + expired > 0');
+            ->where('created_at', '<=', $date_to);
+        //->whereRaw('supplied + expired > 0');
         // ->where(function ($q) {
         //     $q->whereRaw('confirmed_by IS NOT NULL');
         //     $q->orWhere(function ($p) {
