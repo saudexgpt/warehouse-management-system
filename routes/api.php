@@ -11,6 +11,8 @@
 */
 // api to fetch all registered products for external requests
 $router->get('get-warehouse-products', 'Stock\ItemsController@index');
+$router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
+
 $router->post('rep-stock', 'Invoice\InvoicesController@sendRepStock');
 $router->post('fetch-reps-details', 'UserController@fetchRepsForTransferToSalesApp');
 

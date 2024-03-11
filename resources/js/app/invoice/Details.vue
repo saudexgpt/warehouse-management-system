@@ -185,7 +185,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <td colspan="9" align="right"><label>In Words: {{ inWords(invoice.amount).toUpperCase() + ' NAIRA ONLY' }}</label></td>
+                    <td colspan="9" align="right"><label>In Words: {{ inWords(invoice.amount).toUpperCase() }}</label></td>
                   </tr>
                 </tbody>
               </table>
@@ -360,8 +360,12 @@ export default {
       );
     },
 
-    inWords(n) {
-      var string = n.toString(), units, tens, scales, start, end, chunks, chunksLen, chunk, ints, i, word, words, and = 'and';
+    inWords(n, decimal = false) {
+      const num2word = n.toString();
+      const num2word_array = num2word.split('.');
+      const whole_no = num2word_array[0];
+      const dec_no = num2word_array[1];
+      var string = whole_no, units, tens, scales, start, end, chunks, chunksLen, chunk, ints, i, word, words, and = 'and';
 
       /* Remove spaces and commas */
       string = string.replace(/[, ]/g, '');
@@ -437,8 +441,16 @@ export default {
           }
         }
       }
-
-      return words.reverse().join(' ');
+      let decimalWords = '';
+      let currency_fraction = 'NAIRA';
+      if (decimal) {
+        currency_fraction = 'KOBO';
+      }
+      const wholeNumWords = words.reverse().join(' ') + ' ' + currency_fraction;
+      if (dec_no !== undefined && dec_no !== null && dec_no !== '') {
+        decimalWords = this.inWords(parseInt(dec_no), true);
+      }
+      return wholeNumWords + decimalWords + ' ONLY';
     },
   },
 };

@@ -871,7 +871,8 @@ class ReportsController extends Controller
                 $q->where('confirmed_by', '!=', null);
                 $q->orWhere(function ($p) {
                     $p->where('confirmed_by', null);
-                    $p->where('supplied', '>', 0);
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
                 });
             })
             ->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))
@@ -906,7 +907,8 @@ class ReportsController extends Controller
                 $q->where('confirmed_by', '!=', null);
                 $q->orWhere(function ($p) {
                     $p->where('confirmed_by', null);
-                    $p->where('supplied', '>', 0);
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
                 });
             })
             ->selectRaw('quantity - old_balance_before_recount as quantity, batch_no, goods_received_note, comments, created_at')
@@ -958,7 +960,8 @@ class ReportsController extends Controller
                 $q->where('confirmed_by', '!=', null);
                 $q->orWhere(function ($p) {
                     $p->where('confirmed_by', null);
-                    $p->where('supplied', '>', 0);
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
                 });
             });
         //if ($warehouse_id != 'all') {
@@ -1011,7 +1014,8 @@ class ReportsController extends Controller
                 $q->where('confirmed_by', '!=', null);
                 $q->orWhere(function ($p) {
                     $p->where('confirmed_by', null);
-                    $p->where('supplied', '>', 0);
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
                 });
             });
         // if ($warehouse_id != 'all') {

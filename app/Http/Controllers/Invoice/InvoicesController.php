@@ -1374,7 +1374,18 @@ class InvoicesController extends Controller
         $vehicle->availability = $status;
         $vehicle->save();
     }
+    public function deleteRestoredInvoices()
+    {
+        //DB::select('select id from invoice_items_blend where deleted_at IS NOT NULL');
+        $invoice_items =  InvoiceItemBlend::onlyTrashed()->pluck('id');
+        InvoiceItem::whereIn('id', $invoice_items)
+            ->chunkById(200, function (Collection $flights) {
+                $flights->each->delete();
+            }, $column = 'id');
+        return $invoice_items;
+    }
 
+    // onlyTrashed()
     // private function removeOldInvoiceItemBatchesAndCreateNewOne($invoice_item, $batches, $old_quantity)
     // {
     //     $batch_ids = [];

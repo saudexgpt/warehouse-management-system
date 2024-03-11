@@ -18,7 +18,7 @@
           <all-invoice-raised v-if="params != null && activeActivity=='InvoiceRaised'" :params="params" />
           <!-- </keep-alive> -->
         </el-tab-pane>
-        <el-tab-pane label="Waybilled Invoices" name="InvoiceRaised">
+        <el-tab-pane label="Waybilled Invoices" name="WaybilledInvoices">
           <!-- <keep-alive> -->
           <all-waybilled-invoices v-if="params != null && activeActivity=='WaybilledInvoices'" :params="params" />
           <!-- </keep-alive> -->

@@ -197,11 +197,13 @@
                               @change="setItemAsPromo(index, invoice_item.is_promo);"
                             /> -->
                             <el-input
+                              v-if="checkPermission(['update invoice product price'])"
                               v-model="invoice_item.rate"
                               type="number"
                               outline
                               @input="calculateTotal(index)"
                             />
+                            <span v-else>{{ currency }} {{ Number(invoice_item.rate).toLocaleString() }}</span>
                           </td>
                           <td>{{ invoice_item.type }}</td>
                           <!-- <td>
