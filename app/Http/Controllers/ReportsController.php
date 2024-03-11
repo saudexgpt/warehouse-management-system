@@ -782,15 +782,14 @@ class ReportsController extends Controller
             ->where('warehouse_id', $warehouse_id)
             ->where('item_id', $item_id)
             ->where('created_at', '<', $date_from)
-            // ->whereRaw('supplied + expired > 0')
-            // ->where(function ($q) {
-            //     $q->whereRaw('confirmed_by IS NOT NULL');
-            //     $q->orWhere(function ($p) {
-            //         $p->whereRaw('confirmed_by IS NULL');
-            //         // $p->where('supplied', '>', 0);
-            //         $p->whereRaw('supplied + expired > 0');
-            //     });
-            // })
+            ->where(function ($q) {
+                $q->whereRaw('confirmed_by IS NOT NULL');
+                $q->orWhere(function ($p) {
+                    $p->whereRaw('confirmed_by IS NULL');
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
+                });
+            })
             ->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))
             ->first();
         $previous_outbound = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
@@ -819,15 +818,14 @@ class ReportsController extends Controller
         $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
-            // ->whereRaw('supplied + expired > 0')
-            // ->where(function ($q) {
-            //     $q->whereRaw('confirmed_by IS NOT NULL');
-            //     $q->orWhere(function ($p) {
-            //         $p->whereRaw('confirmed_by IS NULL');
-            //         // $p->where('supplied', '>', 0);
-            //         $p->whereRaw('supplied + expired > 0');
-            //     });
-            // })
+            ->where(function ($q) {
+                $q->whereRaw('confirmed_by IS NOT NULL');
+                $q->orWhere(function ($p) {
+                    $p->whereRaw('confirmed_by IS NULL');
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
+                });
+            })
             ->selectRaw('quantity - old_balance_before_recount as quantity, batch_no, goods_received_note, comments, created_at')
             ->orderby('created_at')
             ->get();
@@ -872,16 +870,15 @@ class ReportsController extends Controller
 
         $total_stock_till_date->groupBy('item_id')
             ->where('item_id', $item_id)
-            ->where('created_at', '<', $date_from);
-        // ->whereRaw('supplied + expired > 0');
-        // ->where(function ($q) {
-        //     $q->whereRaw('confirmed_by IS NOT NULL');
-        //     $q->orWhere(function ($p) {
-        //         $p->whereRaw('confirmed_by IS NULL');
-        //         // $p->where('supplied', '>', 0);
-        //         $p->whereRaw('supplied + expired > 0');
-        //     });
-        // });
+            ->where('created_at', '<', $date_from)
+            ->where(function ($q) {
+                $q->whereRaw('confirmed_by IS NOT NULL');
+                $q->orWhere(function ($p) {
+                    $p->whereRaw('confirmed_by IS NULL');
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
+                });
+            });
         //if ($warehouse_id != 'all') {
         $total_stock_till_date->where('warehouse_id', $warehouse_id);
         //}
@@ -927,16 +924,15 @@ class ReportsController extends Controller
 
         $inbounds->where(['item_id' => $item_id])
             ->where('created_at', '>=', $date_from)
-            ->where('created_at', '<=', $date_to);
-        //->whereRaw('supplied + expired > 0');
-        // ->where(function ($q) {
-        //     $q->whereRaw('confirmed_by IS NOT NULL');
-        //     $q->orWhere(function ($p) {
-        //         $p->whereRaw('confirmed_by IS NULL');
-        //         // $p->where('supplied', '>', 0);
-        //         $p->whereRaw('supplied + expired > 0');
-        //     });
-        // });
+            ->where('created_at', '<=', $date_to)
+            ->where(function ($q) {
+                $q->whereRaw('confirmed_by IS NOT NULL');
+                $q->orWhere(function ($p) {
+                    $p->whereRaw('confirmed_by IS NULL');
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
+                });
+            });
         // if ($warehouse_id != 'all') {
         $inbounds->where('warehouse_id', $warehouse_id);
         // }
