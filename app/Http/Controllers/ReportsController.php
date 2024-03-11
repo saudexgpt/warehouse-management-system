@@ -929,7 +929,6 @@ class ReportsController extends Controller
                 $q->where('confirmed_by', '!=', NULL);
                 $q->orWhere(function ($p) {
                     $p->where('confirmed_by', NULL);
-                    // $p->where('supplied', '>', 0);
                     $p->whereRaw('supplied + expired > 0');
                 });
             });
