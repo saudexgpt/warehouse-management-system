@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Invoice\InvoiceItem;
+use App\Models\Invoice\Invoice;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Console\Command;
 
@@ -34,17 +35,19 @@ class StabilizeInvoiceAmount extends Command
     }
     private function stabilize()
     {
-        InvoiceItem::with('invoice')
-            ->groupBy('invoice_id')
+        InvoiceItem::groupBy('invoice_id')
             ->where('supply_status', 'Pending')
-            ->select('*', \DB::raw('SUM(amount) as total_amount'))->chunkById(200, function (Collection $invoice_items) {
+            ->select('*', \DB::raw('SUM(amount) as total_amount'))->chunk(200, function ($invoice_items) {
                 foreach ($invoice_items as $invoice_item) {
-                    $invoice = $invoice_item->invoice;
-                    $invoice->subtotal = $invoice_item->total_amount;
-                    $invoice->amount = $invoice_item->total_amount;
-                    $invoice->save();
+                    $invoice = Invoice::find($invoice_item->invoice_id);
+                    if ($invoice) {
+
+                        $invoice->subtotal = $invoice_item->total_amount;
+                        $invoice->amount = $invoice_item->total_amount;
+                        $invoice->save();
+                    }
                 }
-            }, $column = 'id');
+            });
     }
     public function handle()
     {

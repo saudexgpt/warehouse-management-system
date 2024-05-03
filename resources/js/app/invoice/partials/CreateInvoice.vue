@@ -28,6 +28,10 @@
               :to="{name:'Invoices'}"
               class="btn btn-danger"
             >Cancel</router-link>
+            <el-button
+              type="primary"
+              @click="loadOfflineData()"
+            >Load Unsaved Invoice</el-button>
 
           </span>
         </div>
@@ -165,7 +169,7 @@
                                 :label="item.name"
                               />
                             </el-select>
-                            <div v-loading="invoice_item.load">
+                            <div v-if="params.enable_stock_quantity_check_when_raising_invoice === 'yes'" v-loading="invoice_item.load">
                               <!-- <br><small class="label label-primary">Physical Stock: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
 
                               <br><small class="label label-warning">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small> -->
@@ -184,7 +188,7 @@
                               @input="calculateTotal(index); calculateNoOfCartons(index); checkStockBalance(index)"
                             />
                             <br>
-                            <div v-if="invoice_item.stock_balance < 1" class="label label-danger">You cannot raise invoice for this product due to insufficient stock</div>
+                            <div v-if="params.enable_stock_quantity_check_when_raising_invoice === 'yes' &&invoice_item.stock_balance < 1" class="label label-danger">You cannot raise invoice for this product due to insufficient stock</div>
                             <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                           </td>
                           <td>
@@ -367,14 +371,19 @@ export default {
         notes: '',
         invoice_items: [
           {
+            item: null,
+            load: false,
             item_id: '',
-            quantity: 1,
-            rate: null,
-            tax: null,
+            quantity: 0,
             type: '',
-            total: 0,
+            item_rate: null,
+            rate: null,
+            is_promo: false,
+            amount: 0,
             batches: [],
             batches_of_items_in_stock: [],
+            total_stocked: null,
+            total_invoiced_quantity: null,
           },
         ],
       },
@@ -390,12 +399,19 @@ export default {
         notes: '',
         invoice_items: [
           {
-            item: '',
+            item: null,
+            load: false,
             item_id: '',
             quantity: 0,
             type: '',
+            item_rate: null,
             rate: null,
+            is_promo: false,
             amount: 0,
+            batches: [],
+            batches_of_items_in_stock: [],
+            total_stocked: null,
+            total_invoiced_quantity: null,
           },
         ],
       },
@@ -440,6 +456,9 @@ export default {
     customer_types() {
       return this.$store.getters.customer_types;
     },
+    unsavedInvoice() {
+      return this.$store.getters.unsavedInvoice;
+    },
   },
   watch: {
     invoice_items() {
@@ -447,6 +466,7 @@ export default {
     },
   },
   mounted() {
+    this.loadOfflineData();
     this.fetchNecessaryParams();
     this.fetchCustomers();
     this.addLine();
@@ -456,6 +476,17 @@ export default {
     checkPermission,
     checkRole,
     showItemsInCartons,
+    loadOfflineData() {
+      this.loadForm = true;
+      this.$store.dispatch('invoice/loadOfflineInvoice').then(() => {
+        this.form = this.unsavedInvoice;
+        this.invoice_items = this.form.invoice_items;
+        if (this.form.warehouse_id !== '') {
+          this.show_product_list = true;
+        }
+        this.loadForm = false;
+      });
+    },
     rowIsEmpty() {
       this.fill_fields_error = false;
       const checkEmptyLines = this.invoice_items.filter(
@@ -494,6 +525,9 @@ export default {
           total_stocked: null,
           total_invoiced_quantity: null,
         });
+        const unsavedInvoice = this.form;
+        unsavedInvoice.invoice_items = this.invoice_items;
+        this.$store.dispatch('invoice/saveUnsavedInvoice', unsavedInvoice);
       }
     },
     removeLine(detailId) {
@@ -501,6 +535,9 @@ export default {
       if (!this.blockRemoval) {
         this.invoice_items.splice(detailId, 1);
         this.calculateTotal(null);
+        const unsavedInvoice = this.form;
+        unsavedInvoice.invoice_items = this.invoice_items;
+        this.$store.dispatch('invoice/saveUnsavedInvoice', unsavedInvoice);
       }
     },
     fetchNecessaryParams() {
@@ -556,6 +593,11 @@ export default {
             app.form = app.empty_form;
             app.form.warehouse_id = warehouse_id;
             app.invoice_items = app.form.invoice_items;
+
+            // persist it
+            const unsavedInvoice = this.form;
+            app.$store.dispatch('invoice/saveUnsavedInvoice', unsavedInvoice);
+
             app.disable_submit = false;
             app.$router.push({ name: 'Invoices' });
             app.loadForm = false;
@@ -588,7 +630,9 @@ export default {
       //   tax += parseFloat(item.taxes[a].rate);
       // }
       // app.invoice_items[index].tax = tax;
-      app.setProductBatches(index, app.form.warehouse_id, item.id);
+      if (app.params.enable_stock_quantity_check_when_raising_invoice === 'yes') {
+        app.setProductBatches(index, app.form.warehouse_id, item.id);
+      }
       app.calculateTotal(index);
     },
     setProductBatches(index, warehouse_id, item_id) {
@@ -665,17 +709,19 @@ export default {
     checkStockBalance(index) {
       const app = this;
       // Get total amount for this item without tax
-      if (index !== null) {
-        const invoice_item = app.invoice_items[index];
-        const item = app.invoice_items[index].item;
-        const quantity = invoice_item.quantity;
-        const available_stock = invoice_item.total_stocked - invoice_item.total_invoiced_quantity;
-        app.disable_submit = false;
-        if (quantity > available_stock) {
-          app.disable_submit = true;
-          app.$alert(`${item} stock balance is less than ${quantity}. Please enter a value within range`);
-          app.invoice_items[index].quantity = 0;
-          app.calculateTotal(index);
+      if (app.params.enable_stock_quantity_check_when_raising_invoice === 'yes') {
+        if (index !== null) {
+          const invoice_item = app.invoice_items[index];
+          const item = app.invoice_items[index].item;
+          const quantity = invoice_item.quantity;
+          const available_stock = invoice_item.total_stocked - invoice_item.total_invoiced_quantity;
+          app.disable_submit = false;
+          if (quantity > available_stock) {
+            app.disable_submit = true;
+            app.$alert(`${item} stock balance is less than ${quantity}. Please enter a value within range`);
+            app.invoice_items[index].quantity = 0;
+            app.calculateTotal(index);
+          }
         }
       }
     },

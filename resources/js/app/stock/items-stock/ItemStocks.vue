@@ -50,6 +50,9 @@
                 {{ row.quantity }} {{ formatPackageType(row.item.package_type) }}
                 <br><small v-html="showItemsInCartons(row.quantity, row.item.quantity_per_carton)" />
               </div>
+              <div slot="is_warehouse_transfered" slot-scope="{row}">
+                {{ (row.is_warehouse_transfered === 1 ) ? 'Transfer' : 'New Entry' }}
+              </div>
               <!-- <div slot="in_transit" slot-scope="{row}" class="alert alert-warning">
                 {{ row.in_transit }} {{ formatPackageType(row.item.package_type) }}
                 <br><small v-html="showItemsInCartons(row.in_transit, row.item.quantity_per_carton)" />
@@ -82,7 +85,7 @@
               </div>
               <div slot="confirmer.name" slot-scope="{row}">
                 <div :id="row.id">
-                  <div v-if="row.confirmed_by == null">
+                  <div v-if="row.confirmed_by === null">
                     <a v-if="checkPermission(['audit confirm actions'])" title="Click to confirm" class="btn btn-warning" @click="confirmItemStocked(row.id);"><i class="fa fa-check" /> </a>
                   </div>
                   <div v-else>
@@ -237,7 +240,7 @@ export default {
       warehouses: [],
       items_in_stock: [],
       expired_products: [],
-      columns: ['action', 'stocker.name', 'confirmer.name', 'item.name', 'batch_no', 'quantity', /* 'in_transit'*/ 'supplied', /* 'expired',*/ 'reserved_for_supply', 'balance', 'in_stock', 'created_at', 'expiry_date'],
+      columns: ['action', 'stocker.name', 'confirmer.name', 'item.name', 'batch_no', 'quantity', /* 'in_transit'*/ 'supplied', /* 'expired',*/ 'reserved_for_supply', 'balance', 'in_stock', 'created_at', 'expiry_date', 'is_warehouse_transfered'],
 
       options: {
         headings: {
@@ -253,6 +256,7 @@ export default {
           balance: 'Main Bal.',
           expiry_date: 'Expires',
           created_at: 'Created',
+          is_warehouse_transfered: 'Entry Mode',
 
           // id: 'S/N',
         },

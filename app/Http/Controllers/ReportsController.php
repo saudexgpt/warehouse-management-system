@@ -207,8 +207,8 @@ class ReportsController extends Controller
         return response()->json(
             [
 
-                'categories'    => $categories,
-                'series'      => $series,
+                'categories' => $categories,
+                'series' => $series,
                 'title' => 'Number of Products Physically in Stock at ' . $warehouse->name . $extra_title,
                 'subtitle' => $subtitle,
 
@@ -259,8 +259,8 @@ class ReportsController extends Controller
     {
         return response()->json(
             [
-                'expenses'  => $this->expensesOnVehicles($request),
-                'vehicles'  => $this->getCurrentVehicleCondition($request),
+                'expenses' => $this->expensesOnVehicles($request),
+                'vehicles' => $this->getCurrentVehicleCondition($request),
 
             ],
             200
@@ -411,8 +411,8 @@ class ReportsController extends Controller
         $subtitle = strtoupper($panel . 'ly Report');
 
         return [
-            'categories'    => $categories,
-            'series'      => $series,
+            'categories' => $categories,
+            'series' => $series,
             'title' => 'Total expenses on vehicles in ' . $warehouse->name . $extra_title,
             'subtitle' => $subtitle,
             'plot_band' => $plot_band
@@ -495,8 +495,8 @@ class ReportsController extends Controller
         $subtitle = strtoupper($panel . 'ly Report');
 
         return [
-            'categories'    => $categories,
-            'series'      => $series,
+            'categories' => $categories,
+            'series' => $series,
             'title' => 'Total Delivery Cost on Waybills in ' . $warehouse->name . $extra_title,
             'subtitle' => $subtitle,
             'plot_band' => $plot_band,
@@ -507,6 +507,7 @@ class ReportsController extends Controller
     public function outbounds(Request $request)
     {
         set_time_limit(0);
+        ini_set('memory_limit', '1024M');
         $warehouse_id = $request->warehouse_id;
         $date_from = Carbon::now()->startOfMonth();
         $date_to = Carbon::now()->endOfMonth();
@@ -548,7 +549,7 @@ class ReportsController extends Controller
 
 
             $total_supplied = $quantity_supplied[$invoice_item->id] + $supplied;
-            $outbounds[]  = [
+            $outbounds[] = [
                 'dispatcher' => $dispatcher,
                 'invoice_no' => $invoice_item->invoice->invoice_number,
                 'customer' => $invoice_item->invoice->customer->user->name,
@@ -586,10 +587,11 @@ class ReportsController extends Controller
 
             if (!isset($transfered_quantity_supplied[$invoice_item->id])) {
 
-                $transfered_quantity_supplied[$invoice_item->id] = 0;;
+                $transfered_quantity_supplied[$invoice_item->id] = 0;
+                ;
             }
             $total_supplied = $transfered_quantity_supplied[$invoice_item->id] + $supplied;
-            $outbounds[]  = [
+            $outbounds[] = [
                 'dispatcher' => $dispatcher,
                 'invoice_no' => $invoice_item->transferRequest->request_number,
                 'customer' => $invoice_item->requestWarehouse->name,
@@ -610,6 +612,7 @@ class ReportsController extends Controller
             return strtotime($a['date']) - strtotime($b['date']);
         });
 
+        ini_set('memory_limit', '128M');
         return response()->json(compact('outbounds'));
     }
     // public function waybills(Request $request)
@@ -690,11 +693,11 @@ class ReportsController extends Controller
         $transfer_item_quantity_supplied = ($previous_transfer_outbound) ? $previous_transfer_outbound->total_quantity_supplied : 0;
         $expired_quantity = ($previous_expired_product) ? $previous_expired_product->total_quantity : 0;
 
-        $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied - (int) $expired_quantity;
+        $brought_forward = (int) $quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied - (int) $expired_quantity;
         if ($inbounds->isNotEmpty()) {
             foreach ($inbounds as $inbound) {
                 //$running_balance += $inbound->quantity;
-                $bincards[]  = [
+                $bincards[] = [
                     'type' => 'in_bound',
                     'date' => $inbound->created_at,
                     'invoice_no' => '',
@@ -772,7 +775,7 @@ class ReportsController extends Controller
         });
         $date_from_formatted = date('Y-m-d', strtotime($date_from));
         $date_to_formatted = date('Y-m-d', strtotime($date_to));
-        return  response()->json(compact('bincards', 'brought_forward', 'date_from_formatted', 'date_to_formatted'), 200);
+        return response()->json(compact('bincards', 'brought_forward', 'date_from_formatted', 'date_to_formatted'), 200);
     }
 
     private function getProductTransaction($item_id, $date_from, $date_to, $warehouse_id)
@@ -1035,7 +1038,7 @@ class ReportsController extends Controller
 
                 $expired_quantity = ($previous_expired_product) ? $previous_expired_product->total_quantity : 0;
 
-                $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied - (int) $expired_quantity;
+                $brought_forward = (int) $quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied - (int) $expired_quantity;
 
                 $quantity_in = 0;
                 $quantity_out = 0; //$quantity_supplied + $transfer_item_quantity_supplied;

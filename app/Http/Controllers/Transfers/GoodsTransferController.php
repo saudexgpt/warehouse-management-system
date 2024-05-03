@@ -39,26 +39,54 @@ class GoodsTransferController extends Controller
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;
-            $incoming_transfer_requests = TransferRequest::with(['supplyWarehouse', 'requestWarehouse', 'transferWaybillItems', 'requestBy', 'transferRequestItems.item', 'histories' => function ($q) {
-                $q->orderBy('id', 'DESC');
-            }])->where(['supply_warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
+            $incoming_transfer_requests = TransferRequest::with([
+                'supplyWarehouse',
+                'requestWarehouse',
+                'transferWaybillItems',
+                'requestBy',
+                'transferRequestItems.item',
+                'histories' => function ($q) {
+                    $q->orderBy('id', 'DESC');
+                }
+            ])->where(['supply_warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
 
-            $sent_requests = TransferRequest::with(['supplyWarehouse', 'requestWarehouse', 'transferWaybillItems', 'requestBy', 'transferRequestItems.item', 'histories' => function ($q) {
-                $q->orderBy('id', 'DESC');
-            }])->where(['request_warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
+            $sent_requests = TransferRequest::with([
+                'supplyWarehouse',
+                'requestWarehouse',
+                'transferWaybillItems',
+                'requestBy',
+                'transferRequestItems.item',
+                'histories' => function ($q) {
+                    $q->orderBy('id', 'DESC');
+                }
+            ])->where(['request_warehouse_id' => $warehouse_id, 'status' => $status])->orderBy('id', 'DESC')->get();
         }
         if (isset($request->from, $request->to, $request->status) && $request->from != '' && $request->from != '' && $request->status != '') {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
             $status = $request->status;
             $panel = $request->panel;
-            $incoming_transfer_requests = TransferRequest::with(['supplyWarehouse', 'requestWarehouse', 'transferWaybillItems', 'requestBy', 'transferRequestItems.item', 'histories' => function ($q) {
-                $q->orderBy('id', 'DESC');
-            }])->where(['supply_warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
+            $incoming_transfer_requests = TransferRequest::with([
+                'supplyWarehouse',
+                'requestWarehouse',
+                'transferWaybillItems',
+                'requestBy',
+                'transferRequestItems.item',
+                'histories' => function ($q) {
+                    $q->orderBy('id', 'DESC');
+                }
+            ])->where(['supply_warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
 
-            $sent_requests = TransferRequest::with(['supplyWarehouse', 'requestWarehouse', 'transferWaybillItems', 'requestBy', 'transferRequestItems.item', 'histories' => function ($q) {
-                $q->orderBy('id', 'DESC');
-            }])->where(['request_warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
+            $sent_requests = TransferRequest::with([
+                'supplyWarehouse',
+                'requestWarehouse',
+                'transferWaybillItems',
+                'requestBy',
+                'transferRequestItems.item',
+                'histories' => function ($q) {
+                    $q->orderBy('id', 'DESC');
+                }
+            ])->where(['request_warehouse_id' => $warehouse_id, 'status' => $status])->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to)->orderBy('id', 'DESC')->get();
         }
         return response()->json(compact('incoming_transfer_requests', 'sent_requests'));
     }
@@ -76,17 +104,21 @@ class GoodsTransferController extends Controller
             }
         }*/
         // $transfer_requests = TransferRequest::with(['transferRequestItems', 'transferRequestItems.item'])->where('warehouse_id', $warehouse_id)->where('status', '!=', 'delivered')->get();
-        $transfer_requests = TransferRequest::with(['requestWarehouse', 'transferRequestItems' => function ($q) {
-            $q->where('supply_status', '!=', 'Complete');
-        }, 'transferRequestItems.item.stocks' => function ($p) use ($warehouse_id) {
-            $p->groupBy('expiry_date', 'batch_no')
-                ->whereRaw('balance - reserved_for_supply > 0')
-                ->whereRaw('confirmed_by IS NOT NULL')
-                ->where('warehouse_id', $warehouse_id)
-                ->orderBy('expiry_date')
-                ->orderBy('batch_no')
-                ->select('*', \DB::raw('(SUM(balance) - SUM(reserved_for_supply)) as balance'));
-        }])
+        $transfer_requests = TransferRequest::with([
+            'requestWarehouse',
+            'transferRequestItems' => function ($q) {
+                $q->where('supply_status', '!=', 'Complete');
+            },
+            'transferRequestItems.item.stocks' => function ($p) use ($warehouse_id) {
+                $p->groupBy('expiry_date', 'batch_no')
+                    ->whereRaw('balance - reserved_for_supply > 0')
+                    ->whereRaw('confirmed_by IS NOT NULL')
+                    ->where('warehouse_id', $warehouse_id)
+                    ->orderBy('expiry_date')
+                    ->orderBy('batch_no')
+                    ->select('*', \DB::raw('(SUM(balance) - SUM(reserved_for_supply)) as balance'));
+            }
+        ])
             ->where('supply_warehouse_id', $warehouse_id)
             ->where('full_waybill_generated', 0)
             ->orderBy('id', 'DESC')
@@ -125,23 +157,23 @@ class GoodsTransferController extends Controller
     {
 
         $user = $this->getUser();
-        $request_number  = $this->nextReceiptNo('transfer_request'); //$request->request_number;
+        $request_number = $this->nextReceiptNo('transfer_request'); //$request->request_number;
         $transfer_request_items = json_decode(json_encode($request->request_items));
         $dupicate_invoice = TransferRequest::where('request_number', $request_number)->first();
         if ($dupicate_invoice) {
-            $request_number  = $this->nextReceiptNo('transfer_request');
+            $request_number = $this->nextReceiptNo('transfer_request');
         }
         //////update next invoice number/////
         $this->incrementReceiptNo('transfer_request');
         $request_warehouse = Warehouse::find($request->request_warehouse_id);
         $supply_warehouse = Warehouse::find($request->supply_warehouse_id);
         $transfer_request = new TransferRequest();
-        $transfer_request->request_warehouse_id        = $request->request_warehouse_id;
-        $transfer_request->supply_warehouse_id         = $request->supply_warehouse_id;
-        $transfer_request->request_number      = $request_number; // $this->nextTransferRequestNo();
-        $transfer_request->request_by              = $user->id;
-        $transfer_request->status              = $request->status;
-        $transfer_request->notes              = $request->notes;
+        $transfer_request->request_warehouse_id = $request->request_warehouse_id;
+        $transfer_request->supply_warehouse_id = $request->supply_warehouse_id;
+        $transfer_request->request_number = $request_number; // $this->nextTransferRequestNo();
+        $transfer_request->request_by = $user->id;
+        $transfer_request->status = $request->status;
+        $transfer_request->notes = $request->notes;
         $transfer_request->save();
         $title = "New product transfer request generated";
         $description = "New $transfer_request->status product transfer request ($transfer_request->request_number) was sent to $supply_warehouse->name from $request_warehouse->name by $user->name ($user->phone)";
@@ -250,9 +282,16 @@ class GoodsTransferController extends Controller
     public function show(TransferRequest $transfer_request)
     {
         //
-        $transfer_request =  $transfer_request->with(['supplyWarehouse', 'requestWarehouse', 'requestBy', 'transferWaybillItems', 'transferRequestItems.item', 'histories' => function ($q) {
-            $q->orderBy('id', 'DESC');
-        }])->find($transfer_request->id);
+        $transfer_request = $transfer_request->with([
+            'supplyWarehouse',
+            'requestWarehouse',
+            'requestBy',
+            'transferWaybillItems',
+            'transferRequestItems.item',
+            'histories' => function ($q) {
+                $q->orderBy('id', 'DESC');
+            }
+        ])->find($transfer_request->id);
         return response()->json(compact('transfer_request'), 200);
     }
 
@@ -456,7 +495,7 @@ class GoodsTransferController extends Controller
         $description = "Transfer Request Waybill ($waybill->transfer_request_waybill_no) status updated to " . strtoupper($waybill->status) . " by $user->name ($user->email)";
         if ($status === 'delivered') {
             $item_in_stock_obj->confirmItemInStockAsSupplied($waybill->dispatchProducts);
-            foreach ($transfer_requests as  $transfer_request) {
+            foreach ($transfer_requests as $transfer_request) {
 
                 $transfer_request->status = $status;
                 // check for partial supplies
@@ -476,7 +515,7 @@ class GoodsTransferController extends Controller
 
                 $item_stock_sub_batch = new ItemStockSubBatch();
                 $item_stock_sub_batch->stocked_by = $user->id;
-                $item_stock_sub_batch->confirmed_by = $user->id;
+                // $item_stock_sub_batch->confirmed_by = $user->id;
                 $item_stock_sub_batch->warehouse_id = $waybill->request_warehouse_id;
                 $item_stock_sub_batch->item_id = $dispatched_stock->item_id;
                 // we suffix 'Trans-' so that we can differentiate between transfered stock and normal ones
@@ -526,9 +565,9 @@ class GoodsTransferController extends Controller
         $transfer_request_items = json_decode(json_encode($request->transfer_request_items));
         $transfer_request = TransferRequest::find($request->id);
         $old_request_number = $transfer_request->request_number;
-        $transfer_request->request_number      = $request->request_number;
-        $transfer_request->supply_warehouse_id      = $request->supply_warehouse_id;
-        $transfer_request->notes              = $request->notes;
+        $transfer_request->request_number = $request->request_number;
+        $transfer_request->supply_warehouse_id = $request->supply_warehouse_id;
+        $transfer_request->notes = $request->notes;
         $transfer_request->save();
         $extra_info = "";
         if ($old_request_number !== $transfer_request->request_number) {

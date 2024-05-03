@@ -62,7 +62,7 @@ class Controller extends BaseController
     }
     public function resolveIncompleteSupplies()
     {
-        $dispatch_products = DispatchedProduct::groupBy('waybill_item_id')->select('*',  \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->where('created_at', '>=', '2021-05-01')->get();
+        $dispatch_products = DispatchedProduct::groupBy('waybill_item_id')->select('*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->where('created_at', '>=', '2021-05-01')->get();
 
         foreach ($dispatch_products as $dispatch_product) {
             if ((int) $dispatch_product->total_quantity_supplied < $dispatch_product->waybillItem->quantity) {
@@ -234,7 +234,7 @@ class Controller extends BaseController
 
     public function setUser()
     {
-        $this->user  = new UserResource(Auth::user());
+        $this->user = new UserResource(Auth::user());
     }
 
     public function getUser()
@@ -253,6 +253,7 @@ class Controller extends BaseController
     public function fetchNecessayParams()
     {
         set_time_limit(0);
+        ini_set('memory_limit', '512M');
         $user = $this->getUser();
         // $all_warehouses = Warehouse::with(['vehicles'/*'itemStocks.item.taxes', 'itemStocks.item.price','vehicles'*/])->where('enabled', 1)->get();
         // if ($user->isAdmin() || $user->isAssistantAdmin()) {
@@ -273,6 +274,7 @@ class Controller extends BaseController
         //$order_statuses = OrderStatus::get();
         $invoice_statuses = InvoiceStatus::get();
         $company_name = $this->settingValue('company_name');
+        $enable_stock_quantity_check_when_raising_invoice = $this->settingValue('enable_stock_quantity_check_when_raising_invoice');
         $company_contact = $this->settingValue('company_contact');
         $currency = $this->settingValue('currency');
         $product_expiry_date_alert = $this->settingValue('product_expiry_date_alert_in_months');
@@ -282,13 +284,14 @@ class Controller extends BaseController
         $expense_types = ['Insurance', 'Maintenance / Repairs', 'Fuel'];
         $package_types = ['Bottles', 'Boxes', 'Bundles', 'Cartons', 'Clips', 'Packets', 'Pieces', 'Rolls', 'Tins'];
         $product_return_reasons = ['Product short-dated', 'Mass return - expired', 'Mass return - unexpired', 'Rep. resignation/sack - expired', 'Rep. resignation/sack - unexpired', 'Spillage', 'Others'];
-        $teams = ['Allied', 'Bull', 'Confectionaries', 'Cosmestics', 'Eagle', 'Falcons', 'Funbact', 'Jaguar', 'Key Account', 'Lion', 'REP', 'Stallion'];
+        $teams = ['Allied', 'Bull', 'Confectionaries', 'Cosmestics', 'Consumer Health Team', 'Eagle', 'East Market Area', 'Falcons', 'Funbact', 'Jaguar', 'Key Account', 'Lagos Market Area', 'Lion', 'National Market Business Area', 'North Market Area', 'REP', 'Stallion', 'West Market Area'];
         $dispatch_companies = ['GREENLIFE LOGISTICS', 'COURIER SERVICE', 'FOB (Free On Board)'];
         $all_roles = Role::orderBy('name')->select('name')->get();
         $default_roles = Role::where('role_type', 'default')->orderBy('name')->select('name')->get();
         $customer_types = CustomerType::get();
+        ini_set('memory_limit', '128M');
         return response()->json([
-            'params' => compact('company_name', 'company_contact', 'all_warehouses', 'warehouses', 'items', 'currencies', 'taxes', /*'order_statuses',*/ 'invoice_statuses', 'currency', 'vehicle_types', 'engine_types', 'expense_types', 'package_types', 'automobile_engineers', 'all_roles', 'default_roles', 'product_return_reasons', 'product_expiry_date_alert', 'teams', 'dispatch_companies', 'customer_types')
+            'params' => compact('company_name', 'company_contact', 'all_warehouses', 'warehouses', 'items', 'currencies', 'taxes', /*'order_statuses',*/ 'invoice_statuses', 'currency', 'vehicle_types', 'engine_types', 'expense_types', 'package_types', 'automobile_engineers', 'all_roles', 'default_roles', 'product_return_reasons', 'product_expiry_date_alert', 'teams', 'dispatch_companies', 'customer_types', 'enable_stock_quantity_check_when_raising_invoice')
         ]);
     }
     public function settingValue($key)
