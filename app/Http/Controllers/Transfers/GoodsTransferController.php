@@ -514,8 +514,8 @@ class GoodsTransferController extends Controller
                 $dispatched_stock = $dispatched_product->itemStock;
 
                 $item_stock_sub_batch = new ItemStockSubBatch();
-                $item_stock_sub_batch->stocked_by = $user->id;
-                // $item_stock_sub_batch->confirmed_by = $user->id;
+                $item_stock_sub_batch->stocked_by = $dispatched_stock->stocked_by;
+                $item_stock_sub_batch->confirmed_by = $user->id;
                 $item_stock_sub_batch->warehouse_id = $waybill->request_warehouse_id;
                 $item_stock_sub_batch->item_id = $dispatched_stock->item_id;
                 // we suffix 'Trans-' so that we can differentiate between transfered stock and normal ones

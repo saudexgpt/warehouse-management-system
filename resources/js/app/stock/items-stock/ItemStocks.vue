@@ -51,7 +51,7 @@
                 <br><small v-html="showItemsInCartons(row.quantity, row.item.quantity_per_carton)" />
               </div>
               <div slot="is_warehouse_transfered" slot-scope="{row}">
-                {{ (row.is_warehouse_transfered === 1 ) ? 'Transfer' : 'New Entry' }}
+                {{ (row.is_warehouse_transfered === 1 ) ? 'Inter-Warehouse Transfer' : 'GRN Entry' }}
               </div>
               <!-- <div slot="in_transit" slot-scope="{row}" class="alert alert-warning">
                 {{ row.in_transit }} {{ formatPackageType(row.item.package_type) }}
