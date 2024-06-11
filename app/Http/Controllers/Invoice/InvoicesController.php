@@ -376,10 +376,18 @@ class InvoicesController extends Controller
         }
         $status = (isset($request->status) && $request->status != '') ? $request->status : 'pending';
 
-        $invoices = $invoiceQuery->with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer',  'invoiceItems.item', 'histories' => function ($q) {
-            $q->orderBy('id', 'DESC');
-        }])
-            ->where([/*'warehouse_id' => $warehouse_id,*/'status' => $status])
+        $invoices = $invoiceQuery->with([
+            'warehouse',
+            'waybillItems',
+            'customer.user',
+            'customer.type',
+            'confirmer',
+            'invoiceItems.item',
+            'histories' => function ($q) {
+                $q->orderBy('id', 'DESC');
+            }
+        ])
+            ->where([/*'warehouse_id' => $warehouse_id,*/ 'status' => $status])
             ->orderBy('updated_at', 'DESC')
             ->paginate($limit);
 
@@ -490,15 +498,15 @@ class InvoicesController extends Controller
         // }
         foreach ($customer_ids as $customer_id) {
             $invoice = new Invoice();
-            $invoice->warehouse_id        = $request->warehouse_id;
-            $invoice->customer_id         = $customer_id;
-            $invoice->subtotal            = $request->subtotal;
-            $invoice->discount            = $request->discount;
-            $invoice->amount              = $request->amount;
-            $invoice->invoice_number      = $this->nextReceiptNo('invoice'); // $request->invoice_number; // $this->nextInvoiceNo();
-            $invoice->status              = $request->status;
-            $invoice->notes              = $request->notes;
-            $invoice->invoice_date        = date('Y-m-d H:i:s', strtotime($request->invoice_date));
+            $invoice->warehouse_id = $request->warehouse_id;
+            $invoice->customer_id = $customer_id;
+            $invoice->subtotal = $request->subtotal;
+            $invoice->discount = $request->discount;
+            $invoice->amount = $request->amount;
+            $invoice->invoice_number = $this->nextReceiptNo('invoice'); // $request->invoice_number; // $this->nextInvoiceNo();
+            $invoice->status = $request->status;
+            $invoice->notes = $request->notes;
+            $invoice->invoice_date = date('Y-m-d H:i:s', strtotime($request->invoice_date));
             $invoice->save();
             $this->incrementReceiptNo('invoice');
             $title = "New invoice generated";
@@ -531,7 +539,7 @@ class InvoicesController extends Controller
             $dupicate_invoice = Invoice::where('invoice_number', $invoice_number)->first();
             if (!$dupicate_invoice) {
                 // We want to make sure all headers are set and what we need
-                $invoice_item_headers =  json_decode(json_encode($bulk_invoice->bulk_invoices_header));
+                $invoice_item_headers = json_decode(json_encode($bulk_invoice->bulk_invoices_header));
                 if (!in_array('Description of Goods', $invoice_item_headers)) {
                     $header_error[] = "'Description of Goods' is needed as an header";
                 }
@@ -548,7 +556,7 @@ class InvoicesController extends Controller
                     $header_error[] = "'Amount' is needed as an header";
                 }
                 if (empty($header_error)) {
-                    $invoice_items =  json_decode(json_encode($bulk_invoice->bulk_invoices_data));
+                    $invoice_items = json_decode(json_encode($bulk_invoice->bulk_invoices_data));
                     $amount = 0;
                     $discount = 0;
                     foreach ($invoice_items as $item) {
@@ -556,15 +564,15 @@ class InvoicesController extends Controller
                         $amount += $item->$amount_label;
                     }
                     $invoice = new Invoice();
-                    $invoice->warehouse_id        = $warehouse_id;
-                    $invoice->customer_id         = $customer_id;
-                    $invoice->subtotal            = $amount;
-                    $invoice->discount            = $discount;
-                    $invoice->amount              = $amount;
-                    $invoice->invoice_number      = $invoice_number; // $this->nextInvoiceNo();
-                    $invoice->status              = 'pending';
-                    $invoice->notes              = 'BEING GOODS SOLD TO THE ABOVE CUSTOMER';
-                    $invoice->invoice_date        = date('Y-m-d H:i:s', strtotime($invoice_date));
+                    $invoice->warehouse_id = $warehouse_id;
+                    $invoice->customer_id = $customer_id;
+                    $invoice->subtotal = $amount;
+                    $invoice->discount = $discount;
+                    $invoice->amount = $amount;
+                    $invoice->invoice_number = $invoice_number; // $this->nextInvoiceNo();
+                    $invoice->status = 'pending';
+                    $invoice->notes = 'BEING GOODS SOLD TO THE ABOVE CUSTOMER';
+                    $invoice->invoice_date = date('Y-m-d H:i:s', strtotime($invoice_date));
                     $invoice->save();
                     if ($invoice->save()) {
                         $title = "New invoice generated";
@@ -648,13 +656,17 @@ class InvoicesController extends Controller
         $invoices = [];
         $date = date('Y-m-d', strtotime('now'));
 
-        $invoice_items = $invoiceQuery->with(['item.stocks' => function ($q) {
-            $q->groupBy('item_id')
-                ->where('warehouse_id', '!=', 7)
-                ->whereRaw('confirmed_by IS NOT NULL')
-                ->select(['id', 'item_id', \DB::raw('(SUM(balance) -  SUM(reserved_for_supply)) as total_balance')]);
-            // ->first();
-        }, 'invoice.warehouse', 'invoice.customer.user'])
+        $invoice_items = $invoiceQuery->with([
+            'item.stocks' => function ($q) {
+                $q->groupBy('item_id')
+                    ->where('warehouse_id', '!=', 7)
+                    ->whereRaw('confirmed_by IS NOT NULL')
+                    ->select(['id', 'item_id', \DB::raw('(SUM(balance) -  SUM(reserved_for_supply)) as total_balance')]);
+                // ->first();
+            },
+            'invoice.warehouse',
+            'invoice.customer.user'
+        ])
             ->orderBy('updated_at', 'DESC')
             ->where('invoice_id', $invoice_id)
             ->get();
@@ -675,14 +687,14 @@ class InvoicesController extends Controller
         $invoice_items = json_decode(json_encode($request->invoice_items));
         $invoice = Invoice::find($request->id);
         $old_invoice_number = $invoice->invoice_number;
-        $invoice->invoice_number      = $request->invoice_number;
-        $invoice->warehouse_id      = $request->warehouse_id;
-        $invoice->customer_id      = $request->customer_id;
-        $invoice->invoice_date      = date('Y-m-d H:i:s', strtotime($request->invoice_date));
-        $invoice->subtotal            = $request->subtotal;
-        $invoice->discount            = $request->discount;
-        $invoice->amount              = $request->amount;
-        $invoice->notes              = $request->notes;
+        $invoice->invoice_number = $request->invoice_number;
+        $invoice->warehouse_id = $request->warehouse_id;
+        $invoice->customer_id = $request->customer_id;
+        $invoice->invoice_date = date('Y-m-d H:i:s', strtotime($request->invoice_date));
+        $invoice->subtotal = $request->subtotal;
+        $invoice->discount = $request->discount;
+        $invoice->amount = $request->amount;
+        $invoice->notes = $request->notes;
         $invoice->save();
         $extra_info = "";
         if ($old_invoice_number !== $invoice->invoice_number) {
@@ -739,9 +751,17 @@ class InvoicesController extends Controller
     public function show(Invoice $invoice)
     {
         //
-        $invoice =  $invoice->with(['warehouse', 'waybillItems', 'customer.user', 'customer.type', 'confirmer', 'invoiceItems.item', 'histories' => function ($q) {
-            $q->orderBy('id', 'DESC');
-        }])->find($invoice->id);
+        $invoice = $invoice->with([
+            'warehouse',
+            'waybillItems',
+            'customer.user',
+            'customer.type',
+            'confirmer',
+            'invoiceItems.item',
+            'histories' => function ($q) {
+                $q->orderBy('id', 'DESC');
+            }
+        ])->find($invoice->id);
         return response()->json(compact('invoice'), 200);
     }
 
@@ -773,7 +793,7 @@ class InvoicesController extends Controller
     {
         //
         $date = date('Y-m-d', strtotime($waybill->created_at));
-        $waybill =  $waybill->with([
+        $waybill = $waybill->with([
             'invoices.customer.user',
             'waybillItems' => function ($q) {
                 $q->where('quantity', '>', 0);
@@ -957,7 +977,7 @@ class InvoicesController extends Controller
                     $original_quantity = $invoice_item_update->quantity;
                     $quantity_supplied = $invoice_item_update->quantity_supplied;
                     if ($original_quantity > $quantity_supplied) {
-                        if (($original_quantity - $quantity_supplied)  >= $for_supply) {
+                        if (($original_quantity - $quantity_supplied) >= $for_supply) {
 
 
                             // $actual_supply_quantity = $for_supply; //  - $balance;
@@ -983,6 +1003,8 @@ class InvoicesController extends Controller
         $invoice_ids = array_unique($invoice_ids);
 
         if (empty($invoice_ids)) {
+            $waybill->waybill_no .= '-deleted-' . time();
+            $waybill->save();
             $waybill->delete();
             return response()->json(['message' => 'Pick at least one invoice to generate a waybill'], 500);
         }
@@ -1021,7 +1043,7 @@ class InvoicesController extends Controller
     {
         //
         $warehouse_id = $waybill->warehouse_id;
-        $waybill =  $waybill->with([
+        $waybill = $waybill->with([
             'waybillItems.invoiceItem.item.stocks' => function ($p) use ($warehouse_id) {
                 $p->groupBy('expiry_date', 'batch_no');
                 $p->whereRaw('balance - reserved_for_supply > 0')->where('warehouse_id', $warehouse_id)->whereRaw('confirmed_by IS NOT NULL')
@@ -1069,7 +1091,7 @@ class InvoicesController extends Controller
 
             // $waybill_quantity = $waybillItem->quantity;
             $reserved_batches = $waybill_item->batches;
-            $batches =  new Collection();
+            $batches = new Collection();
             foreach ($reserved_batches as $reserved_batch) {
                 $old_supply = (int) $reserved_batch->old_supply_quantity;
                 $new_supply_quantity = $reserved_batch->supply_quantity;
@@ -1086,7 +1108,7 @@ class InvoicesController extends Controller
                     $invoice_item_batch->forceDelete();
                 }
                 if ($new_supply_quantity > 0) {
-                    $batches->push((object)[
+                    $batches->push((object) [
                         'batch_no' => $batch_no,
                         'expiry_date' => $expiry_date,
                         'supply_quantity' => $new_supply_quantity
@@ -1157,7 +1179,7 @@ class InvoicesController extends Controller
                 $this->setVehicleAvailability($vehicle, 'available');
             }
             $item_in_stock_obj->confirmItemInStockAsSupplied($waybill->dispatchProducts);
-            foreach ($invoices as  $invoice) {
+            foreach ($invoices as $invoice) {
 
                 $invoice->status = $status;
                 // check for partial supplies
@@ -1194,7 +1216,7 @@ class InvoicesController extends Controller
     {
         $warehouse_id = $request->warehouse_id;
         $trip_no = $this->nextReceiptNo('trip');
-        $vehicles = Vehicle::with('vehicleDrivers.driver.user')/*->where('warehouse_id', $warehouse_id)*/->get();
+        $vehicles = Vehicle::with('vehicleDrivers.driver.user')/*->where('warehouse_id', $warehouse_id)*/ ->get();
         $delivery_trips = DeliveryTrip::with('cost.confirmer', 'waybills', 'vehicle.vehicleDrivers.driver.user')->orderBy('id', 'DESC')->where(['warehouse_id' => $warehouse_id])->paginate($request->limit);
 
         $waybills_with_pending_wayfare = Waybill::where(['warehouse_id' => $warehouse_id, 'waybill_wayfare_status' => 'pending'])->whereRaw('confirmed_by IS NOT NULL')->get();
@@ -1377,7 +1399,7 @@ class InvoicesController extends Controller
     public function deleteRestoredInvoices()
     {
         //DB::select('select id from invoice_items_blend where deleted_at IS NOT NULL');
-        $invoice_items =  InvoiceItemBlend::onlyTrashed()->pluck('id');
+        $invoice_items = InvoiceItemBlend::onlyTrashed()->pluck('id');
         InvoiceItem::whereIn('id', $invoice_items)
             ->chunkById(200, function (Collection $flights) {
                 $flights->each->delete();
@@ -1444,7 +1466,8 @@ class InvoicesController extends Controller
     {
         set_time_limit(0);
         if ($waybill->status == 'pending') {
-
+            $waybill->waybill_no .= '-deleted-' . time();
+            $waybill->save();
             // delete all relationships with waybill and the waybill itself
             $actor = $this->getUser();
             $title = "Waybill deleted";

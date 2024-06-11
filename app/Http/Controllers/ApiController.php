@@ -507,7 +507,7 @@ class ApiController extends Controller
 
                 $expired_quantity = ($previous_expired_product) ? $previous_expired_product->total_quantity : 0;
 
-                $brought_forward = (int)$quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied - (int) $expired_quantity;
+                $brought_forward = (int) $quantity_in_stock - (int) $quantity_supplied - (int) $transfer_item_quantity_supplied - (int) $expired_quantity;
 
                 $quantity_in = 0;
                 $quantity_out = 0; //$quantity_supplied + $transfer_item_quantity_supplied;
@@ -571,6 +571,7 @@ class ApiController extends Controller
 
         $items_in_stock_query->join('warehouses', 'warehouses.id', '=', 'item_stock_sub_batches.warehouse_id')
             ->join('items', 'items.id', '=', 'item_stock_sub_batches.item_id')
+            ->join('categories', 'categories.id', '=', 'items.category_id')
             ->groupBy('batch_no', 'warehouse_id');
         if (isset($request->warehouse_id) && $request->warehouse_id != 'all' && $request->warehouse_id != '') {
 
@@ -586,7 +587,7 @@ class ApiController extends Controller
             ->where('expiry_date', '>=', $date)
             ->orderBy('warehouse_id')
             ->orderBy('expiry_date')
-            ->select('warehouses.name as warehouse', 'items.name as product', 'batch_no', 'goods_received_note as grn', \DB::raw('SUM(quantity) as quantity_in'), \DB::raw('(SUM(in_transit) + SUM(supplied)) as quantity_out'), \DB::raw('SUM(balance) as total_balance'), 'expiry_date', 'item_stock_sub_batches.created_at');
+            ->select('warehouses.name as warehouse', 'items.id as product_id', 'items.name as product', 'categories.name as product_category', 'batch_no', 'goods_received_note as grn', \DB::raw('SUM(quantity) as quantity_in'), \DB::raw('(SUM(in_transit) + SUM(supplied)) as quantity_out'), \DB::raw('SUM(balance) as total_balance'), 'expiry_date', 'item_stock_sub_batches.created_at');
         // $items_in_stock = $items_in_stock_query->get();
         $items_in_stock = $items_in_stock_query->get();
         return response()->json(compact('items_in_stock'));
