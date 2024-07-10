@@ -9,13 +9,13 @@ function scoreInPercentage($numerator, $denominator)
 function rainbowColor($color)
 {
     $arr = [
-        "1" =>    "bg-blue",
-        "2" =>    "bg-orange",
-        "3" =>    "bg-green",
-        "4" =>    "bg-red",
-        "5" =>    "bg-yellow",
-        "6" =>    "bg-brown",
-        "7" =>    "bg-pink",
+        "1" => "bg-blue",
+        "2" => "bg-orange",
+        "3" => "bg-green",
+        "4" => "bg-red",
+        "5" => "bg-yellow",
+        "6" => "bg-brown",
+        "7" => "bg-pink",
 
     ];
 
@@ -132,7 +132,7 @@ function formatLevel($level)
 function severityLevels($level = null)
 {
     $arr = [
-        ''  => 'Select Level',
+        '' => 'Select Level',
         'good' => 'Good',
         'fair' => 'Fair',
         'severe' => 'Severe',
@@ -192,7 +192,8 @@ function getLinkText($status)
 function curricula()
 {
     return [
-        'British', 'Nigerian'
+        'British',
+        'Nigerian'
     ];
 }
 function curriculumLevel($curriculum = null, $level_group = null, $level = null)
@@ -671,7 +672,7 @@ function schoolType()
 
 function countries()
 {
-    return  array("Afghanistan", "Albania", "Algeria", "American Samoa", "Andorra", "Angola", "Anguilla", "Antarctica", "Antigua and Barbuda", "Argentina", "Armenia", "Aruba", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bermuda", "Bhutan", "Bolivia", "Bosnia and Herzegowina", "Botswana", "Bouvet Island", "Brazil", "British Indian Ocean Territory", "Brunei Darussalam", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon", "Canada", "Cape Verde", "Cayman Islands", "Central African Republic", "Chad", "Chile", "China", "Christmas Island", "Cocos (Keeling) Islands", "Colombia", "Comoros", "Congo", "Congo, the Democratic Republic of the", "Cook Islands", "Costa Rica", "Cote d'Ivoire", "Croatia (Hrvatska)", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "East Timor", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Ethiopia", "Falkland Islands (Malvinas)", "Faroe Islands", "Fiji", "Finland", "France", "France Metropolitan", "French Guiana", "French Polynesia", "French Southern Territories", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Gibraltar", "Greece", "Greenland", "Grenada", "Guadeloupe", "Guam", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Heard and Mc Donald Islands", "Holy See (Vatican City State)", "Honduras", "Hong Kong", "Hungary", "Iceland", "India", "Indonesia", "Iran (Islamic Republic of)", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Korea, Democratic People's Republic of", "Korea, Republic of", "Kuwait", "Kyrgyzstan", "Lao, People's Democratic Republic", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libyan Arab Jamahiriya", "Liechtenstein", "Lithuania", "Luxembourg", "Macau", "Macedonia, The Former Yugoslav Republic of", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Martinique", "Mauritania", "Mauritius", "Mayotte", "Mexico", "Micronesia, Federated States of", "Moldova, Republic of", "Monaco", "Mongolia", "Montserrat", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "Netherlands Antilles", "New Caledonia", "New Zealand", "Nicaragua", "Niger", "Nigeria", "Niue", "Norfolk Island", "Northern Mariana Islands", "Norway", "Oman", "Pakistan", "Palau", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Pitcairn", "Poland", "Portugal", "Puerto Rico", "Qatar", "Reunion", "Romania", "Russian Federation", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Seychelles", "Sierra Leone", "Singapore", "Slovakia (Slovak Republic)", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Georgia and the South Sandwich Islands", "Spain", "Sri Lanka", "St. Helena", "St. Pierre and Miquelon", "Sudan", "Suriname", "Svalbard and Jan Mayen Islands", "Swaziland", "Sweden", "Switzerland", "Syrian Arab Republic", "Taiwan, Province of China", "Tajikistan", "Tanzania, United Republic of", "Thailand", "Togo", "Tokelau", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Turks and Caicos Islands", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "United States Minor Outlying Islands", "Uruguay", "Uzbekistan", "Vanuatu", "Venezuela", "Vietnam", "Virgin Islands (British)", "Virgin Islands (U.S.)", "Wallis and Futuna Islands", "Western Sahara", "Yemen", "Yugoslavia", "Zambia", "Zimbabwe");
+    return array("Afghanistan", "Albania", "Algeria", "American Samoa", "Andorra", "Angola", "Anguilla", "Antarctica", "Antigua and Barbuda", "Argentina", "Armenia", "Aruba", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bermuda", "Bhutan", "Bolivia", "Bosnia and Herzegowina", "Botswana", "Bouvet Island", "Brazil", "British Indian Ocean Territory", "Brunei Darussalam", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon", "Canada", "Cape Verde", "Cayman Islands", "Central African Republic", "Chad", "Chile", "China", "Christmas Island", "Cocos (Keeling) Islands", "Colombia", "Comoros", "Congo", "Congo, the Democratic Republic of the", "Cook Islands", "Costa Rica", "Cote d'Ivoire", "Croatia (Hrvatska)", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "East Timor", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Ethiopia", "Falkland Islands (Malvinas)", "Faroe Islands", "Fiji", "Finland", "France", "France Metropolitan", "French Guiana", "French Polynesia", "French Southern Territories", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Gibraltar", "Greece", "Greenland", "Grenada", "Guadeloupe", "Guam", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Heard and Mc Donald Islands", "Holy See (Vatican City State)", "Honduras", "Hong Kong", "Hungary", "Iceland", "India", "Indonesia", "Iran (Islamic Republic of)", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Korea, Democratic People's Republic of", "Korea, Republic of", "Kuwait", "Kyrgyzstan", "Lao, People's Democratic Republic", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libyan Arab Jamahiriya", "Liechtenstein", "Lithuania", "Luxembourg", "Macau", "Macedonia, The Former Yugoslav Republic of", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Martinique", "Mauritania", "Mauritius", "Mayotte", "Mexico", "Micronesia, Federated States of", "Moldova, Republic of", "Monaco", "Mongolia", "Montserrat", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "Netherlands Antilles", "New Caledonia", "New Zealand", "Nicaragua", "Niger", "Nigeria", "Niue", "Norfolk Island", "Northern Mariana Islands", "Norway", "Oman", "Pakistan", "Palau", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Pitcairn", "Poland", "Portugal", "Puerto Rico", "Qatar", "Reunion", "Romania", "Russian Federation", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Seychelles", "Sierra Leone", "Singapore", "Slovakia (Slovak Republic)", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Georgia and the South Sandwich Islands", "Spain", "Sri Lanka", "St. Helena", "St. Pierre and Miquelon", "Sudan", "Suriname", "Svalbard and Jan Mayen Islands", "Swaziland", "Sweden", "Switzerland", "Syrian Arab Republic", "Taiwan, Province of China", "Tajikistan", "Tanzania, United Republic of", "Thailand", "Togo", "Tokelau", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Turks and Caicos Islands", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "United States Minor Outlying Islands", "Uruguay", "Uzbekistan", "Vanuatu", "Venezuela", "Vietnam", "Virgin Islands (British)", "Virgin Islands (U.S.)", "Wallis and Futuna Islands", "Western Sahara", "Yemen", "Yugoslavia", "Zambia", "Zimbabwe");
 }
 
 function defaultPasswordStatus()
@@ -713,9 +714,9 @@ function convertPercentToUnitScore($factor, $numerator, $denominator = 100)
     $converted_score = $numerator / $denominator * $factor;
     return sprintf("%01.1f", $converted_score);
 }
-function deleteSingleElementFromString($parent_string, $child_string)
+function deleteSingleElementFromString($parent_string, $child_string, $separator = '~')
 {
-    $string_array = explode('~', $parent_string);
+    $string_array = explode($separator, $parent_string);
 
     $count_array = count($string_array);
 
@@ -726,20 +727,20 @@ function deleteSingleElementFromString($parent_string, $child_string)
             unset($string_array[$i]);
         }
     }
-    return $new_parent_str = implode('~', array_unique($string_array));
+    return $new_parent_str = implode($separator, array_unique($string_array));
 }
-function addSingleElementToString($parent_string, $child_string)
+function addSingleElementToString($parent_string, $child_string, $separator = '~')
 {
     if ($parent_string == '') {
-        $str =  $child_string;
+        $str = $child_string;
     } else {
-        $str =  $parent_string . '~' . $child_string;
+        $str = $parent_string . $separator . $child_string;
     }
 
 
-    $string_array = array_unique(explode('~', $str));
+    $string_array = array_unique(explode($separator, $str));
 
-    return $new_parent_str = implode('~', $string_array);
+    return $new_parent_str = implode($separator, $string_array);
 }
 
 /**
@@ -775,12 +776,12 @@ function scoreOptions($type = 'ca')
     $options = ['' => 'Select'];
 
     if ($type == 'exam') {
-        for ($i = 70; $i <= 1; $i--) :
+        for ($i = 70; $i <= 1; $i--):
             $options[$i] = $i;
         endfor;
         return $options;
     }
-    for ($i = 10; $i <= 1; $i--) :
+    for ($i = 10; $i <= 1; $i--):
         $options[$i] = $i;
     endfor;
     return $options;
@@ -812,7 +813,7 @@ function terms($term = null)
 function subjectTeacherSelectWithClassLevel($details)
 {
     $subject_details = [];
-    foreach ($details as $detail) :
+    foreach ($details as $detail):
         if ($detail->subject) {
             $subject_details[$detail->id] = $detail->subject->name . ' for ' . $detail->class->name . ' (' . formatLevel($detail->level->level) . ')';
         }
@@ -860,11 +861,11 @@ function schoolDays($day = null)
 function schoolDaysStr($day = null)
 {
     $arr = [
-        'Monday'    => '1',
-        'Tuesday'   => '2',
+        'Monday' => '1',
+        'Tuesday' => '2',
         'Wednesday' => '3',
-        'Thursday'  => '4',
-        'Friday'    => '5'
+        'Thursday' => '4',
+        'Friday' => '5'
 
     ];
 
@@ -939,7 +940,7 @@ function nationalExpectationGrade($grade)
 function registrationPinType($type = null)
 {
     $arr = [
-        'teacher'   => 'Teacher',
+        'teacher' => 'Teacher',
         'student' => 'Student',
 
 
@@ -966,7 +967,7 @@ function disabilities()
 function gender($gender = null)
 {
     $arr = [
-        'Male'   => 'Male',
+        'Male' => 'Male',
         'Female' => 'Female',
 
 
@@ -981,12 +982,12 @@ function gender($gender = null)
 function sections($name = null)
 {
     $arr = [
-        'A'   => 'A',
-        'B'   => 'B',
-        'C'   => 'C',
-        'D'   => 'D',
-        'E'   => 'E',
-        'F'   => 'F'
+        'A' => 'A',
+        'B' => 'B',
+        'C' => 'C',
+        'D' => 'D',
+        'E' => 'E',
+        'F' => 'F'
 
 
 
@@ -1001,9 +1002,9 @@ function sections($name = null)
 function occupation()
 {
     $arr = [
-        'Civil Servant'   => 'Civil Servant',
-        'Public Servant'   => 'Public Servant',
-        'Professional'   => [
+        'Civil Servant' => 'Civil Servant',
+        'Public Servant' => 'Public Servant',
+        'Professional' => [
             'Architect' => 'Architect',
             'Banker' => 'Banker',
             'Doctor' => 'Doctor',
@@ -1012,8 +1013,8 @@ function occupation()
             'Lawyer' => 'Lawyer',
             'Teacher' => 'Teacher'
         ],
-        'Business Person'   => 'Business Person',
-        'Others'   => 'Others (if not listed here)',
+        'Business Person' => 'Business Person',
+        'Others' => 'Others (if not listed here)',
 
 
     ];
@@ -1074,20 +1075,21 @@ function folderSize($dir)
 
 function byteToGB($byte)
 {
-    $gb =  $byte / 1024 / 1024 / 1024;
+    $gb = $byte / 1024 / 1024 / 1024;
     return $gb;
 }
 
 function percentageDirUsage($dir_size, $total_usable)
 {
-    $used =  $dir_size / $total_usable * 100;
+    $used = $dir_size / $total_usable * 100;
     return (float) sprintf('%01.2f', $used);
 }
 function folderSizeFilter($bytes)
 {
     $label = array('B', 'KB', 'MB', 'GB', 'TB', 'PB');
 
-    for ($i = 0; $bytes >= 1024 && $i < (count($label) - 1); $bytes /= 1024, $i++);
+    for ($i = 0; $bytes >= 1024 && $i < (count($label) - 1); $bytes /= 1024, $i++)
+        ;
 
     return (round($bytes, 2) . $label[$i]);
 }

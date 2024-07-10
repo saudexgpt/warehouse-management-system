@@ -13,9 +13,12 @@ use App\Models\Transfers\TransferRequestDispatchedProduct;
 use App\Models\Warehouse\Warehouse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ApiController extends Controller
 {
+    private $public_api_key = '7fcf357647dbabf7a793f8bec0-b36d2969-75674bf8';
     //
     public function customers(Request $request)
     {
@@ -130,25 +133,41 @@ class ApiController extends Controller
         $date_to = Carbon::now()->endOfYear();
         $invoiceItemQuery = InvoiceItem::query();
 
-        $invoiceItemQuery = $invoiceItemQuery->join('invoices', 'invoice_items.invoice_id', 'invoices.id')
-            ->join('customers', 'invoices.customer_id', 'customers.id')
-            ->join('users', 'customers.user_id', 'users.id')
-            ->join('items', 'invoice_items.item_id', 'items.id')
-            ->join('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
+        $invoiceItemQuery = $invoiceItemQuery->leftJoin('invoices', 'invoice_items.invoice_id', 'invoices.id')
+            ->leftJoin('customers', 'invoices.customer_id', 'customers.id')
+            ->leftJoin('users', 'customers.user_id', 'users.id')
+            ->leftJoin('items', 'invoice_items.item_id', 'items.id')
+            ->leftJoin('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
+            ->leftJoin('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
+            ->leftJoin('waybills', 'waybill_items.waybill_id', 'waybills.id')
+            ->leftJoin('delivery_trip_waybill', 'delivery_trip_waybill.waybill_id', 'waybills.id')
+            ->leftJoin('delivery_trips', 'delivery_trip_waybill.delivery_trip_id', 'delivery_trips.id')
             ->selectRaw(
                 'warehouses.name as warehouse,
                 users.name as customer,
                 invoice_number,
                 items.name as product,
+                items.id as product_id,
                 invoice_items.type as uom,
                 invoice_items.rate,
                 invoice_items.amount,
                 invoice_items.quantity,
-                invoice_items.quantity_supplied,
-                invoice_items.quantity_reversed,
-                invoice_items.created_at'
+                waybill_items.remitted as quantity_supplied,
+                waybill_items.quantity_reversed,
+                invoice_items.created_at as date_raised,
+                invoice_items.auditor_confirmed_date as auditor_approval_date,
+                waybills.waybill_no as waybill_no,                
+                waybills.created_at as waybill_date,               
+                waybills.status as waybill_status,
+                waybills.delivery_date,
+                delivery_trips.dispatchers,
+                delivery_trips.vehicle_no,
+                delivery_trips.trip_no'
             );
-
+        // $invoiceItemQuery->where(function ($q) {
+        //     $q->whereNotNull('customers.deleted_at');
+        //     $q->orWhereNULL('customers.deleted_at');
+        // });
         if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
             $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.warehouse_id', $request->warehouse_id);
         }
@@ -664,5 +683,88 @@ class ApiController extends Controller
         $count_query->select('warehouses.name as warehouse', 'items.name as product', 'batch_no', 'expiry_date', 'count_quantity', 'date as count_date', 'stock_counts.created_at');
         $stoct_counts = $count_query->get();
         return response()->json(compact('stoct_counts'));
+    }
+
+
+    public function fetchRepsForTransferToSalesApp(Request $request)
+    {
+        if ($this->public_api_key !== $request->api_key) {
+            return response()->json(['message' => 'Access Denied'], 403);
+        }
+        // $reps = Customer::with(['user' => function ($q) {
+        //     $q->where('email', 'NOT LIKE', 'default' . '%');
+        // }])->where('type', 'reps')->get();
+
+        $reps = DB::table('reps')->select('codes', 'name', 'email')->get();
+        return response()->json(compact('reps'), 200);
+    }
+
+    public function warehouseProducts(Request $request)
+    {
+        if ($this->public_api_key !== $request->api_key) {
+            return response()->json(['message' => 'Access Denied'], 403);
+        }
+        $products = Item::join('item_prices', 'item_prices.item_id', 'items.id')
+            ->selectRaw('code,name,package_type,basic_unit,basic_unit_quantity_per_package_type,quantity_per_carton, sale_price')
+            ->get();
+
+        return response()->json(compact('products'));
+    }
+    public function sendRepStock(Request $request)
+    {
+        if ($this->public_api_key !== $request->api_key) {
+            return response()->json(['message' => 'Access Denied'], 403);
+        }
+        $customer_codes = $request->rep_codes;
+        $customer_codes_array = explode(',', $customer_codes);
+        $customer_ids = Customer::whereIn('code', $customer_codes_array)->pluck('id');
+        $date_from = '2024-01-01 00:00:00';
+        // $items = new Collection();
+        $customer_items = DispatchedProduct::join('customers', 'dispatched_products.customer_id', 'customers.id')
+            ->join('reps', 'reps.customer_id', 'reps.customer_id')
+            ->join('waybills', 'dispatched_products.waybill_id', 'waybills.id')
+            ->join('invoices', 'dispatched_products.invoice_id', 'invoices.id')
+            ->join('items', 'dispatched_products.item_id', 'items.id')
+            ->whereIn('dispatched_products.customer_id', $customer_ids)
+            ->where('dispatched_products.sent_to_rep', 0)
+            ->where('dispatched_products.updated_at', '>', $date_from)
+            ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'reps.name as rep_name', 'reps.email as rep_email', 'items.name as product', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.date_sent_to_rep', 'sent_to_rep')
+            ->get();
+
+
+        // update each as sent
+        foreach ($customer_items as $customer_item) {
+            $customer_item->sent_to_rep = 1;
+            $customer_item->date_sent_to_rep = date('Y-m-d H:i:s', strtotime('now'));
+            $customer_item->save();
+
+            unset($customer_item->sent_to_rep);
+            unset($customer_item->updated_at);
+        }
+        // $items = $items->merge($customer_items);
+        return response()->json(['warehouse_supplies' => $customer_items], 200);
+        // $invoice_item_stock = InvoiceItemBatch::join
+    }
+    public function checkAlreadyReceivedStock(Request $request)
+    {
+        if ($this->public_api_key !== $request->api_key) {
+            return response()->json(['message' => 'Access Denied'], 403);
+        }
+        $customer_codes = $request->rep_codes;
+        $customer_codes_array = explode(',', $customer_codes);
+        $customer_ids = Customer::whereIn('code', $customer_codes_array)->pluck('id');
+        // $items = new Collection();
+        $customer_items = DispatchedProduct::join('customers', 'dispatched_products.customer_id', 'customers.id')
+            ->join('reps', 'reps.customer_id', 'reps.customer_id')
+            ->join('waybills', 'dispatched_products.waybill_id', 'waybills.id')
+            ->join('invoices', 'dispatched_products.invoice_id', 'invoices.id')
+            ->join('items', 'dispatched_products.item_id', 'items.id')
+            ->whereIn('dispatched_products.customer_id', $customer_ids)
+            ->where('dispatched_products.sent_to_rep', 1)
+            ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'reps.name as rep_name', 'reps.email as rep_email', 'items.name as product', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.date_sent_to_rep', 'sent_to_rep')
+            ->get();
+        // $items = $items->merge($customer_items);
+        return response()->json(['already_sent_stocks' => $customer_items], 200);
+        // $invoice_item_stock = InvoiceItemBatch::join
     }
 }

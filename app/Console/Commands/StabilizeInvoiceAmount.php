@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Customer;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Invoice\Invoice;
 use Illuminate\Database\Eloquent\Collection;
@@ -49,9 +50,11 @@ class StabilizeInvoiceAmount extends Command
                 }
             });
     }
+
     public function handle()
     {
         //
         $this->stabilize();
+
     }
 }

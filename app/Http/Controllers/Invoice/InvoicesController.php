@@ -667,7 +667,7 @@ class InvoicesController extends Controller
             'invoice.warehouse',
             'invoice.customer.user'
         ])
-            ->orderBy('updated_at', 'DESC')
+            // ->orderBy('updated_at', 'DESC')
             ->where('invoice_id', $invoice_id)
             ->get();
 
@@ -1164,7 +1164,10 @@ class InvoicesController extends Controller
         $invoice_item_obj->updateInvoiceItemsForWaybill($waybill->waybillItems, $status);
         // update items in stock based on waybill status
         // we want to automatically change the status to delivered once the waybill has been moved to transtit
-        $status = 'delivered';
+        // $status = 'delivered';
+        if ($status === 'delivered') {
+            $waybill->delivery_date = date('Y-m-d H:i:s', strtotime('now'));
+        }
         // update waybill status
         $waybill->status = $status;
         $waybill->save();
@@ -1504,34 +1507,7 @@ class InvoicesController extends Controller
         return response()->json(null, 204);
     }
 
-    public function sendRepStock(Request $request)
-    {
-        $customer_ids = $request->rep_ids;
-        $customer_ids_array = explode('~', $customer_ids);
-        $date_from = '2022-08-02 00:00:00';
-        $items = new Collection();
-        foreach ($customer_ids_array as $customer_id) {
-            $customer_items = DispatchedProduct::with('waybillItem.waybill', 'waybillItem.invoice', 'itemStock.item')
-                ->groupBy('waybill_item_id')
-                ->where('customer_id', $customer_id)
-                ->where('sent_to_rep', 0)
-                ->where('dispatched_products.updated_at', '>', $date_from)
-                ->select('*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
 
-                ->orderby('created_at')->get();
-
-
-            // update each as sent
-            foreach ($customer_items as $customer_item) {
-                $customer_item->sent_to_rep = 1;
-                $customer_item->save();
-            }
-            $items = $items->merge($customer_items);
-        }
-
-        return response()->json(['items' => $items], 200);
-        // $invoice_item_stock = InvoiceItemBatch::join
-    }
     public function reverseUnTreatedInvoiceItem(Request $request, InvoiceItem $invoice_item)
     {
         //since we have not treated this yet, we just remove it

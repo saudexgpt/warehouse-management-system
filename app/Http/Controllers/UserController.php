@@ -92,10 +92,10 @@ class UserController extends Controller
         // try {
         $count = 0;
         foreach ($bulk_data as $data) {
-            $name =  trim($data->CUSTOMER_NAME);
-            $email =  trim($data->EMAIL);
-            $phone =  trim($data->PHONE);
-            $address =  trim($data->ADDRESS);
+            $name = trim($data->CUSTOMER_NAME);
+            $email = trim($data->EMAIL);
+            $phone = trim($data->PHONE);
+            $address = trim($data->ADDRESS);
             // $address =  trim($data->ADDRESS);
             $password = $phone;
             if ($email == 'NIL') {
@@ -117,7 +117,7 @@ class UserController extends Controller
             $role = Role::findByName('customer');
             $user->syncRoles($role);
 
-            $new_user =  new UserResource($user);
+            $new_user = new UserResource($user);
             $customer = new Customer();
             $customer->user_id = $new_user->id;
             $customer->team = strtolower($request->team);
@@ -157,7 +157,7 @@ class UserController extends Controller
         $role = Role::findByName($request->role);
         $user->syncRoles($role);
 
-        $new_user =  new UserResource($user);
+        $new_user = new UserResource($user);
         //$this->store($request, 'customer'); //save customer's user details
 
         $customer = new Customer();
@@ -536,11 +536,4 @@ class UserController extends Controller
         ];
     }
 
-    public function fetchRepsForTransferToSalesApp()
-    {
-        $reps = Customer::with(['user' => function ($q) {
-            $q->where('email', 'NOT LIKE', 'default' . '%');
-        }])->where('type', 'reps')->get();
-        return response()->json(compact('reps'), 200);
-    }
 }

@@ -66,13 +66,16 @@ class AuditConfirmsController extends Controller
     }
     public function confirmInvoice(Request $request, Invoice $invoice)
     {
+        $date = date('Y-m-d H:i:s', strtotime('now'));
         $user = $this->getUser();
         $invoice_items = $invoice->invoiceItems;
         foreach ($invoice_items as $invoice_item) {
             $invoice_item->is_confirmed = 1;
+            $invoice_item->auditor_confirmed_date = $date;
             $invoice_item->save();
         }
         $invoice->confirmed_by = $user->id;
+        $invoice->auditor_confirmed_date = $date;
         $confirmed = 'failed';
         if ($invoice->save()) {
             $confirmed = 'success';

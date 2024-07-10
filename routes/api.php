@@ -10,12 +10,14 @@
 |
 */
 // api to fetch all registered products for external requests
-$router->get('get-warehouse-products', 'Stock\ItemsController@index');
+$router->get('get-warehouse-products', 'ApiController@warehouseProducts');
 $router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
 
-$router->post('rep-stock', 'Invoice\InvoicesController@sendRepStock');
-$router->post('fetch-reps-details', 'UserController@fetchRepsForTransferToSalesApp');
+$router->post('receive-rep-stock', 'ApiController@sendRepStock');
+$router->get('check-already-received-stock', 'ApiController@checkAlreadyReceivedStock');
 
+$router->get('fetch-reps-details', 'ApiController@fetchRepsForTransferToSalesApp');
+// $router->post('fetch-reps-details', 'ApiController@fetchRepsForTransferToSalesApp');
 $router->get('resolve-incomplete-supplies', 'Controller@resolveIncompleteSupplies');
 $router->get('partial-invoices', 'Controller@normalizePartialSuppliedInvoices');
 $router->get('hello-message', function () {
