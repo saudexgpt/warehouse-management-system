@@ -728,7 +728,7 @@ class ApiController extends Controller
             ->whereIn('dispatched_products.customer_id', $customer_ids)
             ->where('dispatched_products.sent_to_rep', 0)
             ->where('dispatched_products.updated_at', '>', $date_from)
-            ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'reps.name as rep_name', 'reps.email as rep_email', 'items.name as product', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.date_sent_to_rep', 'sent_to_rep')
+            ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'reps.name as rep_name', 'reps.email as rep_email', 'items.name as product', 'items.code as product_code', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.date_sent_to_rep', 'sent_to_rep')
             ->get();
 
 
@@ -761,7 +761,7 @@ class ApiController extends Controller
             ->join('items', 'dispatched_products.item_id', 'items.id')
             ->whereIn('dispatched_products.customer_id', $customer_ids)
             ->where('dispatched_products.sent_to_rep', 1)
-            ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'reps.name as rep_name', 'reps.email as rep_email', 'items.name as product', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.date_sent_to_rep', 'sent_to_rep')
+            ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'reps.name as rep_name', 'reps.email as rep_email', 'items.name as product', 'items.code as product_code', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.date_sent_to_rep', 'sent_to_rep')
             ->get();
         // $items = $items->merge($customer_items);
         return response()->json(['already_sent_stocks' => $customer_items], 200);

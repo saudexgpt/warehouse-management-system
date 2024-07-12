@@ -131,7 +131,7 @@
                     <td>
                       {{ invoice_item.quantity_reversed }}
                       {{ invoice_item.type }}
-                      <br><code v-html="showItemsInCartons(invoice_item.quantity - invoice_item.quantity_supplied, invoice_item.quantity_per_carton, invoice_item.type)" />
+                      <br><code v-html="showItemsInCartons(invoice_item.quantity_reversed, invoice_item.quantity_per_carton, invoice_item.type)" />
                     </td>
                     <td align="right">
                       {{
