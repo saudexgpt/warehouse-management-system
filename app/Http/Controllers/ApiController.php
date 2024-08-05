@@ -144,6 +144,7 @@ class ApiController extends Controller
             ->leftJoin('delivery_trips', 'delivery_trip_waybill.delivery_trip_id', 'delivery_trips.id')
             ->selectRaw(
                 'warehouses.name as warehouse,
+                customers.id as customer_id,
                 users.name as customer,
                 invoice_number,
                 items.name as product,
@@ -154,7 +155,7 @@ class ApiController extends Controller
                 invoice_items.quantity,
                 waybill_items.remitted as quantity_supplied,
                 waybill_items.quantity_reversed,
-                invoice_items.created_at as date_raised,
+                invoices.created_at as date_raised,
                 invoice_items.auditor_confirmed_date as auditor_approval_date,
                 waybills.waybill_no as waybill_no,                
                 waybills.created_at as waybill_date,               
@@ -175,8 +176,8 @@ class ApiController extends Controller
         if (isset($request->from, $request->to) && $request->from !== '' && $request->to !== '') {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
-            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '>=', $date_from);
-            $invoiceItemQuery = $invoiceItemQuery->where('invoice_items.created_at', '<=', $date_to);
+            $invoiceItemQuery = $invoiceItemQuery->where('invoices.created_at', '>=', $date_from);
+            $invoiceItemQuery = $invoiceItemQuery->where('invoices.created_at', '<=', $date_to);
         }
         $invoiceItemQuery->orderBy('invoice_items.id', 'DESC');
         $invoice_items = $invoiceItemQuery->get();
@@ -705,7 +706,8 @@ class ApiController extends Controller
             return response()->json(['message' => 'Access Denied'], 403);
         }
         $products = Item::join('item_prices', 'item_prices.item_id', 'items.id')
-            ->selectRaw('code,name,package_type,basic_unit,basic_unit_quantity_per_package_type,quantity_per_carton, sale_price')
+            // ->selectRaw('code,name,package_type,basic_unit,basic_unit_quantity_per_package_type,quantity_per_carton, sale_price')
+            ->selectRaw('code,name,basic_unit,quantity_per_carton, sale_price')
             ->get();
 
         return response()->json(compact('products'));

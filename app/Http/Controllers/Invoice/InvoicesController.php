@@ -640,8 +640,8 @@ class InvoicesController extends Controller
             $invoice_item->quantity_per_carton = $item->quantity_per_carton;
             $invoice_item->no_of_cartons = $item->quantity / $item->quantity_per_carton; //$item->no_of_cartons;
             $invoice_item->type = $item->type;
-            $invoice_item->rate = $item->rate;
-            $invoice_item->amount = $item->amount;
+            $invoice_item->rate = ($item->rate) ? $item->rate : 0;
+            $invoice_item->amount = ($item->amount) ? $item->amount : 0;
             $invoice_item->save();
         }
     }
@@ -794,9 +794,15 @@ class InvoicesController extends Controller
         //
         $date = date('Y-m-d', strtotime($waybill->created_at));
         $waybill = $waybill->with([
+            'invoices.customer' => function ($q) {
+                $q->withTrashed();
+            },
             'invoices.customer.user',
             'waybillItems' => function ($q) {
                 $q->where('quantity', '>', 0);
+            },
+            'waybillItems.invoice.customer' => function ($q) {
+                $q->withTrashed();
             },
             'waybillItems.invoice.customer.user',
             'waybillItems.item.stocks',

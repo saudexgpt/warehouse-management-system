@@ -25,8 +25,8 @@ const adminRoutes = {
       path: 'users/edit/:id(\\d+)',
       component: () => import('@/app/users/UserProfile'),
       name: 'UserProfile',
-      // meta: { title: 'userProfile', noCache: true, permissions: ['manage user'] },
-      meta: { title: 'userProfile', noCache: true, roles: ['admin'] },
+      meta: { title: 'userProfile', noCache: true, permissions: ['manage user'] },
+      // meta: { title: 'userProfile', noCache: true, roles: ['admin'] },
       hidden: true,
     },
     {
