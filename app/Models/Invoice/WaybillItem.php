@@ -38,9 +38,14 @@ class WaybillItem extends Model
         return $this->belongsTo(InvoiceItem::class);
     }
 
-    public function createWaybillItems($waybill_id, $warehouse_id, $invoice_item, $for_supply)
+    public function createWaybillItems($waybill_id, $warehouse_id, $invoice_item, $batches)
     {
         // foreach ($invoice_items as $invoice_item) {
+        $for_supply = 0;
+        foreach ($batches as $batch) {
+
+            $for_supply += $batch->supply_quantity;
+        }
         $waybill_item = new WaybillItem();
         $waybill_item->warehouse_id = $warehouse_id;
         $waybill_item->invoice_id = $invoice_item->invoice_id;

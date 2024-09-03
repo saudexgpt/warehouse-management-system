@@ -59,7 +59,7 @@
                     <td>
                       <span>
                         <a v-if="sub_batches.length > 1" class="btn btn-danger btn-flat fa fa-trash" @click="removeLine(index)" />
-                        <a class="btn btn-info btn-flat fa fa-plus" @click="addLine()" />
+                        <a v-if="sub_batches.length <= 10" class="btn btn-info btn-flat fa fa-plus" @click="addLine()" />
                       </span>
                     </td>
                     <td>
@@ -98,6 +98,9 @@
                   </tr>
                   <tr v-if="fill_fields_error">
                     <td colspan="6"><label class="label label-danger">Please fill all empty fields before adding another row</label></td>
+                  </tr>
+                  <tr v-if="max_count">
+                    <td colspan="6"><label class="label label-danger">We strongly advise that you submit when you have up to 10 entries</label></td>
                   </tr>
                 </tbody>
               </table>
@@ -146,6 +149,7 @@ export default {
     return {
       bulkUpload: false,
       fill_fields_error: false,
+      max_count: false,
       form: {
         warehouse_id: '',
         item_id: '',
@@ -213,6 +217,10 @@ export default {
     },
     addLine() {
       this.fill_fields_error = false;
+      this.max_count = false;
+      if (this.sub_batches.length > 10) {
+        this.max_count = true;
+      }
       if (this.isRowEmpty()) {
         this.fill_fields_error = true;
         return;

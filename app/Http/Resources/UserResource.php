@@ -20,10 +20,10 @@ class UserResource extends JsonResource
         if ($this->id === $currentUser->id) {
             $can_edit = true;
         }
-        if ($currentUser->hasRole('admin') && $this->user_type == 'customer') {
+        if (($currentUser->hasRole('admin') || $currentUser->hasRole('assistant admin')) && $this->user_type == 'customer') {
             $can_edit = true;
         }
-        if ($currentUser->hasRole('admin')) {
+        if ($currentUser->hasRole('admin') || $currentUser->hasRole('assistant admin')) {
             $can_edit = true;
         }
         // $db_notifications = $this->unreadNotifications()->orderBy('created_at', 'DESC')->get();

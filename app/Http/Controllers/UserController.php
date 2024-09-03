@@ -317,7 +317,7 @@ class UserController extends Controller
 
         $currentUser = Auth::user();
         if (
-            !$currentUser->isAdmin()
+            !$currentUser->isAdmin() && !$currentUser->isAssistantAdmin()
             && $currentUser->id !== $user->id
             && !$currentUser->hasPermission(\App\Laravue\Acl::PERMISSION_USER_MANAGE)
         ) {

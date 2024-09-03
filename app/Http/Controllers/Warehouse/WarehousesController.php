@@ -23,7 +23,7 @@ class WarehousesController extends Controller
         //
         $user = $this->getUser();
 
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->isAssistantAdmin()) {
             $warehouses = Warehouse::with('users')->get();
         } else {
 

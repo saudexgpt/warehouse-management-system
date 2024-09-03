@@ -36,6 +36,8 @@ class GoodsTransferController extends Controller
         $user = $this->getUser();
         $warehouse_id = $request->warehouse_id;
         $transfer_requests = [];
+        $incoming_transfer_requests = [];
+        $sent_requests = [];
         if (isset($request->status) && $request->status != '') {
             ////// query by status //////////////
             $status = $request->status;

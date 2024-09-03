@@ -445,7 +445,7 @@ class InvoicesController extends Controller
         $invoice_items = InvoiceItem::with([
             'item.stocks' => function ($p) use ($warehouse_id) {
                 $p->groupBy('expiry_date', 'batch_no')
-                    ->whereRaw('balance > 0')
+                    ->whereRaw('balance - reserved_for_supply > 0')
                     ->where('warehouse_id', $warehouse_id)
                     ->whereRaw('confirmed_by IS NOT NULL')
                     ->orderBy('expiry_date')
@@ -954,7 +954,6 @@ class InvoicesController extends Controller
         $user = $this->getUser();
         // $invoice = Invoice::find($request->invoice_id);
         $warehouse_id = $request->warehouse_id;
-        $warehouse_id = $request->warehouse_id;
         $message = '';
         $invoice_items = json_decode(json_encode($request->invoice_items));
         if (empty($invoice_items)) {
@@ -990,7 +989,7 @@ class InvoicesController extends Controller
                             $quantity_supplied += $for_supply;
                             // $invoice_item_update->save();
 
-                            $waybill_item = $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_item_update, $for_supply);
+                            $waybill_item = $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_item_update, $batches);
 
 
                             $this->createInvoiceItemBatches($waybill_item, $invoice_item_update, $batches);

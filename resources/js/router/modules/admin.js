@@ -19,7 +19,7 @@ const adminRoutes = {
       component: () => import('@/app/tickets'),
       name: 'Tickets',
       // meta: { title: 'userProfile', noCache: true, permissions: ['manage user'] },
-      meta: { title: 'Issue Tickets', icon: 'el-icon-document', roles: ['admin'] },
+      meta: { title: 'Issue Tickets', icon: 'el-icon-document', roles: ['admin', 'assistant admin'] },
     },
     {
       path: 'users/edit/:id(\\d+)',
@@ -39,8 +39,8 @@ const adminRoutes = {
       path: 'users',
       component: () => import('@/app/users/List'),
       name: 'UserList',
-      // meta: { title: 'users', icon: 'el-icon-user', permissions: ['manage user'] },
-      meta: { title: 'users', icon: 'el-icon-user', roles: ['admin'] },
+      meta: { title: 'users', icon: 'el-icon-user', permissions: ['manage user'] },
+      // meta: { title: 'users', icon: 'el-icon-user', roles: ['admin'] },
     },
     /** Role and permission */
     {

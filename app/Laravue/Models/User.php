@@ -100,7 +100,7 @@ class User extends Authenticatable
      * @param String
      * @return bool
      */
-    public function hasPermission($permission): bool
+    public function hasPermission($permission)
     {
         foreach ($this->roles as $role) {
             if (in_array($permission, $role->permissions->toArray())) {

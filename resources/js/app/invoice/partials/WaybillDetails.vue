@@ -62,8 +62,9 @@
                   <th>Invoice No.</th>
                   <!-- <th>Customer</th> -->
                   <th>Product</th>
-                  <th>Quantity</th>
-                  <th>Supplied</th>
+                  <th>Invoice Original Quantity</th>
+                  <th>Current Waybill Generated Quantity</th>
+                  <th>Current Waybill Quantity Supplied</th>
                   <th>Quantity Reversed</th>
                   <th>Batch No.</th>
                   <th>Expires</th>
@@ -90,6 +91,9 @@
                   <!-- <td>{{ waybill_item.invoice.customer.user.name.toUpperCase() }}</td> -->
                   <td>{{ waybill_item.item.name }}</td>
                   <!-- <td>{{ waybill_item.item.description }}</td> -->
+                  <td>{{ waybill_item.invoice_item.quantity+' '+formatPackageType(waybill_item.type) }}<br>
+                    <code v-html="showItemsInCartons(waybill_item.invoice_item.quantity, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
+                  </td>
                   <td>{{ waybill_item.quantity+' '+formatPackageType(waybill_item.type) }}<br>
                     <code v-html="showItemsInCartons(waybill_item.quantity, waybill_item.invoice_item.quantity_per_carton, waybill_item.type)" />
                   </td>
