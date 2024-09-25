@@ -13,7 +13,7 @@
           </el-select>
 
         </el-col>
-        <!-- <el-col :xs="24" :sm="12" :md="12">
+        <el-col :xs="24" :sm="12" :md="12">
           <br>
           <el-popover
             placement="right"
@@ -24,7 +24,7 @@
               <i class="el-icon-date" /> Pick Date Range
             </el-button>
           </el-popover>
-        </el-col> -->
+        </el-col>
       </el-row>
       <br>
 
@@ -391,17 +391,15 @@ export default {
     setDateRange(values){
       const app = this;
       document.getElementById('pick_date').click();
-      let panel = app.panel;
-      let from = app.format(new Date(app.moment().clone().startOf('month').format('YYYY-MM-DD hh:mm')));
-      let to = app.format(new Date(app.moment().clone().endOf('month').format('YYYY-MM-DD hh:mm')));
       if (values !== '') {
-        to = this.format(new Date(values.to));
-        from = this.format(new Date(values.from));
-        panel = values.panel;
+        const to = this.format(new Date(values.to));
+        const from = this.format(new Date(values.from));
+        const panel = values.panel;
+
+        app.form.from = from;
+        app.form.to = to;
+        app.form.panel = panel;
       }
-      app.form.from = from;
-      app.form.to = to;
-      app.form.panel = panel;
       app.fetchItemStocks();
     },
     fetchNecessaryParams() {
@@ -413,11 +411,11 @@ export default {
         app.form.warehouse_id = app.warehouses[0];
         app.form.warehouse_index = 0;
 
-        const from = app.format(new Date(app.moment().clone().startOf('month').format('YYYY-MM-DD hh:mm')));
-        const to = app.format(new Date(app.moment().clone().endOf('month').format('YYYY-MM-DD hh:mm')));
+        // const from = app.format(new Date(app.moment().clone().startOf('month').format('YYYY-MM-DD hh:mm')));
+        // const to = app.format(new Date(app.moment().clone().endOf('month').format('YYYY-MM-DD hh:mm')));
 
-        app.form.from = from;
-        app.form.to = to;
+        // app.form.from = from;
+        // app.form.to = to;
         app.fetchItemStocks();
       }
       app.product_expiry_date_alert_in_months = params.product_expiry_date_alert;

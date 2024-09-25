@@ -11,6 +11,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Invoice extends Model
 {
     //
+    protected $fillable = [
+        'warehouse_id',
+        'invoice_number',
+        'status'
+
+    ];
     use SoftDeletes;
     public function warehouse()
     {

@@ -27,25 +27,35 @@ class ItemStocksController extends Controller
         // $date_from = Carbon::now()->startOfMonth();
         // $date_to = Carbon::now()->endOfMonth();
         // $panel = 'month';
-        // if (isset($request->from, $request->to)) {
-        //     $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
-        //     $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+        $itemsInStockQuery = ItemStockSubBatch::query();
+        if (isset($request->from, $request->to) && $request->from != '' && $request->to != '') {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
 
-        //     $panel = $request->panel;
-        // }
+            $itemsInStockQuery->where('created_at', '>=', $date_from)->where('created_at', '<=', $date_to);
+        }
         $date = date('Y-m-d', strtotime('now'));
         $warehouse_id = $request->warehouse_id;
-        $items_in_stock = ItemStockSubBatch::with(['warehouse', 'item' => function ($q) {
-            $q->orderBy('name');
-        }, 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->where(function ($q) {
+        $items_in_stock = $itemsInStockQuery->with([
+            'warehouse',
+            'item' => function ($q) {
+                $q->orderBy('name');
+            },
+            'stocker',
+            'confirmer'
+        ])->where('warehouse_id', $warehouse_id)->where(function ($q) {
             $q->where('balance', '>', '0');
             // $q->orWhere('in_transit', '>', '0');
         })->where('expiry_date', '>=', $date)
             ->orderBy('expiry_date')->get();
 
-        $expired_products = ItemStockSubBatch::with(['warehouse', 'item' => function ($q) {
-            $q->orderBy('name');
-        }, 'stocker'])->where('warehouse_id', $warehouse_id)->whereRaw('balance > 0')->where('expiry_date', '<', $date)
+        $expired_products = ItemStockSubBatch::with([
+            'warehouse',
+            'item' => function ($q) {
+                $q->orderBy('name');
+            },
+            'stocker'
+        ])->where('warehouse_id', $warehouse_id)->whereRaw('balance > 0')->where('expiry_date', '<', $date)
             ->orderBy('expiry_date')->get();
 
         // $expired_products = ExpiredProduct::with(['item'])->groupBy(['batch_no'])->where('warehouse_id', $warehouse_id)->select('*', \DB::raw('SUM(quantity) as quantity'))->get();
@@ -78,8 +88,9 @@ class ItemStocksController extends Controller
 
         // $total_invoiced_quantity = WaybillItem::groupBy('item_id')->where(['warehouse_id' => $warehouse_id, 'item_id' => $item_id])->whereRaw('quantity - remitted - quantity_reversed > 0')->select(\DB::raw('SUM(quantity - remitted - quantity_reversed) as total_invoiced'))->first();
 
-        return response()->json(compact(/*'batches_of_items_in_stock', */'total_balance', /*'total_invoiced_quantity'*/), 200);
+        return response()->json(compact(/*'batches_of_items_in_stock', */ 'total_balance', /*'total_invoiced_quantity'*/), 200);
     }
+
 
     public function productStockBalanceByExpiryDate(Request $request)
     {
@@ -149,14 +160,14 @@ class ItemStocksController extends Controller
         $items_stocked = [];
         foreach ($bulk_data as $data) {
             try {
-                $product =  trim($data->PRODUCT);
+                $product = trim($data->PRODUCT);
                 $item = Item::where('name', $product)->first();
                 if ($item) {
                     $item_id = $item->id;
                     // $goods_received_note =  $data->GRN;
-                    $expiry_date =  $data->EXPIRY_DATE;
-                    $batch_no =  trim($data->BATCH_NO);
-                    $quantity =  trim($data->QUANTITY);
+                    $expiry_date = $data->EXPIRY_DATE;
+                    $batch_no = trim($data->BATCH_NO);
+                    $quantity = trim($data->QUANTITY);
                     $sub_batch_no = $batch_no;
                     if (isset($data->SUB_BATCH_NO)) {
                         $sub_batch_no = $data->SUB_BATCH_NO;
@@ -295,6 +306,12 @@ class ItemStocksController extends Controller
         //     $item_in_stock->quantity = $request->quantity;
         //     $item_in_stock->balance += $difference_in_stock;
         // }
+        $old_name = $item_in_stock->item->name;
+        $old_batch = $item_in_stock->batch_no;
+        $old_warehouse = $item_in_stock->warehouse->name;
+        $old_quantity = $item_in_stock->quantity;
+        $old_balance = $item_in_stock->balance;
+        $old_entry = "Item: $old_name, Batch No: $old_batch, Warehouse: $old_warehouse, Stock Quantity: $old_quantity, Balance: $old_balance.";
 
         if ($item_in_stock->confirmed_by == NULL) {
             if ($supplied == 0) {
@@ -313,9 +330,16 @@ class ItemStocksController extends Controller
         $item_in_stock->expiry_date = date('Y-m-d', strtotime($request->expiry_date));
         $item_in_stock->save();
 
+        // }
+        $new_name = $item_in_stock->item->name;
+        $new_batch = $item_in_stock->batch_no;
+        $new_warehouse = $item_in_stock->warehouse->name;
+        $new_quantity = $item_in_stock->quantity;
+        $new_balance = $item_in_stock->balance;
+        $new_entry = "Item: $new_name, Batch No: $new_batch, Warehouse: $new_warehouse, Stock Quantity: $new_quantity, Balance: $new_balance.";
         // log this event
-        $title = 'Product in stock updated';
-        $description = $item_in_stock->item->name . " with batch number: ($item_in_stock->batch_no) was updated by " . $user->name;
+        $title = 'Product in stock updated by ' . $user->name;
+        $description = "Compare the old entry [$old_entry] with the updated entry [$new_entry]";
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
         $this->logUserActivity($title, $description, $roles);
         return $this->show($item_in_stock);

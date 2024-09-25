@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Customer;
 use App\Models\Invoice\DispatchedProduct;
+use App\Models\Invoice\Invoice;
+use App\Models\Invoice\WaybillItem;
 use App\Models\Stock\Item;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -98,6 +100,24 @@ class SetTableUniqueCode extends Command
                 }
             });
     }
+    public function setWaybilledInvoices()
+    {
+        Invoice::with('waybillItems')->where(
+            'waybill_generated',
+            0
+        )
+            ->chunkById(200, function ($invoices) {
+                foreach ($invoices as $invoice) {
+                    $waybillItems = $invoice->waybillItems;
+                    if ($waybillItems->count() > 0) {
+
+                        $invoice->waybill_generated = 1;
+                        $invoice->save();
+                    }
+                }
+
+            }, $column = 'id');
+    }
     /**
      * Execute the console command.
      *
@@ -109,5 +129,6 @@ class SetTableUniqueCode extends Command
         $this->updateProductCode();
         $this->updateRepsTable();
         $this->createDispatchIdForDispatchedProducts();
+        $this->setWaybilledInvoices();
     }
 }

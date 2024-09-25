@@ -17,7 +17,7 @@ class Item extends Model
     }
     public function stocks()
     {
-        return $this->hasMany(ItemStockSubBatch::class);
+        return $this->hasMany(ItemStockSubBatch::class, 'item_id', 'id');
     }
     public function taxes()
     {

@@ -31,6 +31,15 @@ const permissionRoutes = {
         permissions: ['manage invoice reversals'],
       },
     },
+    {
+      path: 'archive-invoices',
+      component: () => import('@/app/invoice/ArchiveInvoices'),
+      name: 'ArchiveInvoices',
+      meta: {
+        title: 'Archive Invoices',
+        permissions: ['archive invoices'],
+      },
+    },
     // {
     //   path: 'details/:id',
     //   component: () => import('@/app/invoice/Details'),

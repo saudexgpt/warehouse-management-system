@@ -110,8 +110,7 @@
                             <td>
                               <div class="alert alert-danger">
                                 {{
-                                  invoice_item.quantity -
-                                    invoice_item.quantity_supplied
+                                  invoice_item.supply_bal
                                 }}
                               </div>
                             </td>
@@ -468,7 +467,7 @@ export default {
             var reserved_for_supply = 0;
             var physical_stock = 0;
 
-            var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied;
+            var supply_bal = invoice_item.quantity - invoice_item.quantity_supplied - invoice_item.quantity_reversed;
             var stocks = invoice_item.item.stocks;
             const batches = [];
             stocks.forEach((stock_batch) => {
@@ -488,11 +487,12 @@ export default {
               physical_stock += parseInt(stock_batch.balance);
             });
             invoice_item.batches = batches;
-            invoice_item.supply_bal = supply_bal;
             invoice_item.quantity_for_supply = 0;
             invoice_item.total_supplied = 0;
             if (supply_bal > total_batch_balance) {
               invoice_item.supply_bal = total_batch_balance;
+            } else {
+              invoice_item.supply_bal = supply_bal;
             }
             invoice_item.total_batch_balance = total_batch_balance;
             invoice_item.reserved_for_supply = reserved_for_supply;

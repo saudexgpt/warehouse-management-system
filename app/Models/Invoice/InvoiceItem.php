@@ -11,6 +11,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class InvoiceItem extends Model
 {
     //
+    protected $fillable = [
+        'warehouse_id',
+        'invoice_id',
+        'supply_status'
+
+    ];
     use SoftDeletes;
     public function warehouse()
     {
@@ -23,10 +29,6 @@ class InvoiceItem extends Model
     public function item()
     {
         return $this->belongsTo(Item::class);
-    }
-    public function itemStock()
-    {
-        return $this->belongsTo(ItemStock::class);
     }
 
     public function batches()

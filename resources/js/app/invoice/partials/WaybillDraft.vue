@@ -12,6 +12,7 @@
           <th>Product</th>
           <th>Order</th>
           <th>Supplied</th>
+          <th>Reversed</th>
           <th>Balance</th>
           <th>Stock Info</th>
         </tr>
@@ -41,10 +42,14 @@
             }}
           </td>
           <td>
+            {{
+              invoice_item.quantity_reversed
+            }}
+          </td>
+          <td>
             <div class="alert alert-danger">
               {{
-                invoice_item.quantity -
-                  invoice_item.quantity_supplied
+                invoice_item.supply_bal
               }}
             </div>
           </td>

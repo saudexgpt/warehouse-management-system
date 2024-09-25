@@ -413,6 +413,7 @@ class InvoicesController extends Controller
         ])
             ->where('warehouse_id', $warehouse_id)
             ->where('status', '!=', 'delivered')
+            ->where('status', '!=', 'archived')
             // ->where('full_waybill_generated', '0')
             ->whereRaw('confirmed_by IS NOT NULL')
             ->orderBy('id', 'DESC')
@@ -431,7 +432,9 @@ class InvoicesController extends Controller
         ])
             ->where('warehouse_id', $warehouse_id)
             ->where('status', '!=', 'delivered')
+            ->where('status', '!=', 'archived')
             ->where('invoice_number', 'LIKE', '%' . $invoice_no . '%')
+            // ->where('full_waybill_generated', '0')
             ->whereRaw('confirmed_by IS NOT NULL')
             ->orderBy('id', 'DESC')
             ->get();
@@ -439,18 +442,13 @@ class InvoicesController extends Controller
     }
     public function waybillSelectedInvoices(Request $request)
     {
-        $user = $this->getUser();
         $invoice_ids = $request->invoice_ids;
         $warehouse_id = $request->warehouse_id;
         $invoice_items = InvoiceItem::with([
             'item.stocks' => function ($p) use ($warehouse_id) {
-                $p->groupBy('expiry_date', 'batch_no')
+                $p->where('warehouse_id', $warehouse_id)
                     ->whereRaw('balance - reserved_for_supply > 0')
-                    ->where('warehouse_id', $warehouse_id)
-                    ->whereRaw('confirmed_by IS NOT NULL')
-                    ->orderBy('expiry_date')
-                    ->orderBy('batch_no')
-                    ->select('*', \DB::raw('SUM(balance) as balance'), \DB::raw('SUM(reserved_for_supply) as reserved_for_supply'));
+                    ->whereRaw('confirmed_by IS NOT NULL');
             }
         ])
             ->whereRaw('quantity - quantity_supplied - quantity_reversed > 0')
@@ -479,6 +477,43 @@ class InvoicesController extends Controller
         return $this->show($invoice);
     }
 
+    public function checkProductQuantityInStock(Request $request)
+    {
+        //
+        $warehouse_id = $request->warehouse_id;
+        $invoice_items = json_decode(json_encode($request->invoice_items));
+        $insufficient_stock_count = 0;
+        foreach ($invoice_items as $item) {
+            $item_id = $item->item_id;
+            $quantity = $item->quantity;
+            $stock = ItemStockSubBatch::groupBy('item_id')
+                ->where('warehouse_id', '!=', 7)
+                ->where('item_id', $item_id)
+                ->whereRaw('confirmed_by IS NOT NULL')
+                ->select(\DB::raw('(SUM(balance) -  SUM(reserved_for_supply)) as total_balance'))
+                ->first();
+
+            $invoiced_item = InvoiceItem::groupBy('item_id')
+                ->where('warehouse_id', '!=', 7)
+                ->where('item_id', $item_id)
+                ->where('supply_status', '!=', 'Archived')
+                ->whereRaw('quantity > quantity_supplied')
+                ->select(\DB::raw('(SUM(quantity) -  SUM(quantity_supplied)) as total_invoiced'))
+                ->first();
+            $total_stock_balance = ($stock) ? (int) $stock->total_balance : (int) 0;
+            $total_invoice_quantity = ($invoiced_item) ? (int) $invoiced_item->total_invoiced : (int) 0;
+            $diff = $total_stock_balance - $total_invoice_quantity;
+
+            $item->stock_balance = (int) $diff;
+
+            if ($quantity > $item->stock_balance) {
+                $insufficient_stock_count++;
+            }
+        }
+
+        $can_submit = ($insufficient_stock_count == 0) ? true : false;
+        return response()->json(compact('invoice_items', 'can_submit'), 200);
+    }
 
     /**
      * Store a newly created resource in storage.
@@ -1020,6 +1055,7 @@ class InvoicesController extends Controller
         $invoice_numbers = '';
         foreach ($invoice_ids as $invoice_id) {
             $invoice = Invoice::find($invoice_id);
+            $invoice->waybill_generated = 0;
             $invoice->full_waybill_generated = '0';
             if (!in_array($invoice_id, $partial_waybill_generated)) {
 
@@ -1609,6 +1645,53 @@ class InvoicesController extends Controller
         //log this action to invoice history
         $this->createInvoiceHistory($invoice, $title, $description);
         $this->logUserActivity($title, $description);
+        return response()->json([], 204);
+    }
+
+    public function fetchPendingInvoices(Request $request)
+    {
+        set_time_limit(0);
+        $warehouse_id = $request->warehouse_id;
+        $panel = 'month';
+        $condition = [];
+
+        $invoiceQuery = Invoice::where(['waybill_generated' => 0, 'status' => 'pending']);
+        if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
+            $invoiceQuery->where('warehouse_id', $request->warehouse_id);
+        }
+
+        if (isset($request->from, $request->to)) {
+            $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+            $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+            $invoiceQuery->where('created_at', '>=', $date_from);
+            $invoiceQuery->where('created_at', '<=', $date_to);
+        }
+        $is_download = 'no';
+        if (isset($request->is_download)) {
+            $is_download = $request->is_download;
+        }
+
+        if ($is_download == 'yes') {
+            $invoices = $invoiceQuery->get();
+        } else {
+            $invoices = $invoiceQuery->paginate($request->limit);
+        }
+        return response()->json(compact('invoices'), 200);
+    }
+    public function archiveInvoices(Request $request)
+    {
+        $invoice_ids = json_decode(json_encode($request->invoice_ids));
+
+        Invoice::whereIn('id', $invoice_ids)
+            ->chunkById(200, function ($invoices) {
+                $invoices->each->update(['status' => 'archived']);
+            }, $column = 'id');
+
+        InvoiceItem::whereIn('invoice_id', $invoice_ids)
+            ->chunkById(200, function ($invoiceItems) {
+                $invoiceItems->each->update(['supply_status' => 'Archived']);
+            }, $column = 'id');
+
         return response()->json([], 204);
     }
 }

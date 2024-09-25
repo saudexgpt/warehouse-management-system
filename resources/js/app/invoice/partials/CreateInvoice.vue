@@ -141,7 +141,7 @@
                       <tbody>
                         <tr v-for="(invoice_item, index) in invoice_items" :key="index">
                           <td>
-                            <span>
+                            <span v-if="!can_submit">
                               <a
                                 class="btn btn-danger btn-flat fa fa-trash"
                                 @click="removeLine(index)"
@@ -152,6 +152,9 @@
                                 @click="addLine(index)"
                               />
                             </span>
+                            <span v-else>
+                              {{ index + 1 }}
+                            </span>
                           </td>
                           <td>
                             <el-select
@@ -160,6 +163,7 @@
                               placeholder="Select Product"
                               filterable
                               class="span"
+                              :disabled="can_submit"
                               @input="fetchItemDetails(index)"
                             >
                               <el-option
@@ -174,7 +178,7 @@
 
                               <br><small class="label label-warning">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small> -->
 
-                              <br><small class="label label-success">Available for Order: {{ invoice_item.stock_balance }} {{ invoice_item.type }}</small>
+                              <small v-if="invoice_item.stock_balance" class="label label-success">Quantity Available for Order: {{ invoice_item.stock_balance }} {{ invoice_item.type }}</small>
                             </div>
                           </td>
                           <td>
@@ -184,11 +188,11 @@
                               outline
                               placeholder="Quantity"
                               min="0"
-                              :disabled="invoice_item.stock_balance < 1"
-                              @input="calculateTotal(index); calculateNoOfCartons(index); checkStockBalance(index)"
+                              :disabled="can_submit"
+                              @input="calculateTotal(index); calculateNoOfCartons(index);"
                             />
                             <br>
-                            <div v-if="params.enable_stock_quantity_check_when_raising_invoice === 'yes' &&invoice_item.stock_balance < 1" class="label label-danger">You cannot raise invoice for this product due to insufficient stock</div>
+                            <div v-if="params.enable_stock_quantity_check_when_raising_invoice === 'yes' && invoice_item.stock_balance < invoice_item.quantity" class="label label-danger">You cannot raise invoice for this product due to insufficient stock</div>
                             <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                           </td>
                           <td>
@@ -205,6 +209,7 @@
                               v-model="invoice_item.rate"
                               type="number"
                               outline
+                              :disabled="can_submit"
                               @input="calculateTotal(index)"
                             />
                             <span v-else>{{ currency }} {{ Number(invoice_item.rate).toLocaleString() }}</span>
@@ -267,6 +272,7 @@
                                   type="number"
                                   min="0"
                                   style="width: 50%;"
+                                  :disabled="can_submit"
                                   @input="calculateTotal(null)"
                                 />% of Subtotal
                                 <el-dropdown-item divided>Enter Discount percentage</el-dropdown-item>
@@ -300,11 +306,24 @@
                 </el-col>
               </el-row>
               <el-row :gutter="2" class="padded">
-                <el-col :xs="24" :sm="6" :md="6">
-                  <el-button type="success" :disabled="disable_submit" @click="submitNewInvoice">
-                    <i class="el-icon-plus" />
-                    Submit Invoice
-                  </el-button>
+                <el-col :xs="24" :sm="24" :md="24">
+                  <div align="center">
+                    <div v-if="can_submit">
+
+                      <el-button type="success" @click="submitNewInvoice">
+                        <i class="el-icon-plus" />
+                        Submit Invoice
+                      </el-button>
+                      <el-button type="danger" @click="can_submit = false">
+                        <i class="el-icon-edit" />
+                        Alter Entry
+                      </el-button>
+                    </div>
+                    <el-button v-else :loading="loadPreview" type="primary" @click="checkProductsQuantityInStock">
+                      <i class="el-icon-file" />
+                      Preview Entry
+                    </el-button>
+                  </div>
                 </el-col>
               </el-row>
             </div>
@@ -332,6 +351,8 @@ import AddNewCustomer from '@/app/users/AddNewCustomer';
 import BulkInvoiceUpload from './BulkInvoiceUpload';
 import Resource from '@/api/resource';
 const createInvoice = new Resource('invoice/general/store');
+const checkProductsInStock = new Resource('invoice/general/check-product-quantity-in-stock');
+
 // const necessaryParams = new Resource('fetch-necessary-params');
 const fetchProductBatches = new Resource('stock/items-in-stock/product-batches');
 export default {
@@ -354,11 +375,13 @@ export default {
       items_in_stock_dialog: false,
       dialogFormVisible: false,
       userCreating: false,
+      loadPreview: false,
       fill_fields_error: false,
       show_product_list: false,
       loadForm: false,
       batches_of_items_in_stock: [],
       disable_submit: false,
+      can_submit: false,
       form: {
         warehouse_id: '',
         customer_ids: [],
@@ -562,6 +585,23 @@ export default {
       });
       return isZero;
     },
+    checkProductsQuantityInStock() {
+      const app = this;
+      const form = app.form;
+      form.invoice_items = app.invoice_items;
+      app.loadPreview = true;
+      checkProductsInStock
+        .store(form)
+        .then((response) => {
+          app.can_submit = response.can_submit;
+          app.invoice_items = response.invoice_items;
+          app.loadPreview = false;
+        })
+        .catch((error) => {
+          app.loadPreview = false;
+          console.log(error.message);
+        });
+    },
     submitNewInvoice() {
       const app = this;
       if (this.stockIsZero() > 0) {
@@ -630,9 +670,10 @@ export default {
       //   tax += parseFloat(item.taxes[a].rate);
       // }
       // app.invoice_items[index].tax = tax;
-      if (app.params.enable_stock_quantity_check_when_raising_invoice === 'yes') {
-        app.setProductBatches(index, app.form.warehouse_id, item.id);
-      }
+
+      // if (app.params.enable_stock_quantity_check_when_raising_invoice === 'yes') {
+      //   app.setProductBatches(index, app.form.warehouse_id, item.id);
+      // }
       app.calculateTotal(index);
     },
     setProductBatches(index, warehouse_id, item_id) {
@@ -677,6 +718,25 @@ export default {
         }
       }
     },
+    checkStockBalance(index) {
+      const app = this;
+      // Get total amount for this item without tax
+      if (app.params.enable_stock_quantity_check_when_raising_invoice === 'yes') {
+        // if (index !== null) {
+        //   const invoice_item = app.invoice_items[index];
+        //   const item = app.invoice_items[index].item;
+        //   const quantity = invoice_item.quantity;
+        //   const available_stock = invoice_item.total_stocked - invoice_item.total_invoiced_quantity;
+        //   app.disable_submit = false;
+        //   if (quantity > available_stock) {
+        //     app.disable_submit = true;
+        //     app.$alert(`${item} stock balance is less than ${quantity}. Please enter a value within range`);
+        //     app.invoice_items[index].quantity = 0;
+        //     app.calculateTotal(index);
+        //   }
+        // }
+      }
+    },
     calculateTotal(index) {
       const app = this;
       // Get total amount for this item without tax
@@ -705,25 +765,6 @@ export default {
       ).toFixed(2);
       // subtract discount
       app.form.amount = parseFloat(subtotal - app.form.discount).toFixed(2);
-    },
-    checkStockBalance(index) {
-      const app = this;
-      // Get total amount for this item without tax
-      if (app.params.enable_stock_quantity_check_when_raising_invoice === 'yes') {
-        if (index !== null) {
-          const invoice_item = app.invoice_items[index];
-          const item = app.invoice_items[index].item;
-          const quantity = invoice_item.quantity;
-          const available_stock = invoice_item.total_stocked - invoice_item.total_invoiced_quantity;
-          app.disable_submit = false;
-          if (quantity > available_stock) {
-            app.disable_submit = true;
-            app.$alert(`${item} stock balance is less than ${quantity}. Please enter a value within range`);
-            app.invoice_items[index].quantity = 0;
-            app.calculateTotal(index);
-          }
-        }
-      }
     },
     setItemAsPromo(index, value) {
       const app = this;

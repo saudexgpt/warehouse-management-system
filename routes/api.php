@@ -175,8 +175,10 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
             $router->get('/', 'InvoicesController@index')->middleware('permission:view invoice');
             $router->get('show/{invoice}', 'InvoicesController@show')->middleware('permission:view invoice');
+            $router->get('fetch-pending-invoices', 'InvoicesController@fetchPendingInvoices');
 
             $router->post('store', 'InvoicesController@store')->middleware('permission:create invoice');
+            $router->post('check-product-quantity-in-stock', 'InvoicesController@checkProductQuantityInStock')->middleware('permission:create invoice');
 
             $router->post('bulk-upload', 'InvoicesController@bulkUpload')->middleware('permission:create invoice');
 
@@ -184,6 +186,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->put('update/{invoice}', 'InvoicesController@update')->middleware('permission:update invoice');
 
             $router->delete('delete/{invoice}', 'InvoicesController@destroy')->middleware('permission:delete invoice');
+            $router->post('archive-invoices', 'InvoicesController@archiveInvoices')->middleware('permission:archive invoices');
 
             $router->put('assign-invoice-to-warehouse/{invoice}', 'InvoicesController@assignInvoiceToWarehouse')->middleware('permission:assign invoice to warehouse');
 

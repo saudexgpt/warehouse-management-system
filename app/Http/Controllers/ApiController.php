@@ -370,10 +370,11 @@ class ApiController extends Controller
             ->where('item_id', $item_id)
             ->where('created_at', '<', $date_from)
             ->where(function ($q) {
-                $q->where('confirmed_by', '!=', null);
+                $q->whereRaw('confirmed_by IS NOT NULL');
                 $q->orWhere(function ($p) {
-                    $p->where('confirmed_by', null);
-                    $p->where('supplied', '>', 0);
+                    $p->whereRaw('confirmed_by IS NULL');
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
                 });
             });
         //if ($warehouse_id != 'all') {
@@ -423,10 +424,11 @@ class ApiController extends Controller
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
             ->where(function ($q) {
-                $q->where('confirmed_by', '!=', null);
+                $q->whereRaw('confirmed_by IS NOT NULL');
                 $q->orWhere(function ($p) {
-                    $p->where('confirmed_by', null);
-                    $p->where('supplied', '>', 0);
+                    $p->whereRaw('confirmed_by IS NULL');
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
                 });
             });
         // if ($warehouse_id != 'all') {
@@ -605,6 +607,14 @@ class ApiController extends Controller
         }
         $items_in_stock_query->where('balance', '>', '0')
             ->where('expiry_date', '>=', $date)
+            ->where(function ($q) {
+                $q->whereRaw('confirmed_by IS NOT NULL');
+                $q->orWhere(function ($p) {
+                    $p->whereRaw('confirmed_by IS NULL');
+                    // $p->where('supplied', '>', 0);
+                    $p->whereRaw('supplied + expired > 0');
+                });
+            })
             ->orderBy('warehouse_id')
             ->orderBy('expiry_date')
             ->select('warehouses.name as warehouse', 'items.id as product_id', 'items.name as product', 'categories.name as product_category', 'batch_no', 'goods_received_note as grn', \DB::raw('SUM(quantity) as quantity_in'), \DB::raw('(SUM(in_transit) + SUM(supplied)) as quantity_out'), \DB::raw('SUM(balance) as total_balance'), 'expiry_date', 'item_stock_sub_batches.created_at');
