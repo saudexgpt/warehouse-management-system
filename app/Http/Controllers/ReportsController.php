@@ -519,7 +519,8 @@ class ReportsController extends Controller
         }
         $outbounds = [];
 
-        $dispatched_products = DispatchedProduct::with(['itemStock', 'waybill.dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItem.invoiceItem'])->where(['warehouse_id' => $warehouse_id])
+        $dispatched_products = DispatchedProduct::with(['itemStock', 'waybill.dispatcher.vehicle.vehicleDrivers.driver.user', 'waybillItem.invoiceItem.invoice.customer.user', 'waybillItem.invoiceItem.item'])
+            ->where(['warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
             ->orderBy('id', 'DESC')
@@ -552,8 +553,8 @@ class ReportsController extends Controller
             $outbounds[] = [
                 'dispatcher' => $dispatcher,
                 'invoice_no' => $invoice_item->invoice->invoice_number,
-                'customer' => $invoice_item->invoice->customer->user->name,
-                'product' => $invoice_item->item->name,
+                'customer' => ($invoice_item->invoice->customer) ? $invoice_item->invoice->customer->user->name : '',
+                'product' => ($invoice_item->item) ? $invoice_item->item->name : '',
                 'batch_nos' => $batch_nos,
                 'amount' => $invoice_item->amount,
                 'quantity' => $quantity . ' ' . $invoice_item->type,
@@ -702,8 +703,8 @@ class ReportsController extends Controller
                     'date' => $inbound->created_at,
                     'invoice_no' => '',
                     'waybill_grn' => $inbound->batch_no . '/' . $inbound->goods_received_note,
-                    'quantity_transacted' => $inbound->quantity,
-                    'in' => $inbound->quantity,
+                    'quantity_transacted' => (int) $inbound->total_quantity,
+                    'in' => (int) $inbound->total_quantity,
                     'out' => '',
                     'balance' => 0, // initially set to zero
                     'packaging' => $item->package_type,
@@ -721,9 +722,9 @@ class ReportsController extends Controller
                     'date' => $outbound->created_at,
                     'invoice_no' => $outbound->waybillItem->invoice->invoice_number,
                     'waybill_grn' => $outbound->waybill->waybill_no,
-                    'quantity_transacted' => $outbound->total_quantity_supplied,
+                    'quantity_transacted' => (int) $outbound->total_quantity_supplied,
                     'in' => '',
-                    'out' => $outbound->total_quantity_supplied,
+                    'out' => (int) $outbound->total_quantity_supplied,
                     'balance' => 0, // initially set to zero
                     'packaging' => $item->package_type,
                     'physical_quantity' => '',
@@ -795,21 +796,21 @@ class ReportsController extends Controller
             })
             ->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))
             ->first();
-        $previous_outbound = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
-            ->where('dispatched_products.warehouse_id', $warehouse_id)
-            ->where('item_stock_sub_batches.item_id', $item_id)
-            ->where('dispatched_products.created_at', '<', $date_from)
+        $previous_outbound = DispatchedProduct::groupBy('item_id')
+            ->where('warehouse_id', $warehouse_id)
+            ->where('item_id', $item_id)
+            ->where('created_at', '<', $date_from)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
-            ->orderby('dispatched_products.created_at')->first();
+            ->orderby('created_at')->first();
 
-        $previous_transfer_outbound = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')->groupBy('item_stock_sub_batches.item_id')
+        $previous_transfer_outbound = TransferRequestDispatchedProduct::groupBy('item_id')
             ->where('supply_warehouse_id', $warehouse_id)
-            ->where('item_stock_sub_batches.item_id', $item_id)
-            ->where('transfer_request_dispatched_products.created_at', '<', $date_from)
+            ->where('item_id', $item_id)
+            ->where('created_at', '<', $date_from)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
             ->select(\DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))
-            ->orderby('transfer_request_dispatched_products.created_at')
+            ->orderby('created_at')
             ->first();
         // expired warehouse has id of 8
         $previous_expired_product = ItemStockSubBatch::groupBy(['item_id'])
@@ -818,7 +819,8 @@ class ReportsController extends Controller
             ->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))
             ->first();
 
-        $inbounds = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
+        $inbounds = ItemStockSubBatch::groupBy(['batch_no'])
+            ->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
             ->where(function ($q) {
@@ -829,25 +831,24 @@ class ReportsController extends Controller
                     $p->whereRaw('supplied + expired > 0');
                 });
             })
-            ->selectRaw('quantity - old_balance_before_recount as quantity, batch_no, goods_received_note, comments, created_at')
+            ->select('batch_no', 'goods_received_note', 'comments', 'created_at', \DB::raw('SUM(quantity) as total_quantity'))
+            // ->selectRaw('SUM(quantity - old_balance_before_recount) as total_quantity, batch_no, goods_received_note, comments, created_at')
             ->orderby('created_at')
             ->get();
-        $outbounds = DispatchedProduct::join('item_stock_sub_batches', 'dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
-            ->groupBy(['waybill_item_id'])
-            ->where('dispatched_products.warehouse_id', $warehouse_id)
-            ->where('item_stock_sub_batches.item_id', $item_id)
-            ->where('dispatched_products.created_at', '>=', $date_from)
-            ->where('dispatched_products.created_at', '<=', $date_to)
+        $outbounds = DispatchedProduct::groupBy(['waybill_item_id'])
+            ->where('warehouse_id', $warehouse_id)
+            ->where('item_id', $item_id)
+            ->where('created_at', '>=', $date_from)
+            ->where('created_at', '<=', $date_to)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('dispatched_products.created_at')->get();
-        $outbounds2 = TransferRequestDispatchedProduct::join('item_stock_sub_batches', 'transfer_request_dispatched_products.item_stock_sub_batch_id', '=', 'item_stock_sub_batches.id')
-            ->groupBy(['transfer_request_waybill_id', 'status'])
+            ->select('*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('created_at')->get();
+        $outbounds2 = TransferRequestDispatchedProduct::groupBy(['transfer_request_waybill_item_id', 'status'])
             ->where('supply_warehouse_id', $warehouse_id)
-            ->where('item_stock_sub_batches.item_id', $item_id)
-            ->where('transfer_request_dispatched_products.created_at', '>=', $date_from)
-            ->where('transfer_request_dispatched_products.created_at', '<=', $date_to)
+            ->where('item_id', $item_id)
+            ->where('created_at', '>=', $date_from)
+            ->where('created_at', '<=', $date_to)
             // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
-            ->select('transfer_request_dispatched_products.*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('transfer_request_dispatched_products.created_at')->get();
+            ->select('*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->orderby('created_at')->get();
 
         // $expired_product = ExpiredProduct::groupBy(['batch_no'])->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])->where('expiry_date', '>=', $date_from)->where('expiry_date', '<=', $date_to)->select('*', \DB::raw('SUM(quantity) as total_quantity'))->first();
 

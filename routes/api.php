@@ -10,6 +10,8 @@
 |
 */
 // api to fetch all registered products for external requests
+
+$router->get('stabilize-delivery-trip-to-waybill-relationship', 'Invoice\InvoicesController@stabilizeDeliveryTripToWaybillRelationship');
 $router->get('get-warehouse-products', 'ApiController@warehouseProducts');
 $router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
 
@@ -187,6 +189,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
             $router->delete('delete/{invoice}', 'InvoicesController@destroy')->middleware('permission:delete invoice');
             $router->post('archive-invoices', 'InvoicesController@archiveInvoices')->middleware('permission:archive invoices');
+            $router->post('restore-archived-invoices', 'InvoicesController@restoreArchivedInvoices')->middleware('permission:archive invoices');
 
             $router->put('assign-invoice-to-warehouse/{invoice}', 'InvoicesController@assignInvoiceToWarehouse')->middleware('permission:assign invoice to warehouse');
 
@@ -319,6 +322,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->group(['middleware' => ['permission:manage general items']], function () use ($router) {
 
                 $router->post('store', 'ItemsController@store');
+                $router->put('enable-disable/{item}', 'ItemsController@enableOrDisableItem');
+
                 $router->put('update/{item}', 'ItemsController@update');
                 $router->delete('delete/{item}', 'ItemsController@destroy');
                 $router->get('delete-item-tax', 'ItemsController@destroyItemTax');

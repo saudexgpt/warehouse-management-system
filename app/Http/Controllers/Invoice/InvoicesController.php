@@ -23,7 +23,9 @@ use App\Models\Stock\Item;
 use App\Models\Stock\ItemStock;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Warehouse\Warehouse;
+use App\Notification;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -382,7 +384,9 @@ class InvoicesController extends Controller
             'customer.user',
             'customer.type',
             'confirmer',
-            'invoiceItems.item',
+            'invoiceItems.item' => function ($q) {
+                $q->withTrashed();
+            },
             'histories' => function ($q) {
                 $q->orderBy('id', 'DESC');
             }
@@ -445,6 +449,9 @@ class InvoicesController extends Controller
         $invoice_ids = $request->invoice_ids;
         $warehouse_id = $request->warehouse_id;
         $invoice_items = InvoiceItem::with([
+            'item' => function ($q) {
+                $q->withTrashed();
+            },
             'item.stocks' => function ($p) use ($warehouse_id) {
                 $p->where('warehouse_id', $warehouse_id)
                     ->whereRaw('balance - reserved_for_supply > 0')
@@ -498,13 +505,13 @@ class InvoicesController extends Controller
                 ->where('item_id', $item_id)
                 ->where('supply_status', '!=', 'Archived')
                 ->whereRaw('quantity > quantity_supplied')
-                ->select(\DB::raw('(SUM(quantity) -  SUM(quantity_supplied)) as total_invoiced'))
+                ->select(columns: \DB::raw('(SUM(quantity) -  SUM(quantity_supplied)) as total_invoiced'))
                 ->first();
             $total_stock_balance = ($stock) ? (int) $stock->total_balance : (int) 0;
-            $total_invoice_quantity = ($invoiced_item) ? (int) $invoiced_item->total_invoiced : (int) 0;
-            $diff = $total_stock_balance - $total_invoice_quantity;
+            // $total_invoice_quantity = ($invoiced_item) ? (int) $invoiced_item->total_invoiced : (int) 0;
+            // $diff = $total_stock_balance - $total_invoice_quantity;
 
-            $item->stock_balance = (int) $diff;
+            $item->stock_balance = $total_stock_balance; // (int) $diff;
 
             if ($quantity > $item->stock_balance) {
                 $insufficient_stock_count++;
@@ -549,9 +556,11 @@ class InvoicesController extends Controller
             //log this action to invoice history
             $this->createInvoiceHistory($invoice, $title, $description);
             //create items invoiceed for
-            $this->createInvoiceItems($invoice, $invoice_items);
+            $total = $this->createInvoiceItems($invoice, $invoice_items);
             //////update next invoice number/////
-
+            $invoice->subtotal = $total;
+            $invoice->amount = $total - $invoice->discount;
+            $invoice->save();
             //log this activity
             $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
             $this->logUserActivity($title, $description, $roles);
@@ -665,6 +674,7 @@ class InvoicesController extends Controller
 
     private function createInvoiceItems($invoice, $invoice_items)
     {
+        $total = 0;
         foreach ($invoice_items as $item) {
             // $batches = $item->batches;
             $invoice_item = new InvoiceItem();
@@ -676,9 +686,11 @@ class InvoicesController extends Controller
             $invoice_item->no_of_cartons = $item->quantity / $item->quantity_per_carton; //$item->no_of_cartons;
             $invoice_item->type = $item->type;
             $invoice_item->rate = ($item->rate) ? $item->rate : 0;
-            $invoice_item->amount = ($item->amount) ? $item->amount : 0;
+            $invoice_item->amount = $item->quantity * $item->rate;
             $invoice_item->save();
+            $total += $invoice_item->amount;
         }
+        return $total;
     }
 
     public function edit(Request $request, Invoice $invoice)
@@ -739,7 +751,10 @@ class InvoicesController extends Controller
             // delete existing invoice items
             $invoice->invoiceItems()->delete();
             //create new set of invoice items
-            $this->createInvoiceItems($invoice, $invoice_items);
+            $total = $this->createInvoiceItems($invoice, $invoice_items);
+            $invoice->subtotal = $total;
+            $invoice->amount = $total - $invoice->discount;
+            $invoice->save();
         }
 
         $title = "Invoice modified";
@@ -1389,6 +1404,93 @@ class InvoicesController extends Controller
         $this->logUserActivity($title, $description, $roles);
         return $this->showDeliveryTrip($delivery_trip->id, $delivery_trip->warehouse_id);
     }
+
+    public function stabilizeDeliveryTripToWaybillRelationship()
+    {
+        // $dispatched_products = DispatchedProduct::groupBy('item_stock_sub_batch_id')
+        //     ->select('*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->get();
+        // foreach ($dispatched_products as $dispatched_product) {
+        //     $batch_id = $dispatched_product->item_stock_sub_batch_id;
+        //     $supplied = $dispatched_product->total_quantity_supplied;
+        //     DB::table('item_stock_sub_batches_check')->where('id', $batch_id)->update(['supplied' => $supplied]);
+        // }
+
+        // Invoice::with('waybillItems')->where(
+        //     'waybill_generated',
+        //     0
+        // )
+        //     ->chunkById(200, function ($invoices) {
+        //         foreach ($invoices as $invoice) {
+        //             $waybillItems = $invoice->waybillItems;
+        //             if (count($waybillItems) > 0) {
+
+        //                 $invoice->waybill_generated = 1;
+        //                 $invoice->save();
+        //             }
+        //         }
+
+        //     }, $column = 'id');
+    }
+    // public function stabilizeDeliveryTripToWaybillRelationship()
+    // {
+    //     InvoiceItem::groupBy('invoice_id')
+    //         ->select('*', \DB::raw('SUM(amount) as total_amount'))
+    //         ->chunkById(200, function ($invoice_items) {
+    //             foreach ($invoice_items as $invoice_item) {
+    //                 $invoice = Invoice::find($invoice_item->invoice_id);
+    //                 if ($invoice) {
+
+    //                     $discount = $invoice->discount;
+    //                     $invoice->subtotal = $invoice_item->total_amount;
+    //                     $invoice->amount = $invoice_item->total_amount - $discount;
+    //                     $invoice->save();
+    //                 }
+    //             }
+    //         }, $column = 'id');
+    // }
+    // public function stabilizeDeliveryTripToWaybillRelationship()
+    // {
+    //     return Waybill::leftJoin('delivery_trip_waybill', 'delivery_trip_waybill.waybill_id', 'waybills.id')->where('delivery_trip_waybill.waybill_id', NULL)->select('waybill_no')->get();
+
+
+    // }
+    // public function stabilizeDeliveryTripToWaybillRelationship()
+    // {
+    //     $notifications = Notification::where('notifiable_id', 1)->where('data', 'LIKE', '%Waybill added to trip%')->select('data')->get();
+
+    //     foreach ($notifications as $notification) {
+    //         $data = $notification->data;
+    //         $description = $data['description'];
+    //         $str_array = explode(' ', $description);
+    //         $waybill_no = $str_array[1];
+    //         $trip_no = $str_array[9];
+    //         $waybill = Waybill::where('waybill_no', $waybill_no)->first();
+    //         $delivery_trip = DeliveryTrip::where('trip_no', operator: $trip_no)->first();
+    //         if ($delivery_trip) {
+    //             if ($waybill) {
+    //                 $delivery_trip->waybills()->syncWithoutDetaching($waybill->id);
+    //             }
+
+    //         }
+    //     }
+
+
+    // }
+    // public function stabilizeDeliveryTripToWaybillRelationship()
+    // {
+    //     Waybill::with('trips')->chunkById(200, function ($waybills) {
+    //         foreach ($waybills as $waybill) {
+    //             $trips = $waybill->trips;
+    //             $trip_count = count($trips);
+    //             if ($trip_count > 1) {
+    //                 for ($i = 1; $i < $trip_count; $i++) {
+    //                     $trip_id = $trips[$i]->id;
+    //                     $waybill->trips()->detach($trip_id);
+    //                 }
+    //             }
+    //         }
+    //     }, $column = 'id');
+    // }
     public function changeTripVehicle(Request $request)
     {
         $actor = $this->getUser();
@@ -1655,7 +1757,7 @@ class InvoicesController extends Controller
         $panel = 'month';
         $condition = [];
 
-        $invoiceQuery = Invoice::where(['waybill_generated' => 0, 'status' => 'pending']);
+        $invoiceQuery = Invoice::where(['waybill_generated' => 0, 'confirmed_by' => NULL]);
         if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
             $invoiceQuery->where('warehouse_id', $request->warehouse_id);
         }
@@ -1690,6 +1792,22 @@ class InvoicesController extends Controller
         InvoiceItem::whereIn('invoice_id', $invoice_ids)
             ->chunkById(200, function ($invoiceItems) {
                 $invoiceItems->each->update(['supply_status' => 'Archived']);
+            }, $column = 'id');
+
+        return response()->json([], 204);
+    }
+    public function restoreArchivedInvoices(Request $request)
+    {
+        $invoice_ids = json_decode(json_encode($request->invoice_ids));
+
+        Invoice::whereIn('id', $invoice_ids)
+            ->chunkById(200, function ($invoices) {
+                $invoices->each->update(['status' => 'pending']);
+            }, $column = 'id');
+
+        InvoiceItem::whereIn('invoice_id', $invoice_ids)
+            ->chunkById(200, function ($invoiceItems) {
+                $invoiceItems->each->update(['supply_status' => 'Pending']);
             }, $column = 'id');
 
         return response()->json([], 204);

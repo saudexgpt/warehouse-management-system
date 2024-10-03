@@ -133,15 +133,15 @@ class ApiController extends Controller
         $date_to = Carbon::now()->endOfYear();
         $invoiceItemQuery = InvoiceItem::query();
 
-        $invoiceItemQuery = $invoiceItemQuery->leftJoin('invoices', 'invoice_items.invoice_id', 'invoices.id')
-            ->leftJoin('customers', 'invoices.customer_id', 'customers.id')
-            ->leftJoin('users', 'customers.user_id', 'users.id')
-            ->leftJoin('items', 'invoice_items.item_id', 'items.id')
-            ->leftJoin('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
-            ->leftJoin('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
-            ->leftJoin('waybills', 'waybill_items.waybill_id', 'waybills.id')
-            ->leftJoin('delivery_trip_waybill', 'delivery_trip_waybill.waybill_id', 'waybills.id')
-            ->leftJoin('delivery_trips', 'delivery_trip_waybill.delivery_trip_id', 'delivery_trips.id')
+        $invoiceItemQuery = $invoiceItemQuery->join('invoices', 'invoice_items.invoice_id', 'invoices.id')
+            ->join('customers', 'invoices.customer_id', 'customers.id')
+            ->join('users', 'customers.user_id', 'users.id')
+            ->join('items', 'invoice_items.item_id', 'items.id')
+            ->join('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
+            ->join('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
+            ->join('waybills', 'waybill_items.waybill_id', 'waybills.id')
+            ->join('delivery_trip_waybill', 'delivery_trip_waybill.waybill_id', 'waybills.id')
+            ->join('delivery_trips', 'delivery_trip_waybill.delivery_trip_id', 'delivery_trips.id')
             ->selectRaw(
                 'warehouses.name as warehouse,
                 customers.id as customer_id,
@@ -180,7 +180,7 @@ class ApiController extends Controller
             $invoiceItemQuery = $invoiceItemQuery->where('invoices.created_at', '<=', $date_to);
         }
         $invoiceItemQuery->orderBy('invoice_items.id', 'DESC');
-        $invoice_items = $invoiceItemQuery->get();
+        $invoice_items = $invoiceItemQuery->distinct()->get();
         $start_date = date('d-m-Y H:i:s', strtotime($date_from));
         $end_date = date('d-m-Y H:i:s', strtotime($date_to));
         return response()->json(compact('start_date', 'end_date', 'invoice_items'), 200);

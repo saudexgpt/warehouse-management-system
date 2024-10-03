@@ -62,7 +62,7 @@ class ItemStockSubBatch extends Model
     {
         $out_of_stock_count = 0;
         $message = [];
-        foreach ($waybill_items as $waybill_item) :
+        foreach ($waybill_items as $waybill_item):
 
             $warehouse_id = $waybill_item->warehouse_id;
             $item = $waybill_item->item;
@@ -82,7 +82,7 @@ class ItemStockSubBatch extends Model
     {
         $out_of_stock_count = 0;
         $message = [];
-        foreach ($waybill_items as $waybill_item) :
+        foreach ($waybill_items as $waybill_item):
 
             $warehouse_id = $waybill_item->supply_warehouse_id;
             $item = $waybill_item->item;
@@ -125,8 +125,8 @@ class ItemStockSubBatch extends Model
 
                 if ($quantity_to_supply <= $balance) {
                     $next_item_stock_batch->in_transit += $quantity_to_supply;
-                    $next_item_stock_batch->reserved_for_supply -=  $quantity_to_supply;
-                    $next_item_stock_batch->balance -=  $quantity_to_supply;
+                    $next_item_stock_batch->reserved_for_supply -= $quantity_to_supply;
+                    $next_item_stock_batch->balance -= $quantity_to_supply;
                     $next_item_stock_batch->save();
 
                     $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $quantity_to_supply);
@@ -137,8 +137,8 @@ class ItemStockSubBatch extends Model
 
                     $quantity_to_supply -= $balance;
                     $next_item_stock_batch->in_transit += $balance;
-                    $next_item_stock_batch->reserved_for_supply =  0;
-                    $next_item_stock_batch->balance =  0;
+                    $next_item_stock_batch->reserved_for_supply = 0;
+                    $next_item_stock_batch->balance = 0;
                     $next_item_stock_batch->save();
 
                     $this->dispatchProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $balance);
@@ -170,7 +170,7 @@ class ItemStockSubBatch extends Model
             if ($quantity_to_supply > 0) {
                 if ($quantity_to_supply <= $next_item_stock_batch->balance) {
                     $next_item_stock_batch->in_transit += $quantity_to_supply;
-                    $next_item_stock_batch->balance -=  $quantity_to_supply;
+                    $next_item_stock_batch->balance -= $quantity_to_supply;
                     $next_item_stock_batch->save();
 
                     $this->dispatchTransferProduct($warehouse_id, $next_item_stock_batch, $waybill_item, $quantity_to_supply);
@@ -185,7 +185,7 @@ class ItemStockSubBatch extends Model
 
                     $quantity_to_supply -= $next_item_stock_batch->balance;
                     $next_item_stock_batch->in_transit += $next_item_stock_batch->balance;
-                    $next_item_stock_batch->balance =  0;
+                    $next_item_stock_batch->balance = 0;
                     $next_item_stock_batch->save();
                 }
             }
@@ -218,7 +218,7 @@ class ItemStockSubBatch extends Model
 
                     $item_stock_batch->reserved_for_supply -= $for_supply;
                     $item_stock_batch->in_transit += $for_supply;
-                    $item_stock_batch->balance -=  $for_supply;
+                    $item_stock_batch->balance -= $for_supply;
                     $item_stock_batch->save();
 
                     $invoice_item_batch->quantity = 0;
@@ -238,7 +238,7 @@ class ItemStockSubBatch extends Model
     {
         $invoice_item_batches = InvoiceItemBatch::with('waybillItem', 'itemStockBatch')->whereIn('waybill_item_id', $waybill_items_ids)->where('quantity', '>', 0)->get();
         if ($invoice_item_batches->count() > 0) {
-            foreach ($invoice_item_batches as $invoice_item_batch) :
+            foreach ($invoice_item_batches as $invoice_item_batch):
                 $waybill_item = $invoice_item_batch->waybillItem;
 
                 $warehouse_id = $waybill_item->warehouse_id;
@@ -249,7 +249,7 @@ class ItemStockSubBatch extends Model
                 if ($item_stock_batch->balance > 0) {
                     $item_stock_batch->reserved_for_supply -= $for_supply;
                     $item_stock_batch->in_transit += $for_supply;
-                    $item_stock_batch->balance -=  $for_supply;
+                    $item_stock_batch->balance -= $for_supply;
                     $item_stock_batch->save();
 
 

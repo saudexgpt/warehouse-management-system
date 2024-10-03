@@ -354,11 +354,11 @@ class Controller extends BaseController
         //     $users = $users->merge($warehouse_managers);
         // }
         // if (in_array('stock officer', $roles)) {
-        $stock_officers = User::whereHas('roles', function ($query) use ($roles) {
-            // $query->where('name', '=', 'stock officer'); // this is the role id inside of this callback
-            $query->whereIn('name', $roles);
-        })->get();
-        $users = $users->merge($stock_officers);
+        // $stock_officers = User::whereHas('roles', function ($query) use ($roles) {
+        //     // $query->where('name', '=', 'stock officer'); // this is the role id inside of this callback
+        //     $query->whereIn('name', $roles);
+        // })->get();
+        // $users = $users->merge($stock_officers);
         // }
         // if (in_array('warehouse auditor', $roles)) {
         //     $auditors = User::whereHas('roles', function ($query) {

@@ -93,6 +93,23 @@
             />
           </el-col>
         </el-row>
+        <el-row v-if="form.status === 'archived'">
+          <el-col :md="6">
+
+            <el-checkbox
+              v-model="checkAll"
+              :indeterminate="isIndeterminate"
+              border
+              @change="handleCheckAllChange"
+            >Check all</el-checkbox>
+          </el-col>
+          <el-col :md="6">
+
+            <el-button :loading="archiving" type="danger" icon="document" @click="restoreSelection">
+              Restore Selection
+            </el-button>
+          </el-col>
+        </el-row>
         <v-client-table v-model="invoices" :columns="columns" :options="options">
 
           <div
@@ -128,30 +145,36 @@
             slot-scope="props"
           >{{ moment(props.row.created_at).format('MMMM Do YYYY, h:mm:ss a') }}</div>
           <div slot="action" slot-scope="props">
-            <a class="btn btn-default" @click="invoice=props.row; page.option='invoice_details'">
-              <i class="el-icon-tickets" />
-            </a>
-            <!-- <a
+            <div v-if="form.status === 'archived'">
+              <el-checkbox-group v-model="checkedInvoices" @change="handleCheckedCitiesChange">
+                <el-checkbox :label="props.row.id" border>{{ props.row.id }}</el-checkbox>
+              </el-checkbox-group>
+            </div>
+            <div v-else>
+              <a class="btn btn-default" @click="invoice=props.row; page.option='invoice_details'">
+                <i class="el-icon-tickets" />
+              </a>
+              <!-- <a
               v-if="props.row.status === 'pending' && props.row.full_waybill_generated ==='0' && checkPermission(['update invoice'])"
               class="btn btn-warning"
               @click="invoice=props.row; page.option='edit_invoice'; selected_row_index=props.index"
             >
               <i class="el-icon-edit" />
             </a> -->
-            <a
-              v-if="props.row.status === 'pending' && checkPermission(['update invoice'])"
-              class="btn btn-warning"
-              @click="invoice=props.row; page.option='edit_invoice'; selected_row_index=props.index"
-            >
-              <i class="el-icon-edit" />
-            </a>
-            <a
-              v-if="props.row.waybill_items.length < 1 && checkPermission(['delete invoice'])"
-              class="btn btn-danger"
-              @click="deleteInvoice(props.index, props.row)"
-            >
-              <i class="fa fa-trash" />
-            </a>
+              <a
+                v-if="props.row.status === 'pending' && checkPermission(['update invoice'])"
+                class="btn btn-warning"
+                @click="invoice=props.row; page.option='edit_invoice'; selected_row_index=props.index"
+              >
+                <i class="el-icon-edit" />
+              </a>
+              <a
+                v-if="props.row.waybill_items.length < 1 && checkPermission(['delete invoice'])"
+                class="btn btn-danger"
+                @click="deleteInvoice(props.index, props.row)"
+              >
+                <i class="fa fa-trash" />
+              </a>
             <!-- <el-dropdown class="avatar-container right-menu-item hover-effect" trigger="click">
               <div class="avatar-wrapper" style="color: brown">
                 <label style="cursor:pointer"><i class="el-icon-more-outline" /></label>
@@ -168,6 +191,7 @@
                 </el-dropdown-item>
               </el-dropdown-menu>
             </el-dropdown>-->
+            </div>
           </div>
         </v-client-table>
       </div>
@@ -224,6 +248,10 @@ export default {
   },
   data() {
     return {
+      checkAll: false,
+      isIndeterminate: true,
+      checkedInvoices: [],
+      archiving: false,
       // params: {},
       warehouses: [],
       invoices: [],
@@ -319,6 +347,38 @@ export default {
     moment,
     checkPermission,
     checkRole,
+    handleCheckAllChange(val) {
+      const invoices = this.invoices;
+      const checkedInvoices = [];
+      invoices.forEach(invoice => {
+        checkedInvoices.push(invoice.id);
+      });
+      this.checkedInvoices = val ? checkedInvoices : [];
+
+      this.isIndeterminate = false;
+    },
+    handleCheckedCitiesChange(value) {
+      const checkedCount = value.length;
+      this.checkAll = checkedCount === this.invoices.length;
+      this.isIndeterminate = checkedCount > 0 && checkedCount < this.invoices.length;
+    },
+    restoreSelection() {
+      const app = this;
+      if (confirm(`Are you sure you want to restore the selected invoices?`)) {
+        const archiveInvoiceResource = new Resource('invoice/general/restore-archived-invoices');
+        app.archiving = true;
+        archiveInvoiceResource.store({ invoice_ids: app.checkedInvoices })
+          .then(response => {
+            app.$message('Invoices Restored Successfully');
+            app.getInvoices();
+            app.archiving = false;
+          })
+          .catch(error => {
+            app.archiving = false;
+            console.log(error.message);
+          });
+      }
+    },
     onEditUpdate(updated_row) {
       const app = this;
       // app.items_in_stock.splice(app.itemInStock.index-1, 1);
@@ -388,6 +448,7 @@ export default {
       const { limit, page } = app.form;
       app.options.perPage = limit;
       const param = app.form;
+      app.invoices = [];
       param.warehouse_id = app.selected_warehouse.id;
       var extra_tableTitle = '';
       if (app.form.from !== '' && app.form.to !== '') {

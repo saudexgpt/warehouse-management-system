@@ -24,8 +24,15 @@
             <span align="right">{{ '₦' + Number(row.price.sale_price).toLocaleString() }}</span>
           </div>
           <div slot="action" slot-scope="props">
-            <a class="btn btn-primary" @click="item=props.row; selected_row_index=props.index; page.option = 'edit_item'"><i class="fa fa-edit" /> </a>
-            <a class="btn btn-danger" @click="confirmDelete(props)"><i class="fa fa-trash" /> </a>
+            <div v-if="props.row.enabled === 1">
+              <a class="btn btn-warning" @click="toggleItemStatus(props, 'Disable')"><i class="fa fa-remove" /> Disable </a>
+              <a class="btn btn-primary" @click="item=props.row; selected_row_index=props.index; page.option = 'edit_item'"><i class="fa fa-edit" /> </a>
+              <a class="btn btn-danger" @click="confirmDelete(props)"><i class="fa fa-trash" /> </a>
+            </div>
+            <div v-else>
+
+              <a class="btn btn-success" @click="toggleItemStatus(props, 'Enable')"><i class="fa fa-check" /> Enable</a>
+            </div>
           </div>
 
         </v-client-table>
@@ -43,6 +50,7 @@ import Resource from '@/api/resource';
 const necessaryParams = new Resource('fetch-necessary-params');
 const itemCategory = new Resource('stock/item-category');
 const generalProducts = new Resource('stock/general-items');
+const enableGeneralProducts = new Resource('stock/general-items/enable-disable');
 const deleteGeneralProducts = new Resource('stock/general-items/delete');
 export default {
   components: { AddNew, EditItem },
@@ -128,7 +136,24 @@ export default {
       // app.items_in_stock.splice(app.itemInStock.index-1, 1);
       app.items[app.selected_row_index - 1] = updated_row;
     },
-
+    toggleItemStatus(props, action) {
+      const row = props.row;
+      const app = this;
+      const message = `Are you sure you want to ${action} ${row.name}? Click OK to confirm`;
+      if (confirm(message)) {
+        enableGeneralProducts.update(row.id, row)
+          .then(response => {
+            this.$message({
+              message: `${action} action successful`,
+              type: 'success',
+            });
+            app.fetchGeneralProducts();
+          })
+          .catch(error => {
+            console.log(error);
+          });
+      }
+    },
     confirmDelete(props) {
       // this.loader();
 

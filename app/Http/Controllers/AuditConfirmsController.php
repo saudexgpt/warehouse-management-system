@@ -75,6 +75,7 @@ class AuditConfirmsController extends Controller
             $invoice_item->save();
         }
         $invoice->confirmed_by = $user->id;
+        $invoice->status = 'auditor approved';
         $invoice->auditor_confirmed_date = $date;
         $confirmed = 'failed';
         if ($invoice->save()) {

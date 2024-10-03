@@ -14,10 +14,10 @@
           <h4 class="box-title">Create New Invoice</h4>
           <span class="pull-right">
             <!-- <a
-              v-if="checkPermission(['create invoice']) && upload_type ==='normal'"
-              class="btn btn-success"
-              @click="upload_type ='bulk'"
-            >Bulk Upload</a> -->
+                v-if="checkPermission(['create invoice']) && upload_type ==='normal'"
+                class="btn btn-success"
+                @click="upload_type ='bulk'"
+              >Bulk Upload</a> -->
             <a
               v-if="checkPermission(['create invoice']) && upload_type ==='bulk'"
               class="btn btn-primary"
@@ -70,20 +70,20 @@
                   />
                 </el-select>
                 <!-- <el-select
-                  v-model="form.warehouse_id"
-                  placeholder="Select Warehouse"
-                  filterable
-                  class="span"
-                  @input="show_product_list = true"
-                >
-                  <el-option
-                    v-for="(warehouse, warehouse_index) in params.warehouses"
-                    :key="warehouse_index"
-                    :value="warehouse.id"
-                    :label="warehouse.name"
-                    :disabled="warehouse.id !== 1"
-                  />
-                </el-select> -->
+                    v-model="form.warehouse_id"
+                    placeholder="Select Warehouse"
+                    filterable
+                    class="span"
+                    @input="show_product_list = true"
+                  >
+                    <el-option
+                      v-for="(warehouse, warehouse_index) in params.warehouses"
+                      :key="warehouse_index"
+                      :value="warehouse.id"
+                      :label="warehouse.name"
+                      :disabled="warehouse.id !== 1"
+                    />
+                  </el-select> -->
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>
@@ -171,13 +171,12 @@
                                 :key="item_index"
                                 :value="item"
                                 :label="item.name"
-                                :disabled="item.enabled === 0"
                               />
                             </el-select>
                             <div v-if="params.enable_stock_quantity_check_when_raising_invoice === 'yes'" v-loading="invoice_item.load">
                               <!-- <br><small class="label label-primary">Physical Stock: {{ invoice_item.total_stocked }} {{ invoice_item.type }}</small>
 
-                              <br><small class="label label-warning">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small> -->
+                                <br><small class="label label-warning">Total Pending Invoice: {{ invoice_item.total_invoiced_quantity }} {{ invoice_item.type }}</small> -->
 
                               <small v-if="invoice_item.stock_balance" class="label label-success">Quantity Available for Order: {{ invoice_item.stock_balance }} {{ invoice_item.type }}</small>
                             </div>
@@ -198,13 +197,13 @@
                           </td>
                           <td>
                             <!-- {{ currency }} {{ Number(invoice_item.rate).toLocaleString() }}
-                            <br>
-                            <el-switch
-                              v-model="invoice_item.is_promo"
-                              active-text="Is Promo"
-                              inactive-text="Not Promo"
-                              @change="setItemAsPromo(index, invoice_item.is_promo);"
-                            /> -->
+                              <br>
+                              <el-switch
+                                v-model="invoice_item.is_promo"
+                                active-text="Is Promo"
+                                inactive-text="Not Promo"
+                                @change="setItemAsPromo(index, invoice_item.is_promo);"
+                              /> -->
                             <el-input
                               v-if="checkPermission(['update invoice product price'])"
                               v-model="invoice_item.rate"
@@ -217,29 +216,29 @@
                           </td>
                           <td>{{ invoice_item.type }}</td>
                           <!-- <td>
-                            <el-select
-                              v-model="invoice_item.batches"
-                              placeholder="Specify product batch for this supply"
-                              filterable
-                              class="span"
-                              multiple
-                              collapse-tags
-                            >
-                              <el-option
-                                v-for="(batch, batch_index) in invoice_item.batches_of_items_in_stock"
-                                :key="batch_index"
-                                :value="batch.id"
-                                :label="batch.batch_no + ' | ' + batch.expiry_date"
+                              <el-select
+                                v-model="invoice_item.batches"
+                                placeholder="Specify product batch for this supply"
+                                filterable
+                                class="span"
+                                multiple
+                                collapse-tags
                               >
-                                <span
-                                  style="float: left"
-                                >{{ batch.batch_no + ' | ' + batch.expiry_date }}</span>
-                                <span
-                                  style="float: right; color: #8492a6; font-size: 13px"
-                                >({{ batch.balance - batch.reserved_for_supply }})</span>
-                              </el-option>
-                            </el-select>
-                          </td> -->
+                                <el-option
+                                  v-for="(batch, batch_index) in invoice_item.batches_of_items_in_stock"
+                                  :key="batch_index"
+                                  :value="batch.id"
+                                  :label="batch.batch_no + ' | ' + batch.expiry_date"
+                                >
+                                  <span
+                                    style="float: left"
+                                  >{{ batch.batch_no + ' | ' + batch.expiry_date }}</span>
+                                  <span
+                                    style="float: right; color: #8492a6; font-size: 13px"
+                                  >({{ batch.balance - batch.reserved_for_supply }})</span>
+                                </el-option>
+                              </el-select>
+                            </td> -->
                           <td align="right">
                             <el-input v-model="invoice_item.amount" type="hidden" outline />
                             {{ currency }} {{ Number(invoice_item.amount).toLocaleString() }}
@@ -516,10 +515,10 @@ export default {
       const checkEmptyLines = this.invoice_items.filter(
         (detail) =>
           detail.item_id === '' ||
-          detail.quantity === '' ||
-          detail.rate === null ||
-          detail.tax === null ||
-          detail.total === 0,
+            detail.quantity === '' ||
+            detail.rate === null ||
+            detail.tax === null ||
+            detail.total === 0,
       );
       if (checkEmptyLines.length >= 1) {
         this.fill_fields_error = true;
@@ -615,10 +614,10 @@ export default {
       }
       var form = app.form;
       const checkEmptyFields =
-        form.warehouse_id === '' ||
-        form.customer_ids.length < 1 ||
-        form.invoice_date === '' ||
-        form.currency_id === '';
+          form.warehouse_id === '' ||
+          form.customer_ids.length < 1 ||
+          form.invoice_date === '' ||
+          form.currency_id === '';
       if (!checkEmptyFields) {
         app.loadForm = true;
         form.invoice_items = app.invoice_items;
@@ -705,7 +704,7 @@ export default {
     showItemsInStock(index) {
       const app = this;
       app.batches_of_items_in_stock =
-        app.invoice_items[index].batches_of_items_in_stock;
+          app.invoice_items[index].batches_of_items_in_stock;
       app.items_in_stock_dialog = true;
     },
     calculateNoOfCartons(index) {
@@ -780,4 +779,3 @@ export default {
   },
 };
 </script>
-

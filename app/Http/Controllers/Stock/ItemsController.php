@@ -50,7 +50,7 @@ class ItemsController extends Controller
     {
         //
         $user = $this->getUser();
-        $tax_ids =  $request->tax_ids;
+        $tax_ids = $request->tax_ids;
         $name = $request->name;
         $category_id = $request->category_id;
         // $sku = $request->sku;
@@ -77,7 +77,7 @@ class ItemsController extends Controller
 
             // save item taxes
             if ($tax_ids) {
-                foreach ($tax_ids  as $tax_id) {
+                foreach ($tax_ids as $tax_id) {
                     $item_tax = new ItemTax();
                     $item_tax->tax_id = $tax_id;
                     $item_tax->item_id = $item->id;
@@ -93,7 +93,8 @@ class ItemsController extends Controller
             $item_price->save();
             // log this action
             $title = "Product Added";
-            $description = $name . " added to list of products by " . $user->name;;
+            $description = $name . " added to list of products by " . $user->name;
+            ;
             $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
             $this->logUserActivity($title, $description, $roles);
             return $this->show($item);
@@ -114,7 +115,7 @@ class ItemsController extends Controller
     {
         //
         $user = $this->getUser();
-        $tax_ids =  $request->tax_ids;
+        $tax_ids = $request->tax_ids;
         $item->name = $request->name;
         $item->category_id = $request->category_id;
         $item->package_type = $request->package_type;
@@ -139,7 +140,7 @@ class ItemsController extends Controller
 
         //update item tax
         if ($tax_ids) {
-            foreach ($tax_ids  as $tax_id) {
+            foreach ($tax_ids as $tax_id) {
                 $item_tax = ItemTax::where(['item_id' => $item->id, 'tax_id' => $tax_id])->first();
                 if (!$item_tax) {
                     $item_tax = new ItemTax();
@@ -150,7 +151,8 @@ class ItemsController extends Controller
             }
         }
         $title = "Product details modified";
-        $description = "Product information with ID $item->id  was modified by " . $user->name;;
+        $description = "Product information with ID $item->id  was modified by " . $user->name;
+        ;
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
         $this->logUserActivity($title, $description, $roles);
         return $this->show($item);
@@ -183,5 +185,13 @@ class ItemsController extends Controller
         $item->price()->delete();
         $item->delete();
         return response()->json(null, 204);
+    }
+
+    public function enableOrDisableItem(Request $request, Item $item)
+    {
+        $status = $item->enabled;
+        $item->enabled = !$status;
+        $item->save();
+        return response()->json(compact('item'), 200);
     }
 }
