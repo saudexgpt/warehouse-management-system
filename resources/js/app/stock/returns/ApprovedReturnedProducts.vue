@@ -1,5 +1,12 @@
 <template>
   <div class="app-container">
+    <el-button
+      :loading="downloadLoading"
+      style="margin:0 0 20px 20px;"
+      type="primary"
+      icon="document"
+      @click="handleDownload"
+    >Export Excel</el-button>
     <v-client-table v-model="returned_products" :columns="columns" :options="options">
       <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
         <!-- {{ row.quantity }} -->
@@ -47,6 +54,7 @@
 </template>
 <script>
 import moment from 'moment';
+import { parseTime } from '@/utils';
 import Pagination from '@/components/Pagination';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
@@ -65,6 +73,7 @@ export default {
     return {
       load: false,
       dialogVisible: false,
+      downloadLoading: false,
       warehouses: [],
       returned_products: [],
       columns: ['stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
@@ -154,6 +163,59 @@ export default {
         formated_type = type + 'es';
       }
       return formated_type;
+    },
+    async handleDownload() {
+      this.downloadLoading = true;
+      const param = this.form;
+      param.is_download = 'yes';
+      const { returned_products } = await returnedProducts.list(param);
+      import('@/vendor/Export2Excel').then(excel => {
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '']];
+        const tHeader = [
+          'STOCKED BY',
+          'CUSTOMER NAME',
+          'PRODUCT',
+          'BATCH NO.',
+          'QUANTITY',
+          'QUANTITY APPROVED',
+          'REASON',
+          'EXPIRY DATE',
+          'DATE RETURNED',
+        ];
+        const filterVal = [
+          'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned',
+        ];
+        const list = returned_products;
+        const data = this.formatJson(filterVal, list);
+        excel.export_json_to_excel({
+          multiHeader,
+          header: tHeader,
+          data,
+          filename: 'UNAPPROVED RETURNS',
+          autoWidth: true,
+          bookType: 'csv',
+        });
+        this.downloadLoading = false;
+      });
+    },
+    formatJson(filterVal, jsonData) {
+      return jsonData.map(v =>
+        filterVal.map(j => {
+          if (j === 'stocker.name') {
+            return (v['stocker']) ? v['stocker']['name'] : '';
+          }
+          if (j === 'item.name') {
+            return (v['item']) ? v['item']['name'] : '';
+          }
+          if (j === 'expiry_date') {
+            return parseTime(v[j]);
+          }
+          if (j === 'date_returned') {
+            return parseTime(v[j]);
+          }
+          return v[j];
+        }),
+      );
     },
   },
 };

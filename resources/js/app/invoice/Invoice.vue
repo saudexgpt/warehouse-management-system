@@ -494,7 +494,7 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '', '']];
+        const multiHeader = [[this.table_title, '', '', '', '', '', '']];
         const tHeader = [
           'INVOICE NUMBER',
           'CUSTOMER',

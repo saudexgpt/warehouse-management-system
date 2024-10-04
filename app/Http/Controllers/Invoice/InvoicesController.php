@@ -1415,21 +1415,24 @@ class InvoicesController extends Controller
         //     DB::table('item_stock_sub_batches_check')->where('id', $batch_id)->update(['supplied' => $supplied]);
         // }
 
-        // Invoice::with('waybillItems')->where(
-        //     'waybill_generated',
-        //     0
-        // )
-        //     ->chunkById(200, function ($invoices) {
-        //         foreach ($invoices as $invoice) {
-        //             $waybillItems = $invoice->waybillItems;
-        //             if (count($waybillItems) > 0) {
+        // InvoiceItem::with('invoice')->groupBy('invoice_id')->select('*', \DB::raw('SUM(quantity) as order_quantity'), \DB::raw('SUM(quantity_supplied + quantity_reversed) as supply_quantity'))
+        //     ->chunkById(200, function ($invoice_items) {
+        //         foreach ($invoice_items as $invoice_item) {
+        //             $invoice = $invoice_item->invoice;
+        //             if ($invoice) {
 
-        //                 $invoice->waybill_generated = 1;
-        //                 $invoice->save();
+        //                 $diff = $invoice_item->order_quantity = $invoice_item->supply_quantity;
+        //                 if ($diff == 0) {
+
+        //                     $invoice->status = 'delivered';
+        //                     $invoice->save();
+        //                 }
         //             }
+
         //         }
 
         //     }, $column = 'id');
+
     }
     // public function stabilizeDeliveryTripToWaybillRelationship()
     // {

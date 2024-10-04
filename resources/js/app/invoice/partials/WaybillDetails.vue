@@ -178,7 +178,7 @@
           </div>
           <!-- /.col -->
         </div>
-        <div v-if="waybill.trips.length > 0">
+        <div v-if="waybill.trips.length > 0 || waybill.dispatcher">
           <div v-if="waybill.dispatcher && waybill.trips[0].dispatch_company === 'GREEN LIFE LOGISTICS'" class="row">
             <div class="col-md-6 col-xs-12">
               <label align="center">CURRENT GOODS DELIVERY STATUS</label>
