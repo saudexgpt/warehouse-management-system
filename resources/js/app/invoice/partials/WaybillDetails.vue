@@ -178,7 +178,7 @@
           </div>
           <!-- /.col -->
         </div>
-        <div v-if="waybill.trips.length > 0 || waybill.dispatcher">
+        <div v-if="waybill.trips.length > 0">
           <div v-if="waybill.dispatcher && waybill.trips[0].dispatch_company === 'GREEN LIFE LOGISTICS'" class="row">
             <div class="col-md-6 col-xs-12">
               <label align="center">CURRENT GOODS DELIVERY STATUS</label>
@@ -260,6 +260,88 @@
             </div>
           </div>
         </div>
+        <!-- <div>
+          <div v-if="waybill.dispatcher && waybill.trips[0].dispatch_company === 'GREEN LIFE LOGISTICS'" class="row">
+            <div class="col-md-6 col-xs-12">
+              <label align="center">CURRENT GOODS DELIVERY STATUS</label>
+              <div v-if="waybill.status === 'pending'" align="center">
+                <img src="images/pending.png" alt="Pending" width="150">
+                <br>
+                <label>Goods delivery is pending</label>
+              </div>
+              <div v-else-if="waybill.status === 'in transit'" align="center">
+                <img src="images/transit.png" alt="Transition" width="150">
+                <br>
+                <label>Goods are currently in transit for delivery</label>
+              </div>
+              <div v-else-if="waybill.status === 'delivered'" align="center">
+                <img src="images/delivered.png" alt="Delivered" width="150">
+                <br>
+                <label>Goods are delivered</label>
+              </div>
+            </div>
+            <div class="col-md-6 col-xs-12">
+              <div v-if="waybill.status === 'pending'">
+                <a
+                  class="btn btn-primary"
+                  @click="form.status = 'in transit'; changeWaybillStatus()"
+                > <i class="el-icon-printer" /> Print Waybill</a>
+                <span
+                  class="label label-danger"
+                >This should be done only when goods have left the warehouse to meet the customer</span>
+              </div>
+              <div v-else-if="waybill.status === 'in transit'">
+                <a
+                  class="btn btn-success"
+                  @click="form.status = 'delivered'; changeWaybillStatus()"
+                >Click to Mark Goods as Delivered</a>
+                <span
+                  class="label label-danger"
+                >This should be done only when goods have been delivered successfully to the customer</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="waybill.trips[0].dispatch_company !== 'GREEN LIFE LOGISTICS'" class="row">
+            <div class="col-md-6 col-xs-12">
+              <label align="center">CURRENT GOODS DELIVERY STATUS</label>
+              <div v-if="waybill.status === 'pending'" align="center">
+                <img src="images/pending.png" alt="Pending" width="150">
+                <br>
+                <label>Goods delivery is pending</label>
+              </div>
+              <div v-else-if="waybill.status === 'in transit'" align="center">
+                <img src="images/transit.png" alt="Transition" width="150">
+                <br>
+                <label>Goods are currently in transit for delivery</label>
+              </div>
+              <div v-else-if="waybill.status === 'delivered'" align="center">
+                <img src="images/delivered.png" alt="Delivered" width="150">
+                <br>
+                <label>Goods are delivered</label>
+              </div>
+            </div>
+            <div class="col-md-6 col-xs-12">
+              <div v-if="waybill.status === 'pending'">
+                <a
+                  class="btn btn-primary"
+                  @click="form.status = 'in transit'; changeWaybillStatus()"
+                > <i class="el-icon-printer" /> Print Waybill</a>
+                <span
+                  class="label label-danger"
+                >This should be done only when goods have left the warehouse to meet the customer</span>
+              </div>
+              <div v-else-if="waybill.status === 'in transit'">
+                <a
+                  class="btn btn-success"
+                  @click="form.status = 'delivered'; changeWaybillStatus()"
+                >Click to Mark Goods as Delivered</a>
+                <span
+                  class="label label-danger"
+                >This should be done only when goods have been delivered successfully to the customer</span>
+              </div>
+            </div>
+          </div>
+        </div> -->
       </div>
     </div>
   </div>

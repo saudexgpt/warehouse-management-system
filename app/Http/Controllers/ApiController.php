@@ -140,8 +140,8 @@ class ApiController extends Controller
             ->join('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
             ->join('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
             ->join('waybills', 'waybill_items.waybill_id', 'waybills.id')
-            ->join('delivery_trip_waybill', 'delivery_trip_waybill.waybill_id', 'waybills.id')
-            ->join('delivery_trips', 'delivery_trip_waybill.delivery_trip_id', 'delivery_trips.id')
+            // ->leftJoin('delivery_trip_waybill', 'delivery_trip_waybill.waybill_id', 'waybills.id')
+            // ->leftJoin('delivery_trips', 'delivery_trip_waybill.delivery_trip_id', 'delivery_trips.id')
             ->selectRaw(
                 'warehouses.name as warehouse,
                 customers.id as customer_id,
@@ -160,11 +160,12 @@ class ApiController extends Controller
                 waybills.waybill_no as waybill_no,                
                 waybills.created_at as waybill_date,               
                 waybills.status as waybill_status,
-                waybills.delivery_date,
-                delivery_trips.dispatchers,
-                delivery_trips.vehicle_no,
-                delivery_trips.trip_no'
+                waybills.delivery_date'
             );
+        // ,
+        //     delivery_trips.dispatchers,
+        //     delivery_trips.vehicle_no,
+        //     delivery_trips.trip_no
         // $invoiceItemQuery->where(function ($q) {
         //     $q->whereNotNull('customers.deleted_at');
         //     $q->orWhereNULL('customers.deleted_at');
@@ -617,7 +618,7 @@ class ApiController extends Controller
             })
             ->orderBy('warehouse_id')
             ->orderBy('expiry_date')
-            ->select('warehouses.name as warehouse', 'items.id as product_id', 'items.name as product', 'categories.name as product_category', 'batch_no', 'goods_received_note as grn', \DB::raw('SUM(quantity) as quantity_in'), \DB::raw('(SUM(in_transit) + SUM(supplied)) as quantity_out'), \DB::raw('SUM(balance) as total_balance'), 'expiry_date', 'item_stock_sub_batches.created_at');
+            ->select('warehouses.name as warehouse', 'items.id as product_id', 'items.name as product', 'items.basic_unit as uom', 'quantity_per_carton', 'categories.name as product_category', 'batch_no', 'goods_received_note as grn', \DB::raw('SUM(quantity) as quantity_in'), \DB::raw('(SUM(in_transit) + SUM(supplied)) as quantity_out'), \DB::raw('SUM(balance) as total_balance'), \DB::raw('SUM(balance)/quantity_per_carton as total_balance_in_carton'), 'expiry_date', 'item_stock_sub_batches.created_at');
         // $items_in_stock = $items_in_stock_query->get();
         $items_in_stock = $items_in_stock_query->get();
         return response()->json(compact('items_in_stock'));

@@ -1039,16 +1039,18 @@ class InvoicesController extends Controller
                             $quantity_supplied += $for_supply;
                             // $invoice_item_update->save();
 
-                            $waybill_item = $waybill_item_obj->createWaybillItems($waybill->id, $warehouse_id, $invoice_item_update, $batches);
+                            $waybill_item = $waybill_item_obj->createWaybillItems($waybill, $warehouse_id, $invoice_item_update, $batches);
+
+                            if ($waybill_item) {
+                                $this->createInvoiceItemBatches($waybill_item, $invoice_item_update, $batches);
 
 
-                            $this->createInvoiceItemBatches($waybill_item, $invoice_item_update, $batches);
-
-
-                            if ($original_quantity > $quantity_supplied) {
-                                $partial_waybill_generated[] = $invoice_item_update->invoice_id;
+                                if ($original_quantity > $quantity_supplied) {
+                                    $partial_waybill_generated[] = $invoice_item_update->invoice_id;
+                                }
+                                $invoice_ids[] = $invoice_item_update->invoice_id;
                             }
-                            $invoice_ids[] = $invoice_item_update->invoice_id;
+
                         }
                     }
                 }
@@ -1086,7 +1088,6 @@ class InvoicesController extends Controller
         }
 
 
-        $waybill->invoices()->sync($invoice_ids);
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
         $this->logUserActivity($title, $description, $roles);
@@ -1119,6 +1120,7 @@ class InvoicesController extends Controller
     public function updateWaybill(Request $request, $waybill_id)
     {
         // return $request;
+        // return response()->json(['message' => 'Waybill update is disabled for now'], 500);
         set_time_limit(0);
         $user = $this->getUser();
         $waybill = Waybill::find($waybill_id);
@@ -1407,6 +1409,26 @@ class InvoicesController extends Controller
 
     public function stabilizeDeliveryTripToWaybillRelationship()
     {
+        // DispatchedWaybill::where('created_at', '>=', '2024-08-01')
+        //     ->chunkById(200, function ($dispatch_waybills) {
+        //         foreach ($dispatch_waybills as $dispatch_waybill) {
+        //             $date = date('Y-m-d', strtotime($dispatch_waybill->created_at));
+        //             $delivery_trip = DeliveryTrip::where('vehicle_id', $dispatch_waybill->vehicle_id)->where('created_at', 'LIKE', '%' . $date . '%')->first();
+        //             if ($delivery_trip) {
+
+        //                 $delivery_trip->waybills()->syncWithoutDetaching($dispatch_waybill->waybill_id);
+        //             }
+        //         }
+        //     }, $column = 'id');
+        // $invoices = Invoice::with('invoiceItems')->where(['waybill_generated' => 0, 'confirmed_by' => NULL])
+        //     ->where('created_at', '<=', '2024-08-31')
+        //     ->get();
+        // foreach ($invoices as $invoice) {
+        //     $invoice->invoiceItems()->update(['supply_status' => 'Archived']);
+
+        //     $invoice->status = 'archived';
+        //     $invoice->save();
+        // }
         // $dispatched_products = DispatchedProduct::groupBy('item_stock_sub_batch_id')
         //     ->select('*', \DB::raw('SUM(quantity_supplied) as total_quantity_supplied'))->get();
         // foreach ($dispatched_products as $dispatched_product) {
@@ -1414,24 +1436,80 @@ class InvoicesController extends Controller
         //     $supplied = $dispatched_product->total_quantity_supplied;
         //     DB::table('item_stock_sub_batches_check')->where('id', $batch_id)->update(['supplied' => $supplied]);
         // }
+        InvoiceItem::with([
+            'dispatchProducts' => function ($p) {
+                $p->groupBy('invoice_item_id')
+                    ->select('id', 'invoice_item_id', 'quantity_supplied', \DB::raw('SUM(quantity_supplied) as total_supplied_quantity'));
+            }
+        ])
+            ->chunkById(200, function ($invoiceItems) {
+                foreach ($invoiceItems as $invoiceItem) {
 
-        // InvoiceItem::with('invoice')->groupBy('invoice_id')->select('*', \DB::raw('SUM(quantity) as order_quantity'), \DB::raw('SUM(quantity_supplied + quantity_reversed) as supply_quantity'))
-        //     ->chunkById(200, function ($invoice_items) {
-        //         foreach ($invoice_items as $invoice_item) {
-        //             $invoice = $invoice_item->invoice;
-        //             if ($invoice) {
+                    if ($invoiceItem->dispatchProducts->count() > 0) {
+                        $invoiceItem->total_quantity_dispatched = (int) $invoiceItem->dispatchProducts[0]->total_supplied_quantity;
+                        $invoiceItem->save();
+                    }
 
-        //                 $diff = $invoice_item->order_quantity = $invoice_item->supply_quantity;
-        //                 if ($diff == 0) {
+                }
 
-        //                     $invoice->status = 'delivered';
-        //                     $invoice->save();
-        //                 }
+            }, $column = 'id');
+        // Invoice::with([
+        //     'invoiceItems' => function ($q) {
+        //         $q->whereRaw('quantity - (quantity_supplied + quantity_reversed) > 0');
+        //         $q->whereRaw('quantity - (quantity_supplied + quantity_reversed) < quantity');
+        //     }
+        // ])
+        //     ->chunkById(200, function ($invoices) {
+        //         foreach ($invoices as $invoice) {
+        //             $invoiceItems = $invoice->invoiceItems;
+        //             if (count($invoiceItems) > 0) {
+
+        //                 $invoice->status = 'partially supplied';
+        //                 $invoice->waybill_generated = 1;
+        //                 $invoice->full_waybill_generated = '0';
+        //                 $invoice->save();
         //             }
 
         //         }
 
         //     }, $column = 'id');
+        // Invoice::with([
+        //     'waybillItems'
+        // ])->where('confirmed_by', '!=', NULL)
+        //     ->chunkById(200, function ($invoices) {
+        //         foreach ($invoices as $invoice) {
+        //             $waybillItems = $invoice->waybillItems;
+        //             if (count($waybillItems) < 1) {
+
+        //                 $invoice->status = 'auditor approved';
+        //                 $invoice->waybill_generated = 0;
+        //                 $invoice->full_waybill_generated = '0';
+        //                 $invoice->save();
+        //             }
+
+        //         }
+
+        //     }, $column = 'id');
+
+        InvoiceItem::with('invoice')->groupBy('invoice_id')->select('*', \DB::raw('SUM(quantity) as order_quantity'), \DB::raw('SUM(quantity_supplied + quantity_reversed) as supply_quantity'))
+            ->chunkById(200, function ($invoice_items) {
+                foreach ($invoice_items as $invoice_item) {
+                    $invoice = $invoice_item->invoice;
+                    if ($invoice) {
+
+                        $diff = $invoice_item->order_quantity - $invoice_item->supply_quantity;
+                        if ($diff == 0) {
+
+                            $invoice->status = 'delivered';
+                            $invoice->full_waybill_generated = '1';
+                            $invoice->waybill_generated = 1;
+                            $invoice->save();
+                        }
+                    }
+
+                }
+
+            }, $column = 'id');
 
     }
     // public function stabilizeDeliveryTripToWaybillRelationship()
@@ -1760,7 +1838,8 @@ class InvoicesController extends Controller
         $panel = 'month';
         $condition = [];
 
-        $invoiceQuery = Invoice::where(['waybill_generated' => 0, 'confirmed_by' => NULL]);
+        $invoiceQuery = Invoice::where(['waybill_generated' => 0, 'confirmed_by' => NULL])
+            ->where('status', '!=', 'archived');
         if (isset($request->warehouse_id) && $request->warehouse_id !== 'all') {
             $invoiceQuery->where('warehouse_id', $request->warehouse_id);
         }
@@ -1768,8 +1847,8 @@ class InvoicesController extends Controller
         if (isset($request->from, $request->to)) {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
             $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
-            $invoiceQuery->where('created_at', '>=', $date_from);
-            $invoiceQuery->where('created_at', '<=', $date_to);
+            $invoiceQuery->where('invoice_date', '>=', $date_from);
+            $invoiceQuery->where('invoice_date', '<=', $date_to);
         }
         $is_download = 'no';
         if (isset($request->is_download)) {

@@ -38,7 +38,7 @@ class WaybillItem extends Model
         return $this->belongsTo(InvoiceItem::class);
     }
 
-    public function createWaybillItems($waybill_id, $warehouse_id, $invoice_item, $batches)
+    public function createWaybillItems($waybill, $warehouse_id, $invoice_item, $batches)
     {
         // foreach ($invoice_items as $invoice_item) {
         $for_supply = 0;
@@ -46,17 +46,21 @@ class WaybillItem extends Model
 
             $for_supply += $batch->supply_quantity;
         }
-        $waybill_item = new WaybillItem();
-        $waybill_item->warehouse_id = $warehouse_id;
-        $waybill_item->invoice_id = $invoice_item->invoice_id;
-        $waybill_item->waybill_id = $waybill_id;
-        $waybill_item->item_id = $invoice_item->item_id;
-        $waybill_item->invoice_item_id = $invoice_item->id;
-        $waybill_item->quantity = $for_supply;
-        $waybill_item->type = $invoice_item->type;
-        $waybill_item->save();
+        if ($for_supply > 0) {
 
-        return $waybill_item;
+            $waybill_item = new WaybillItem();
+            $waybill_item->warehouse_id = $warehouse_id;
+            $waybill_item->invoice_id = $invoice_item->invoice_id;
+            $waybill_item->waybill_id = $waybill->id;
+            $waybill_item->item_id = $invoice_item->item_id;
+            $waybill_item->invoice_item_id = $invoice_item->id;
+            $waybill_item->quantity = $for_supply;
+            $waybill_item->type = $invoice_item->type;
+            $waybill_item->save();
+
+            $waybill->invoices()->sync($invoice_item->invoice_id);
+            return $waybill_item;
+        }
         // }
     }
 }

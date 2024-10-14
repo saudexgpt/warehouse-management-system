@@ -24,14 +24,30 @@
               </el-select>
 
               <label for="">Select Product</label>
-              <el-select v-model="form.item_id" placeholder="Select Product" filterable class="span">
-                <el-option v-for="(item, index) in params.items" :key="index" :value="item.id" :label="item.name" />
+              <el-select v-model="selectedItem" placeholder="Select Product" filterable value-key="id" class="span">
+                <el-option v-for="(item, index) in params.items" :key="index" :value="item" :label="item.name" />
 
               </el-select>
               <label for="">Customer Name</label>
-              <el-input v-model="form.customer_name" placeholder="Customer Name" class="span" />
+              <!-- <el-input v-model="form.customer_name" placeholder="Customer Name" class="span" /> -->
+              <el-select
+                v-model="selectedCustomer"
+                placeholder="Select Customer"
+                filterable
+                value-key="id"
+                class="span"
+              >
+                <el-option
+                  v-for="(customer, customer_index) in customers"
+                  :key="customer_index"
+                  :value="customer"
+                  :label="(customer.user) ? customer.user.name : ''"
+                />
+              </el-select>
               <label for="">Quantity</label>
-              <el-input v-model="form.quantity" type="text" placeholder="Quantity" class="span" />
+              <el-input v-model="form.quantity" type="text" placeholder="Quantity" class="span">
+                <template slot="append">{{ selectedItem.package_type }}</template>
+              </el-input>
             </el-col>
             <el-col :xs="24" :sm="12" :md="12">
               <label for="">Batch No.</label>
@@ -104,6 +120,7 @@ export default {
       form: {
         warehouse_id: 7,
         item_id: '',
+        customer_id: '',
         customer_name: '',
         quantity: '',
         batch_no: '',
@@ -113,17 +130,32 @@ export default {
         other_reason: null,
 
       },
+      selectedCustomer: '',
+      selectedItem: { package_type: '' },
 
     };
   },
+  computed: {
+    customers() {
+      return this.$store.getters.customers;
+    },
+  },
   mounted() {
+    this.fetchCustomers();
   },
   methods: {
     moment,
+    fetchCustomers() {
+      const app = this;
+      app.$store.dispatch('customer/fetch');
+    },
     addNewReturnedProduct() {
       const app = this;
       const load = createReturnedProduct.loaderShow();
       var form = app.form;
+      form.customer_id = app.selectedCustomer.id;
+      form.item_id = app.selectedItem.id;
+      form.customer_name = app.selectedCustomer.user.name;
       createReturnedProduct.store(form)
         .then(response => {
           app.resetForm();
@@ -139,8 +171,9 @@ export default {
     },
     resetForm(){
       this.form = {
-        warehouse_id: '',
+        warehouse_id: 7,
         item_id: '',
+        customer_id: '',
         customer_name: '',
         quantity: '',
         batch_no: '',

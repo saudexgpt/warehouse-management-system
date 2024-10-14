@@ -34,6 +34,10 @@ class Invoice extends Model
     {
         return $this->hasMany(WaybillItem::class);
     }
+    public function dispatchProducts()
+    {
+        return $this->hasMany(DispatchedProduct::class);
+    }
     public function invoiceItems()
     {
         return $this->hasMany(InvoiceItem::class);

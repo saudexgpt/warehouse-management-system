@@ -46,6 +46,7 @@ class ReturnsController extends Controller
         $returned_product->warehouse_id = $request->warehouse_id;
         $returned_product->item_id = $request->item_id;
         $returned_product->batch_no = $request->batch_no;
+        $returned_product->customer_id = $request->customer_id;
         $returned_product->customer_name = $request->customer_name;
         $returned_product->expiry_date = $request->expiry_date;
         $returned_product->date_returned = $request->date_returned;

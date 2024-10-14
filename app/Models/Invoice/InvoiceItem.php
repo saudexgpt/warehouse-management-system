@@ -30,7 +30,10 @@ class InvoiceItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
-
+    public function dispatchProducts()
+    {
+        return $this->hasMany(DispatchedProduct::class);
+    }
     public function batches()
     {
         return $this->hasMany(InvoiceItemBatch::class);
