@@ -22,6 +22,8 @@ use App\Models\Logistics\Vehicle;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStock;
 use App\Models\Stock\ItemStockSubBatch;
+use App\Models\Transfers\TransferRequestDispatchedProduct;
+use App\Models\Transfers\TransferRequestItem;
 use App\Models\Warehouse\Warehouse;
 use App\Notification;
 use Carbon\Carbon;
@@ -1124,6 +1126,9 @@ class InvoicesController extends Controller
         set_time_limit(0);
         $user = $this->getUser();
         $waybill = Waybill::find($waybill_id);
+        if ($waybill->status != 'pending') {
+            return response()->json(['message' => 'Only Pending waybills can be modified'], 500);
+        }
         $invoices = $waybill->invoices;
         // we fetch previous waybill items
         $waybill_items = json_decode(json_encode($request->waybill_items));
@@ -1131,13 +1136,24 @@ class InvoicesController extends Controller
             // we want to get all invoice item for this waybill item and deduct what was reserved
             $old_quantity = $waybill_item->old_quantity;
             $diff = $waybill_item->quantity_for_supply - $old_quantity;
-            $waybillItem = WaybillItem::with('item', 'invoice')->find($waybill_item->id);
+            $waybillItem = WaybillItem::with('item', 'invoice', 'batches.itemStockBatch')->find($waybill_item->id);
             $waybillItem->quantity = $waybill_item->quantity_for_supply;
             $waybillItem->save();
 
             $invoice_item = $waybillItem->invoiceItem;
             $invoice_item->quantity_supplied += $diff; // add the differnce between the new and former quantity
             $invoice_item->save();
+
+            $waybill_supply_batches = $waybillItem->batches;
+            // We will restore former reserved quantities and 
+            foreach ($waybill_supply_batches as $waybill_supply_batch) {
+                $quantity = $waybill_supply_batch->quantity;
+                $item_stock_batch = $waybill_supply_batch->itemStockBatch;
+                $item_stock_batch->reserved_for_supply -= $quantity;
+                $item_stock_batch->save();
+
+                $waybill_supply_batch->forceDelete();
+            }
 
             $invoice = Invoice::find($invoice_item->invoice_id);
             if ($invoice_item->quantity > $invoice_item->quantity_supplied) {
@@ -1151,20 +1167,20 @@ class InvoicesController extends Controller
             $reserved_batches = $waybill_item->batches;
             $batches = new Collection();
             foreach ($reserved_batches as $reserved_batch) {
-                $old_supply = (int) $reserved_batch->old_supply_quantity;
+                // $old_supply = (int) $reserved_batch->old_supply_quantity;
                 $new_supply_quantity = $reserved_batch->supply_quantity;
                 $batch_no = $reserved_batch->batch_no;
                 $expiry_date = $reserved_batch->expiry_date;
-                if ($old_supply > 0) {
+                // if ($old_supply > 0) {
 
-                    $waybill_batch_id = $reserved_batch->waybill_batch_id;
-                    $invoice_item_batch = InvoiceItemBatch::with('itemStockBatch')->find($waybill_batch_id);
-                    $item_stock_batch = $invoice_item_batch->itemStockBatch;
-                    $item_stock_batch->reserved_for_supply -= $old_supply;
-                    $item_stock_batch->save();
+                //     $waybill_batch_id = $reserved_batch->waybill_batch_id;
+                //     $invoice_item_batch = InvoiceItemBatch::with('itemStockBatch')->find($waybill_batch_id);
+                //     $item_stock_batch = $invoice_item_batch->itemStockBatch;
+                //     $item_stock_batch->reserved_for_supply -= $old_supply;
+                //     $item_stock_batch->save();
 
-                    $invoice_item_batch->forceDelete();
-                }
+                //     $invoice_item_batch->forceDelete();
+                // }
                 if ($new_supply_quantity > 0) {
                     $batches->push((object) [
                         'batch_no' => $batch_no,
@@ -1436,23 +1452,53 @@ class InvoicesController extends Controller
         //     $supplied = $dispatched_product->total_quantity_supplied;
         //     DB::table('item_stock_sub_batches_check')->where('id', $batch_id)->update(['supplied' => $supplied]);
         // }
-        InvoiceItem::with([
-            'dispatchProducts' => function ($p) {
-                $p->groupBy('invoice_item_id')
-                    ->select('id', 'invoice_item_id', 'quantity_supplied', \DB::raw('SUM(quantity_supplied) as total_supplied_quantity'));
+        // InvoiceItem::with([
+        //     'dispatchProducts' => function ($p) {
+        //         $p->groupBy('invoice_item_id')
+        //             ->select('id', 'invoice_item_id', 'quantity_supplied', \DB::raw('SUM(quantity_supplied) as total_supplied_quantity'));
+        //     }
+        // ])
+        //     ->chunkById(200, function ($invoiceItems) {
+        //         foreach ($invoiceItems as $invoiceItem) {
+
+        //             if ($invoiceItem->dispatchProducts->count() > 0) {
+        //                 $invoiceItem->total_quantity_dispatched = (int) $invoiceItem->dispatchProducts[0]->total_supplied_quantity;
+        //                 $invoiceItem->save();
+        //             }
+
+        //         }
+
+        //     }, $column = 'id');
+        $dispatchedProduct1s = DispatchedProduct::with('itemStock')->groupBy('item_stock_sub_batch_id')
+            ->select('*', \DB::raw('SUM(quantity_supplied) as total_sold'))
+            ->get();
+        foreach ($dispatchedProduct1s as $dispatchedProduct) {
+            $itemStock = $dispatchedProduct->itemStock;
+            if ($itemStock) {
+                // if ($itemStock->total_sold == 0) {
+                $itemStock->total_sold = $dispatchedProduct->total_sold;
+                $itemStock->total_out += $dispatchedProduct->total_sold;
+                $itemStock->save();
+                // }
+
             }
-        ])
-            ->chunkById(200, function ($invoiceItems) {
-                foreach ($invoiceItems as $invoiceItem) {
 
-                    if ($invoiceItem->dispatchProducts->count() > 0) {
-                        $invoiceItem->total_quantity_dispatched = (int) $invoiceItem->dispatchProducts[0]->total_supplied_quantity;
-                        $invoiceItem->save();
-                    }
+        }
+        $dispatchedProduct2s = TransferRequestDispatchedProduct::with('itemStock')->groupBy('item_stock_sub_batch_id')
+            ->select('*', \DB::raw('SUM(quantity_supplied) as total_sold'))
+            ->get();
+        foreach ($dispatchedProduct2s as $dispatched_Product) {
+            $itemStock2 = $dispatched_Product->itemStock;
+            if ($itemStock2) {
+                // if ($itemStock2->total_transferred == 0) {
+                $itemStock2->total_transferred = $dispatched_Product->total_sold;
+                $itemStock2->total_out += $dispatched_Product->total_sold;
+                $itemStock2->save();
+                // }
 
-                }
+            }
 
-            }, $column = 'id');
+        }
         // Invoice::with([
         //     'invoiceItems' => function ($q) {
         //         $q->whereRaw('quantity - (quantity_supplied + quantity_reversed) > 0');
@@ -1491,25 +1537,25 @@ class InvoicesController extends Controller
 
         //     }, $column = 'id');
 
-        InvoiceItem::with('invoice')->groupBy('invoice_id')->select('*', \DB::raw('SUM(quantity) as order_quantity'), \DB::raw('SUM(quantity_supplied + quantity_reversed) as supply_quantity'))
-            ->chunkById(200, function ($invoice_items) {
-                foreach ($invoice_items as $invoice_item) {
-                    $invoice = $invoice_item->invoice;
-                    if ($invoice) {
+        // InvoiceItem::with('invoice')->groupBy('invoice_id')->select('*', \DB::raw('SUM(quantity) as order_quantity'), \DB::raw('SUM(quantity_supplied + quantity_reversed) as supply_quantity'))
+        //     ->chunkById(200, function ($invoice_items) {
+        //         foreach ($invoice_items as $invoice_item) {
+        //             $invoice = $invoice_item->invoice;
+        //             if ($invoice) {
 
-                        $diff = $invoice_item->order_quantity - $invoice_item->supply_quantity;
-                        if ($diff == 0) {
+        //                 $diff = $invoice_item->order_quantity - $invoice_item->supply_quantity;
+        //                 if ($diff == 0) {
 
-                            $invoice->status = 'delivered';
-                            $invoice->full_waybill_generated = '1';
-                            $invoice->waybill_generated = 1;
-                            $invoice->save();
-                        }
-                    }
+        //                     $invoice->status = 'delivered';
+        //                     $invoice->full_waybill_generated = '1';
+        //                     $invoice->waybill_generated = 1;
+        //                     $invoice->save();
+        //                 }
+        //             }
 
-                }
+        //         }
 
-            }, $column = 'id');
+        //     }, $column = 'id');
 
     }
     // public function stabilizeDeliveryTripToWaybillRelationship()

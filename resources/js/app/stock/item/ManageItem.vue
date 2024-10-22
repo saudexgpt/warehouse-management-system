@@ -10,8 +10,18 @@
         </span>
       </div>
       <div class="box-body">
+        <el-row :gutter="10">
+          <el-col :xs="24" :sm="12" :md="12">
+            <label for="">Select Product Category</label>
+            <el-select v-model="form.product_type" placeholder="Select Product Category" class="span" filterable @input="fetchGeneralProducts">
+              <el-option v-for="(productType, index) in params.product_types" :key="index" :value="productType" :label="productType" />
+
+            </el-select>
+
+          </el-col>
+        </el-row>
         <div>
-          <el-button :loading="downloadLoading" style="margin:0 0 20px 20px;" type="primary" icon="document" @click="handleDownload">
+          <el-button :loading="downloadLoading" style="margin: 20px;" type="primary" icon="document" @click="handleDownload">
             Export Excel
           </el-button>
         </div>
@@ -25,13 +35,13 @@
           </div>
           <div slot="action" slot-scope="props">
             <div v-if="props.row.enabled === 1">
-              <a class="btn btn-warning" @click="toggleItemStatus(props, 'Disable')"><i class="fa fa-remove" /> Disable </a>
+              <a class="btn btn-warning" @click="toggleItemStatus(props.row, 'Disable')"><i class="fa fa-remove" /> Disable </a>
               <a class="btn btn-primary" @click="item=props.row; selected_row_index=props.index; page.option = 'edit_item'"><i class="fa fa-edit" /> </a>
-              <a class="btn btn-danger" @click="confirmDelete(props)"><i class="fa fa-trash" /> </a>
+              <!-- <a class="btn btn-danger" @click="confirmDelete(props)"><i class="fa fa-trash" /> </a> -->
             </div>
             <div v-else>
 
-              <a class="btn btn-success" @click="toggleItemStatus(props, 'Enable')"><i class="fa fa-check" /> Enable</a>
+              <a class="btn btn-success" @click="toggleItemStatus(props.row, 'Enable')"><i class="fa fa-check" /> Enable</a>
             </div>
           </div>
 
@@ -47,7 +57,7 @@
 import AddNew from './partials/AddNew';
 import EditItem from './partials/EditItem';
 import Resource from '@/api/resource';
-const necessaryParams = new Resource('fetch-necessary-params');
+// const necessaryParams = new Resource('fetch-necessary-params');
 const itemCategory = new Resource('stock/item-category');
 const generalProducts = new Resource('stock/general-items');
 const enableGeneralProducts = new Resource('stock/general-items/enable-disable');
@@ -64,12 +74,13 @@ export default {
     return {
       categories: [],
       items: [],
-      columns: ['action', 'name', 'category.name', 'package_type', 'basic_unit', 'basic_unit_quantity_per_package_type', 'quantity_per_carton', 'price.sale_price'],
+      columns: ['action', 'name', 'category.name', 'group_name', 'package_type', 'basic_unit', 'basic_unit_quantity_per_package_type', 'quantity_per_carton', 'price.sale_price'],
 
       options: {
         headings: {
           name: 'Name',
-          'category.name': 'Category',
+          'category.name': 'Product Type',
+          'group_name': 'Category',
           package_type: 'Package Type',
           quantity_per_carton: 'Quantity Per Carton',
           'price.sale_price': 'Rate',
@@ -86,13 +97,19 @@ export default {
       item: {
 
       },
-      params: [],
+      form: {
+        product_type: '',
+      },
       selected_row_index: '',
       downloadLoading: false,
 
     };
   },
-
+  computed: {
+    params() {
+      return this.$store.getters.params;
+    },
+  },
   mounted() {
     this.fetchGeneralProducts();
     this.fetchNecessaryParams();
@@ -104,10 +121,11 @@ export default {
   methods: {
     fetchNecessaryParams() {
       const app = this;
-      necessaryParams.list()
-        .then(response => {
-          app.params = response.params;
-        });
+      app.$store.dispatch('app/setNecessaryParams');
+      // necessaryParams.list()
+      //   .then(response => {
+      //     app.params = response.params;
+      //   });
     },
     fetchCategories() {
       const app = this;
@@ -123,7 +141,7 @@ export default {
     fetchGeneralProducts() {
       const app = this;
       const load = generalProducts.loaderShow();
-      generalProducts.list()
+      generalProducts.list(app.form)
         .then(response => {
         // app.categories = response.categories
 
@@ -136,8 +154,7 @@ export default {
       // app.items_in_stock.splice(app.itemInStock.index-1, 1);
       app.items[app.selected_row_index - 1] = updated_row;
     },
-    toggleItemStatus(props, action) {
-      const row = props.row;
+    toggleItemStatus(row, action) {
       const app = this;
       const message = `Are you sure you want to ${action} ${row.name}? Click OK to confirm`;
       if (confirm(message)) {
@@ -181,8 +198,8 @@ export default {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
         // const multiHeader = [['List of Products', '', '', '', '']];
-        const tHeader = ['PRODUCT', 'CATEGORY', 'PACKAGE_TYPE', 'QUANTITY_PER_CARTON', 'RATE'];
-        const filterVal = ['name', 'category.name', 'package_type', 'quantity_per_carton', 'price.sale_price'];
+        const tHeader = ['PRODUCT', 'CATEGORY', 'PRODUCT TYPE', 'PACKAGE_TYPE', 'QUANTITY_PER_CARTON', 'RATE'];
+        const filterVal = ['name', 'group_name', 'category.name', 'package_type', 'quantity_per_carton', 'price.sale_price'];
         const list = this.items;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({

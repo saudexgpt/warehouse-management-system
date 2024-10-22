@@ -112,13 +112,13 @@ class GoodsTransferController extends Controller
                 $q->where('supply_status', '!=', 'Complete');
             },
             'transferRequestItems.item.stocks' => function ($p) use ($warehouse_id) {
-                $p->groupBy('expiry_date', 'batch_no')
-                    ->whereRaw('balance - reserved_for_supply > 0')
+                //$p->groupBy('expiry_date', 'batch_no')
+                $p->whereRaw('balance - reserved_for_supply > 0')
                     ->whereRaw('confirmed_by IS NOT NULL')
                     ->where('warehouse_id', $warehouse_id)
                     ->orderBy('expiry_date')
                     ->orderBy('batch_no')
-                    ->select('*', \DB::raw('(SUM(balance) - SUM(reserved_for_supply)) as balance'));
+                    ->select('*', \DB::raw('(balance - reserved_for_supply) as balance'));
             }
         ])
             ->where('supply_warehouse_id', $warehouse_id)

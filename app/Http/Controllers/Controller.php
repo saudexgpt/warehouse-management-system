@@ -281,6 +281,7 @@ class Controller extends BaseController
         $vehicle_types = VehicleType::get();
         $automobile_engineers = AutomobileEngineer::get();
         $engine_types = ['Diesel', 'Petrol', 'Kerosene'];
+        $product_types = ['Confectionaries', 'Cosmetics', 'Pharma', 'Promo'];
         $expense_types = ['Insurance', 'Maintenance / Repairs', 'Fuel'];
         $package_types = ['Bottles', 'Boxes', 'Bundles', 'Cartons', 'Clips', 'Packets', 'Pieces', 'Rolls', 'Tins'];
         $product_return_reasons = ['Product short-dated', 'Mass return - expired', 'Mass return - unexpired', 'Rep. resignation/sack - expired', 'Rep. resignation/sack - unexpired', 'Spillage', 'Others'];
@@ -291,7 +292,7 @@ class Controller extends BaseController
         $customer_types = CustomerType::get();
         ini_set('memory_limit', '128M');
         return response()->json([
-            'params' => compact('company_name', 'company_contact', 'all_warehouses', 'warehouses', 'items', 'currencies', 'taxes', /*'order_statuses',*/ 'invoice_statuses', 'currency', 'vehicle_types', 'engine_types', 'expense_types', 'package_types', 'automobile_engineers', 'all_roles', 'default_roles', 'product_return_reasons', 'product_expiry_date_alert', 'teams', 'dispatch_companies', 'customer_types', 'enable_stock_quantity_check_when_raising_invoice')
+            'params' => compact('company_name', 'company_contact', 'all_warehouses', 'warehouses', 'items', 'currencies', 'taxes', /*'order_statuses',*/ 'invoice_statuses', 'currency', 'vehicle_types', 'engine_types', 'expense_types', 'package_types', 'automobile_engineers', 'all_roles', 'default_roles', 'product_return_reasons', 'product_expiry_date_alert', 'teams', 'dispatch_companies', 'customer_types', 'enable_stock_quantity_check_when_raising_invoice', 'product_types')
         ]);
     }
     public function settingValue($key)

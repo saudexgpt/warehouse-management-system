@@ -667,7 +667,7 @@ class ReportsController extends Controller
     public function backUps()
     {
         $date = Date('Y-m-d', strtotime('now'));
-        $file_name = 'gpl_db_backup_' . $date . '.sql';
+        $file_name = 'gpl_db_backup_' . $date . '.sql.zip';
         $url = 'storage/bkup/db/' . $file_name;
         // $directories = Storage::allDirectories($directory);
 
@@ -819,7 +819,7 @@ class ReportsController extends Controller
             ->select(\DB::raw('SUM(quantity - old_balance_before_recount) as total_quantity'))
             ->first();
 
-        $inbounds = ItemStockSubBatch::groupBy(['batch_no'])
+        $inbounds = ItemStockSubBatch::groupBy('batch_no', 'is_warehouse_transfered', 'created_at')
             ->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
             ->where('created_at', '>=', $date_from)
             ->where('created_at', '<=', $date_to)
@@ -835,6 +835,24 @@ class ReportsController extends Controller
             // ->selectRaw('SUM(quantity - old_balance_before_recount) as total_quantity, batch_no, goods_received_note, comments, created_at')
             ->orderby('created_at')
             ->get();
+        // $inbounds2 = ItemStockSubBatch::groupBy(['batch_no'])
+        //     ->where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
+        //     ->where('created_at', '>=', $date_from)
+        //     ->where('created_at', '<=', $date_to)
+        //     ->where('is_warehouse_transfered', '=',  1)
+        //     ->where(function ($q) {
+        //         $q->whereRaw('confirmed_by IS NOT NULL');
+        //         $q->orWhere(function ($p) {
+        //             $p->whereRaw('confirmed_by IS NULL');
+        //             // $p->where('supplied', '>', 0);
+        //             $p->whereRaw('supplied + expired > 0');
+        //         });
+        //     })
+        //     ->select('batch_no', 'goods_received_note', 'comments', 'created_at', \DB::raw('SUM(quantity) as total_quantity'))
+        //     // ->selectRaw('SUM(quantity - old_balance_before_recount) as total_quantity, batch_no, goods_received_note, comments, created_at')
+        //     ->orderby('created_at')
+        //     ->get();
+        // $inbounds = $inbounds1->merge($inbounds2);
         $outbounds = DispatchedProduct::groupBy(['waybill_item_id'])
             ->where('warehouse_id', $warehouse_id)
             ->where('item_id', $item_id)

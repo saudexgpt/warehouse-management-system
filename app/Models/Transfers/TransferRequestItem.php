@@ -26,6 +26,10 @@ class TransferRequestItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
+    public function dispatchProducts()
+    {
+        return $this->hasMany(TransferRequestDispatchedProduct::class, 'transfer_request_item_id', 'id');
+    }
     public function batches()
     {
         return $this->hasMany(TransferRequestItemBatch::class, 'transfer_request_item_id', 'id');

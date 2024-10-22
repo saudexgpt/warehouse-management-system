@@ -15,11 +15,22 @@ class ItemsController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
-        $items = Item::with(['category', /*'stocks',*/ 'taxes', 'price'])->orderBy('name')->get();
+        $itemQuery = Item::query();
+        if (isset($request->product_type) && $request->product_type !== '') {
 
+            $product_type = $request->product_type;
+            $itemQuery->with(['category', /*'stocks',*/ 'taxes', 'price'])
+                ->join('categories', 'categories.id', 'items.category_id')
+                ->where('categories.group_name', $product_type);
+        } else {
+            $itemQuery->with(['category', /*'stocks',*/ 'taxes', 'price'])
+                ->join('categories', 'categories.id', 'items.category_id');
+        }
+
+
+        $items = $itemQuery->orderBy('items.name')->select('*', 'items.id as id', 'items.name as name')->get();
         return response()->json(compact('items'));
     }
 

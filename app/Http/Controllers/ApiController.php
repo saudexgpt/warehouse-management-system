@@ -618,7 +618,7 @@ class ApiController extends Controller
             })
             ->orderBy('warehouse_id')
             ->orderBy('expiry_date')
-            ->select('warehouses.name as warehouse', 'items.id as product_id', 'items.name as product', 'items.basic_unit as uom', 'quantity_per_carton', 'categories.name as product_category', 'batch_no', 'goods_received_note as grn', \DB::raw('SUM(quantity) as quantity_in'), \DB::raw('(SUM(in_transit) + SUM(supplied)) as quantity_out'), \DB::raw('SUM(balance) as total_balance'), \DB::raw('SUM(balance)/quantity_per_carton as total_balance_in_carton'), 'expiry_date', 'item_stock_sub_batches.created_at');
+            ->select('warehouses.name as warehouse', 'items.id as product_id', 'items.name as product', 'items.basic_unit as uom', 'quantity_per_carton', 'categories.name as product_type', 'categories.group_name as product_category', 'batch_no', 'goods_received_note as grn', \DB::raw('SUM(quantity) as quantity_in'), \DB::raw('(SUM(in_transit) + SUM(supplied)) as quantity_out'), \DB::raw('SUM(balance) as total_balance'), \DB::raw('SUM(balance)/quantity_per_carton as total_balance_in_carton'), 'expiry_date', 'item_stock_sub_batches.created_at');
         // $items_in_stock = $items_in_stock_query->get();
         $items_in_stock = $items_in_stock_query->get();
         return response()->json(compact('items_in_stock'));

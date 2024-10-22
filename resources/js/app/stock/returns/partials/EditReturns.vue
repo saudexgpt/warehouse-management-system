@@ -17,7 +17,7 @@
 
               </el-select>
               <label for="">Customer Name</label>
-              <el-input v-model="form.customer_name" placeholder="Customer Name" class="span" />
+              <el-input v-model="form.customer_name" disabled placeholder="Customer Name" class="span" />
               <label for="">Quantity</label>
               <el-input v-model="form.quantity" type="text" placeholder="Quantity" class="span" />
               <label for="">Batch No.</label>
@@ -88,6 +88,11 @@ export default {
       form: {
       },
     };
+  },
+  computed: {
+    customers() {
+      return this.$store.getters.customers;
+    },
   },
   mounted() {
     this.form = this.returnedProduct;
