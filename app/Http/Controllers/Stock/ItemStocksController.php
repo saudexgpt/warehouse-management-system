@@ -130,8 +130,8 @@ class ItemStocksController extends Controller
     {
         $sub_batches = $request->sub_batches;
 
-        $item_stock_sub_batches = $this->createSubBatches($request, $sub_batches, 0);
-        return response()->json(compact('item_stock_sub_batches'), 200);
+        list($item_stock_sub_batches, $unsaved_products) = $this->createSubBatches($request, $sub_batches, 0);
+        return response()->json(compact('item_stock_sub_batches', 'unsaved_products'), 200);
     }
     public function moveExpiredProducts(Request $request)
     {
@@ -146,8 +146,8 @@ class ItemStocksController extends Controller
         $request->warehouse_id = 8; // This is expired warehouse
         $request->confirmed_by = $user->id;
         $data = [$request];
-        $item_stock_sub_batches = $this->createSubBatches($request, $data, 1);
-        return response()->json(compact('item_stock_sub_batches'), 200);
+        list($item_stock_sub_batches, $unsaved_products) = $this->createSubBatches($request, $data, 1);
+        return response()->json(compact('item_stock_sub_batches', 'unsaved_products'), 200);
     }
     public function uploadBulkProductsInStock(Request $request)
     {
@@ -257,6 +257,7 @@ class ItemStocksController extends Controller
     {
         $user = $this->getUser();
         $item_stock_sub_batches = [];
+        $unsaved_products = [];
         foreach ($sub_batches as $batch) {
             $item_stock_sub_batch = new ItemStockSubBatch();
             $item_stock_sub_batch->stocked_by = $user->id;
@@ -275,17 +276,20 @@ class ItemStocksController extends Controller
             $item_stock_sub_batch->goods_received_note = $batch['goods_received_note'];
             $item_stock_sub_batch->expiry_date = date('Y-m-d', strtotime($batch['expiry_date']));
             $item_stock_sub_batch->is_warehouse_transfered = $is_warehouse_transfered;
-            $item_stock_sub_batch->save();
+            if ($item_stock_sub_batch->save()) {
 
-            $item_stock_sub_batches[] = $item_stock_sub_batch;
+                $item_stock_sub_batches[] = $item_stock_sub_batch;
 
-            // log this event
-            $title = "Product added to stock";
-            $description = $item_stock_sub_batch->quantity . " " . $item_stock_sub_batch->item->name . " was added to stock at " . $item_stock_sub_batch->warehouse->name . " by " . $user->name;
-            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
-            $this->logUserActivity($title, $description, $roles);
+                // log this event
+                $title = "Product added to stock";
+                $description = $item_stock_sub_batch->quantity . " " . $item_stock_sub_batch->item->name . " was added to stock at " . $item_stock_sub_batch->warehouse->name . " by " . $user->name;
+                $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+                $this->logUserActivity($title, $description, $roles);
+            } else {
+                $unsaved_products[] = $batch;
+            }
         }
-        return $item_stock_sub_batches;
+        return array($item_stock_sub_batches, $unsaved_products);
     }
 
     /**

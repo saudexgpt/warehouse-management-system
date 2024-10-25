@@ -74,7 +74,7 @@ export default {
     return {
       categories: [],
       items: [],
-      columns: ['action', 'name', 'category.name', 'group_name', 'package_type', 'basic_unit', 'basic_unit_quantity_per_package_type', 'quantity_per_carton', 'price.sale_price'],
+      columns: ['action', 'name', 'code', 'category.name', 'group_name', 'package_type', 'basic_unit', 'basic_unit_quantity_per_package_type', 'quantity_per_carton', 'price.sale_price'],
 
       options: {
         headings: {
@@ -198,8 +198,8 @@ export default {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
         // const multiHeader = [['List of Products', '', '', '', '']];
-        const tHeader = ['PRODUCT', 'CATEGORY', 'PRODUCT TYPE', 'PACKAGE_TYPE', 'QUANTITY_PER_CARTON', 'RATE'];
-        const filterVal = ['name', 'group_name', 'category.name', 'package_type', 'quantity_per_carton', 'price.sale_price'];
+        const tHeader = ['PRODUCT', 'Code', 'CATEGORY', 'PRODUCT TYPE', 'PACKAGE_TYPE', 'QUANTITY_PER_CARTON', 'RATE'];
+        const filterVal = ['name', 'code', 'group_name', 'category.name', 'package_type', 'quantity_per_carton', 'price.sale_price'];
         const list = this.items;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({
