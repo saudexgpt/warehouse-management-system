@@ -162,7 +162,7 @@
               <i class="el-icon-edit" />
             </a> -->
               <a
-                v-if="props.row.status === 'pending' && checkPermission(['update invoice'])"
+                v-if="(props.row.status === 'pending' && checkPermission(['update invoice'])) || checkRole(['admin'])"
                 class="btn btn-warning"
                 @click="invoice=props.row; page.option='edit_invoice'; selected_row_index=props.index"
               >

@@ -57,7 +57,7 @@
                 <p>{{ form.invoice_date }}</p>
               </el-col>
             </el-row>
-            <div v-if="invoice.waybill_items.length < 1">
+            <div v-if="invoice.waybill_items.length < 1 || invoice.status === 'pending'">
               <el-row :gutter="2" class="padded">
                 <el-col>
                   <div v-loading="load" style="overflow: auto">
