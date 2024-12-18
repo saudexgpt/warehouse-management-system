@@ -93,7 +93,7 @@
             />
           </el-col>
         </el-row>
-        <el-row v-if="form.status === 'archived'">
+        <el-row v-if="form.status === 'archived' && (checkRole(['admin']) || checkRole(['assistant admin']))">
           <el-col :md="6">
 
             <el-checkbox
@@ -145,7 +145,7 @@
             slot-scope="props"
           >{{ moment(props.row.created_at).format('MMMM Do YYYY, h:mm:ss a') }}</div>
           <div slot="action" slot-scope="props">
-            <div v-if="form.status === 'archived'">
+            <div v-if="form.status === 'archived' && (checkRole(['admin']) || checkRole(['assistant admin']))">
               <el-checkbox-group v-model="checkedInvoices" @change="handleCheckedCitiesChange">
                 <el-checkbox :label="props.row.id" border>{{ props.row.id }}</el-checkbox>
               </el-checkbox-group>

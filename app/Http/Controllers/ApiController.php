@@ -135,11 +135,11 @@ class ApiController extends Controller
 
         $invoiceItemQuery = $invoiceItemQuery->join('invoices', 'invoice_items.invoice_id', 'invoices.id')
             ->join('customers', 'invoices.customer_id', 'customers.id')
-            ->join('users', 'customers.user_id', 'users.id')
+            ->leftJoin('users', 'customers.user_id', 'users.id')
             ->join('items', 'invoice_items.item_id', 'items.id')
             ->join('warehouses', 'invoice_items.warehouse_id', 'warehouses.id')
-            ->join('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
-            ->join('waybills', 'waybill_items.waybill_id', 'waybills.id')
+            ->leftJoin('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
+            ->leftJoin('waybills', 'waybill_items.waybill_id', 'waybills.id')
             // ->leftJoin('delivery_trip_waybill', 'delivery_trip_waybill.waybill_id', 'waybills.id')
             // ->leftJoin('delivery_trips', 'delivery_trip_waybill.delivery_trip_id', 'delivery_trips.id')
             ->selectRaw(

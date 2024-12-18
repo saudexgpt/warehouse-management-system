@@ -58,7 +58,7 @@ class WaybillItem extends Model
             $waybill_item->type = $invoice_item->type;
             $waybill_item->save();
 
-            $waybill->invoices()->sync($invoice_item->invoice_id);
+            $waybill->invoices()->syncWithoutDetaching($invoice_item->invoice_id);
             return $waybill_item;
         }
         // }

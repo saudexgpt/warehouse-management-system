@@ -31,6 +31,17 @@
         </el-col>
 
       </el-row>
+      <el-row :gutter="10">
+        <el-col :xs="24" :sm="8" :md="8">
+          <label for="">Search Batch No</label>
+          <el-input v-model="form.batch_no" placeholder="Search Batch No" class="span" filterable style="width: 100%">
+            <template slot="append">
+              <el-button @click="getBinCard">Search</el-button>
+            </template>
+          </el-input>
+        </el-col>
+
+      </el-row>
     </div>
 
     <div v-if="bincards.length > 0">
@@ -123,6 +134,7 @@ export default {
         from: '',
         to: '',
         panel: '',
+        batch_no: '',
       },
       submitTitle: 'Fetch Report',
       panel: 'month',

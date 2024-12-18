@@ -247,6 +247,7 @@ export default {
       const loader = outboundReport.loaderShow();
       const { limit, page } = this.form;
       const param = app.form;
+      param.is_download = 'no';
       outboundReport.list(param)
         .then(response => {
           this.invoice_items = response.invoice_items.data;

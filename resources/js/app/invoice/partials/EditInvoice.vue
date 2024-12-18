@@ -379,6 +379,7 @@ export default {
         ],
       },
       invoice_items: [],
+      deletable_invoice_items: [],
       newCustomer: {
         name: '',
         email: null,
@@ -500,6 +501,8 @@ export default {
     removeLine(index) {
       this.fill_fields_error = false;
       if (!this.blockRemoval) {
+        const delectable_item = this.invoice_items[index];
+        this.deletable_invoice_items.push(delectable_item);
         this.invoice_items.splice(index, 1);
         this.calculateTotal(null);
       }
@@ -539,6 +542,7 @@ export default {
       if (!checkEmptyFields) {
         app.load = true;
         form.invoice_items = app.invoice_items;
+        form.deletable_invoice_items = app.deletable_invoice_items;
         editInvoice
           .update(form.id, form)
           .then((response) => {
