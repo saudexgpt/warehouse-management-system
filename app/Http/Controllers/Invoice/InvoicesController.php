@@ -823,10 +823,10 @@ class InvoicesController extends Controller
     private function deleteInvoiceItems($invoice_items)
     {
         foreach ($invoice_items as $item) {
-            $item_id = $item->id;
+            $item_id = (isset($item->id)) ? $item->id : null;
             if ($item_id != '' && $item_id != null) {
 
-                $invoice_item = InvoiceItem::find($item->id);
+                $invoice_item = InvoiceItem::find($item_id);
                 if ($invoice_item) {
                     $invoice_item->delete();
                 }
