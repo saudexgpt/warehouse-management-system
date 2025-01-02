@@ -667,7 +667,7 @@ class ReportsController extends Controller
     public function backUps()
     {
         $date = Date('Y-m-d', strtotime('now'));
-        $file_name = 'gpl_db_backup_' . $date . '.sql.zip';
+        $file_name = 'gpl_db_backup_' . $date . '.sql.gz';
         $url = 'storage/bkup/db/' . $file_name;
         // $directories = Storage::allDirectories($directory);
 
