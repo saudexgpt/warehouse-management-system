@@ -1400,7 +1400,8 @@ class ReportsController extends Controller
             // ->rightJoin('invoice_item_batches', 'invoice_items.id', 'invoice_item_batches.invoice_item_id')
             // ->join('waybill_items', 'waybill_items.invoice_item_id', 'invoice_items.id')
 
-            ->where('supply_status', '!=', 'Complete')
+            // ->where('supply_status', '!=', 'Complete')
+            ->where('invoices.status', '=', 'auditor approved')
             ->selectRaw(
                 'warehouses.name as warehouse,
                 users.name as customer,

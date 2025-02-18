@@ -135,10 +135,11 @@ export default {
       tableData: [],
       tableHeader: [],
       list: [],
-      columns: ['name', 'email', 'phone', 'address', 'type', 'team', 'action'],
+      columns: ['name', 'email', 'customer.code', 'phone', 'address', 'type', 'team', 'action'],
 
       options: {
         headings: {
+          'customer.code': 'Code',
         },
         pagination: {
           dropdown: true,
@@ -359,8 +360,8 @@ export default {
     },
     export(export_data) {
       import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['name', 'email', 'phone', 'address'];
-        const filterVal = ['name', 'email', 'phone', 'address'];
+        const tHeader = ['Name', 'Email', 'Code', 'Phone', 'Address'];
+        const filterVal = ['name', 'email', 'code', 'phone', 'address'];
         const data = this.formatJson(filterVal, export_data);
         excel.export_json_to_excel({
           header: tHeader,
@@ -373,6 +374,9 @@ export default {
       return jsonData.map(v => filterVal.map(j => {
         if (j === 'role') {
           return v['roles'].join(', ');
+        }
+        if (j === 'code') {
+          return v['customer']['code'];
         }
         return v[j];
       }));
