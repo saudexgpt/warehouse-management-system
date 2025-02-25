@@ -732,14 +732,15 @@ class ApiController extends Controller
             $customer_codes = $request->rep_codes;
             // $email = $request->rep_email;
             $customer_codes_array = explode(',', $customer_codes);
-            $customer_ids = Customer::join('reps', 'reps.customer_id', 'reps.customer_id')
+            $customer_ids = Customer::join('reps', 'reps.customer_id', 'customers.id')
+                ->where('customers.type', 'reps')
                 ->whereIn('customers.code', $customer_codes_array)->pluck('customers.id');
             if (count($customer_ids) > 0) {
                 $date_from = date('Y-m-d', strtotime($request->date_from));
                 $date_to = date('Y-m-d', strtotime($request->date_to));
                 // $items = new Collection();
                 $customer_items = DispatchedProduct::join('customers', 'dispatched_products.customer_id', 'customers.id')
-                    ->join('reps', 'reps.customer_id', 'reps.customer_id')
+                    ->join('reps', 'reps.customer_id', 'dispatched_products.customer_id')
                     ->join('waybills', 'dispatched_products.waybill_id', 'waybills.id')
                     ->join('invoices', 'dispatched_products.invoice_id', 'invoices.id')
                     ->join('items', 'dispatched_products.item_id', 'items.id')
