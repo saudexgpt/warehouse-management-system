@@ -240,14 +240,17 @@ export default {
       warehouses: [],
       items_in_stock: [],
       expired_products: [],
-      columns: ['action', 'stocker.name', 'confirmer.name', 'item.name', 'batch_no', 'quantity', /* 'in_transit'*/ 'supplied', /* 'expired',*/ 'reserved_for_supply', 'balance', 'in_stock', 'created_at', 'expiry_date', 'is_warehouse_transfered'],
+      columns: ['action', 'stocker.name', 'confirmer.name', 'item.name', 'item.price.sale_price', 'item.quantity_per_carton', 'batch_no', 'goods_received_note', 'quantity', /* 'in_transit'*/ 'supplied', /* 'expired',*/ 'reserved_for_supply', 'balance', 'in_stock', 'created_at', 'expiry_date', 'is_warehouse_transfered'],
 
       options: {
         headings: {
           'confirmer.name': 'Confirmed By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
+          'item.price.sale_price': 'Price',
+          'item.quantity_per_carton': 'QTY in CTN',
           batch_no: 'Batch No.',
+          goods_received_note: 'GRN',
           quantity: 'QTY Stocked',
           // in_transit: 'On Trans',
           supplied: 'Supplied',
@@ -557,8 +560,8 @@ export default {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Stocked By', 'Confirmed By', 'Product', 'Batch No.', 'Quantity', 'In Transit', 'Supplied', 'Physical Stock', 'Reserved for Supply', 'Main Balance', 'Created', 'Expires'];
-        const filterVal = ['stocker.name', 'confirmer.name', 'item.name', 'batch_no', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance', 'created_at', 'expiry_date'];
+        const tHeader = ['Stocked By', 'Confirmed By', 'Product', 'Price', 'QTY in CTN', 'Batch No.', 'GRN', 'Quantity', 'In Transit', 'Supplied', 'Physical Stock', 'Reserved for Supply', 'Main Balance', 'Created', 'Expires'];
+        const filterVal = ['stocker.name', 'confirmer.name', 'item.name', 'item.price.sale_price', 'item.quantity_per_carton', 'batch_no', 'goods_received_note', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance', 'created_at', 'expiry_date'];
         const list = this.items_in_stock;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({
@@ -601,6 +604,16 @@ export default {
         if (j === 'item.name') {
           if (v['item'] != null) {
             return v['item']['name'];
+          }
+        }
+        if (j === 'item.price.sale_price') {
+          if (v['item'] != null) {
+            return v['item']['price']['sale_price'];
+          }
+        }
+        if (j === 'item.quantity_per_carton') {
+          if (v['item'] != null) {
+            return v['item']['quantity_per_carton'];
           }
         }
         if (j === 'expiry_date') {

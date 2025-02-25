@@ -16,6 +16,8 @@ $router->get('get-warehouse-products', 'ApiController@warehouseProducts');
 $router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
 
 $router->post('receive-rep-stock', 'ApiController@sendRepStock');
+$router->put('mark-stock-as-received/{dispatchProduct}', 'ApiController@flagSupplyAsReceived');
+
 $router->get('check-already-received-stock', 'ApiController@checkAlreadyReceivedStock');
 
 $router->get('fetch-reps-details', 'ApiController@fetchRepsForTransferToSalesApp');

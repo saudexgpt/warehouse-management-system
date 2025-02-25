@@ -41,6 +41,7 @@ class ItemStocksController extends Controller
             'item' => function ($q) {
                 $q->orderBy('name');
             },
+            'item.price',
             'stocker',
             'confirmer'
         ])->where('warehouse_id', $warehouse_id)->where(function ($q) {
@@ -54,6 +55,7 @@ class ItemStocksController extends Controller
             'item' => function ($q) {
                 $q->orderBy('name');
             },
+            'item.price',
             'stocker'
         ])->where('warehouse_id', $warehouse_id)->whereRaw('balance > 0')->where('expiry_date', '<', $date)
             ->orderBy('expiry_date')->get();
