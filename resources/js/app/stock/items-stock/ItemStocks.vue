@@ -5,7 +5,7 @@
     <edit-item v-if="page.option=='edit_item'" :item-in-stock="itemInStock" :params="params" :page="page" @update="onEditUpdate" />
     <div v-if="page.option=='list'">
       <el-row :gutter="10">
-        <el-col :xs="24" :sm="12" :md="12">
+        <el-col :xs="24" :sm="8" :md="8">
           <label for="">Select Warehouse</label>
           <el-select v-model="form.warehouse_index" placeholder="Select Warehouse" class="span" filterable @input="fetchItemStocks">
             <el-option v-for="(warehouse, index) in warehouses" :key="index" :value="index" :label="warehouse.name" />
@@ -13,7 +13,15 @@
           </el-select>
 
         </el-col>
-        <el-col :xs="24" :sm="12" :md="12">
+        <el-col :xs="24" :sm="8" :md="8">
+          <label for="">Select Product Category</label>
+          <el-select v-model="form.product_type" placeholder="Select Product Category" class="span" filterable @input="fetchItemStocks">
+            <el-option v-for="(productType, index) in params.product_types" :key="index" :value="productType" :label="productType" />
+
+          </el-select>
+
+        </el-col>
+        <el-col :xs="24" :sm="8" :md="8">
           <br>
           <el-popover
             placement="right"
@@ -39,11 +47,17 @@
 
           </div>
           <div class="box-body">
-            <div v-if="items_in_stock.length > 0" class="pull-left">
-              <el-button :loading="downloadLoading" style="margin:0 0 20px 20px;" type="primary" icon="document" @click="handleDownload">
-                Export Excel
-              </el-button>
-            </div>
+            <el-row :gutter="10">
+              <el-col :xs="24" :sm="12" :md="12">
+
+                <div v-if="items_in_stock.length > 0">
+                  <el-button :loading="downloadLoading" style="margin:0 0 20px 20px;" type="primary" icon="document" @click="handleDownload">
+                    Export Excel
+                  </el-button>
+                </div>
+
+              </el-col>
+            </el-row>
 
             <v-client-table v-model="items_in_stock" :columns="columns" :options="options">
               <div slot="quantity" slot-scope="{row}" class="alert alert-info">
@@ -247,7 +261,7 @@ export default {
           'confirmer.name': 'Confirmed By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
-          'item.price.sale_price': 'Price',
+          'item.price.sale_price': 'Price (NGN)',
           'item.quantity_per_carton': 'QTY in CTN',
           batch_no: 'Batch No.',
           goods_received_note: 'GRN',
@@ -307,6 +321,7 @@ export default {
         from: '',
         to: '',
         panel: 'month',
+        product_type: 'Pharma',
       },
       submitTitle: 'Fetch Report',
       panel: 'month',
@@ -559,8 +574,8 @@ export default {
     handleDownload() {
       this.downloadLoading = true;
       import('@/vendor/Export2Excel').then(excel => {
-        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '']];
-        const tHeader = ['Stocked By', 'Confirmed By', 'Product', 'Price', 'QTY in CTN', 'Batch No.', 'GRN', 'Quantity', 'In Transit', 'Supplied', 'Physical Stock', 'Reserved for Supply', 'Main Balance', 'Created', 'Expires'];
+        const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']];
+        const tHeader = ['Stocked By', 'Confirmed By', 'Product', 'Price (NGN)', 'QTY in CTN', 'Batch No.', 'GRN', 'Quantity', 'In Transit', 'Supplied', 'Physical Stock', 'Reserved for Supply', 'Main Balance', 'Created', 'Expires'];
         const filterVal = ['stocker.name', 'confirmer.name', 'item.name', 'item.price.sale_price', 'item.quantity_per_carton', 'batch_no', 'goods_received_note', 'quantity', 'in_transit', 'supplied', 'in_stock', 'reserved_for_supply', 'balance', 'created_at', 'expiry_date'];
         const list = this.items_in_stock;
         const data = this.formatJson(filterVal, list);
@@ -602,17 +617,17 @@ export default {
           }
         }
         if (j === 'item.name') {
-          if (v['item'] != null) {
+          if (v['item']) {
             return v['item']['name'];
           }
         }
         if (j === 'item.price.sale_price') {
-          if (v['item'] != null) {
+          if (v['item']) {
             return v['item']['price']['sale_price'];
           }
         }
         if (j === 'item.quantity_per_carton') {
-          if (v['item'] != null) {
+          if (v['item']) {
             return v['item']['quantity_per_carton'];
           }
         }

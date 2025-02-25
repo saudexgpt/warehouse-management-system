@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Stock;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Invoice\WaybillItem;
+use App\Models\Stock\Category;
 use App\Models\Stock\ExpiredProduct;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStock;
@@ -27,6 +28,9 @@ class ItemStocksController extends Controller
         // $date_from = Carbon::now()->startOfMonth();
         // $date_to = Carbon::now()->endOfMonth();
         // $panel = 'month';
+        $product_type = $request->product_type;
+        $category_ids = Category::where('group_name', $product_type)->pluck('id');
+        $item_ids = Item::whereIn('category_id', $category_ids)->pluck('id');
         $itemsInStockQuery = ItemStockSubBatch::query();
         if (isset($request->from, $request->to) && $request->from != '' && $request->to != '') {
             $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
@@ -44,11 +48,15 @@ class ItemStocksController extends Controller
             'item.price',
             'stocker',
             'confirmer'
-        ])->where('warehouse_id', $warehouse_id)->where(function ($q) {
-            $q->where('balance', '>', '0');
-            // $q->orWhere('in_transit', '>', '0');
-        })->where('expiry_date', '>=', $date)
-            ->orderBy('expiry_date')->get();
+        ])
+            ->where('warehouse_id', $warehouse_id)->where(function ($q) {
+                $q->where('balance', '>', '0');
+                // $q->orWhere('in_transit', '>', '0');
+            })
+            ->where('expiry_date', '>=', $date)
+            ->whereIn('item_id', $item_ids)
+            ->orderBy('expiry_date')
+            ->get();
 
         $expired_products = ItemStockSubBatch::with([
             'warehouse',
