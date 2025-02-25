@@ -760,7 +760,7 @@ class ApiController extends Controller
             // $items = $items->merge($customer_items);
             return response()->json(['warehouse_supplies' => $customer_items], 200);
         } else {
-            return response()->json(['message' => 'Please include values for date_from and date_to in your query params'], 500);
+            return response()->json(['message' => 'Please include values for date_from and date_to in your query params. Use format: YYYY-MM-DD'], 500);
         }
 
         // $invoice_item_stock = InvoiceItemBatch::join
