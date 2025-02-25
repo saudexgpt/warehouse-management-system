@@ -744,7 +744,7 @@ class ApiController extends Controller
                 ->where('dispatched_products.sent_to_rep', 0)
                 ->where('dispatched_products.updated_at', '>=', $date_from)
                 ->where('dispatched_products.updated_at', '<=', $date_to)
-                ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'reps.name as rep_name', 'reps.email as rep_email', 'items.name as product', 'items.code as product_code', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement'/*, 'dispatched_products.date_sent_to_rep', 'sent_to_rep'*/)
+                ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'reps.name as rep_name', 'reps.email as rep_email', 'items.name as product', 'items.code as product_code', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.updated_at as date', /*, 'dispatched_products.date_sent_to_rep', 'sent_to_rep'*/)
                 ->get();
 
 
