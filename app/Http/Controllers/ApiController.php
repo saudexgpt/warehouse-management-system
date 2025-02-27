@@ -729,12 +729,16 @@ class ApiController extends Controller
             return response()->json(['message' => 'Access Denied'], 403);
         }
         if (isset($request->date_from, $request->date_to) && $request->date_from != '' && $request->date_to != '') {
-            $customer_codes = str_replace(',,', ',', $request->rep_codes);
+            // $customer_codes = str_replace(',,', ',', $request->rep_codes);
+            $email = $request->email;
             // $email = $request->rep_email;
 
-            $customer_codes_array = explode(',', $customer_codes);
-            $customer_ids = Customer::where('customers.type', 'reps')
-                ->whereIn('customers.code', $customer_codes_array)->pluck('id');
+            // $customer_codes_array = explode(',', $customer_codes);
+            $customer_ids = Customer::join('users', 'customers.user_id', 'users.id')
+                // ->where('customers.type', 'reps')
+                ->where('users.email', $email)
+                // ->whereIn('customers.code', $customer_codes_array)
+                ->pluck('customers.id');
             if (count($customer_ids) > 0) {
                 $date_from = date('Y-m-d', strtotime($request->date_from));
                 $date_to = date('Y-m-d', strtotime($request->date_to));
