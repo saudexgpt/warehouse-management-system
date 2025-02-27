@@ -740,33 +740,33 @@ class ApiController extends Controller
                 // ->whereIn('customers.code', $customer_codes_array)
                 ->pluck('customers.id');
             if (count($customer_ids) > 0) {
-                return $date_from = date('Y-m-d ', strtotime($request->date_from));
-                // $date_to = date('Y-m-d', strtotime($request->date_to));
-                // // $items = new Collection();
-                // $customer_items = DispatchedProduct::join('customers', 'dispatched_products.customer_id', 'customers.id')
-                //     ->join('reps', 'reps.customer_id', 'dispatched_products.customer_id')
-                //     ->join('waybills', 'dispatched_products.waybill_id', 'waybills.id')
-                //     ->join('invoices', 'dispatched_products.invoice_id', 'invoices.id')
-                //     ->join('items', 'dispatched_products.item_id', 'items.id')
-                //     ->whereIn('dispatched_products.customer_id', $customer_ids)
-                //     ->where('dispatched_products.sent_to_rep', 0)
-                //     ->where('dispatched_products.updated_at', '>=', $date_from)
-                //     ->where('dispatched_products.updated_at', '<=', $date_to)
-                //     ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'reps.name as rep_name', 'reps.email as rep_email', 'items.name as product', 'items.code as product_code', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.updated_at as date', /*, 'dispatched_products.date_sent_to_rep', 'sent_to_rep'*/)
-                //     ->get();
+                $date_from = date('Y-m-d ', strtotime($request->date_from));
+                $date_to = date('Y-m-d', strtotime($request->date_to));
+                // $items = new Collection();
+                $customer_items = DispatchedProduct::join('customers', 'dispatched_products.customer_id', 'customers.id')
+                    ->join('users', 'customers.user_id', 'users.id')
+                    ->join('waybills', 'dispatched_products.waybill_id', 'waybills.id')
+                    ->join('invoices', 'dispatched_products.invoice_id', 'invoices.id')
+                    ->join('items', 'dispatched_products.item_id', 'items.id')
+                    ->whereIn('dispatched_products.customer_id', $customer_ids)
+                    ->where('dispatched_products.sent_to_rep', 0)
+                    ->whereBetween('dispatched_products.updated_at', [$date_from, $date_to])
+                    // ->where('dispatched_products.updated_at', '<=', $date_to)
+                    ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'users.name as rep_name', 'users.email as rep_email', 'items.name as product', 'items.code as product_code', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.updated_at as date', /*, 'dispatched_products.date_sent_to_rep', 'sent_to_rep'*/)
+                    ->get();
 
 
-                // // update each as sent
-                // // foreach ($customer_items as $customer_item) {
-                // //     $customer_item->sent_to_rep = 1;
-                // //     $customer_item->date_sent_to_rep = date('Y-m-d H:i:s', strtotime('now'));
-                // //     $customer_item->save();
+                // update each as sent
+                // foreach ($customer_items as $customer_item) {
+                //     $customer_item->sent_to_rep = 1;
+                //     $customer_item->date_sent_to_rep = date('Y-m-d H:i:s', strtotime('now'));
+                //     $customer_item->save();
 
-                // //     unset($customer_item->sent_to_rep);
-                // //     unset($customer_item->updated_at);
-                // // }
-                // // $items = $items->merge($customer_items);
-                // return response()->json(['warehouse_supplies' => $customer_items], 200);
+                //     unset($customer_item->sent_to_rep);
+                //     unset($customer_item->updated_at);
+                // }
+                // $items = $items->merge($customer_items);
+                return response()->json(['warehouse_supplies' => $customer_items], 200);
             }
             return response()->json(['message' => 'Invalid Rep email'], 500);
         } else {
