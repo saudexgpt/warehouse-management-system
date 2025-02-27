@@ -729,8 +729,9 @@ class ApiController extends Controller
             return response()->json(['message' => 'Access Denied'], 403);
         }
         if (isset($request->date_from, $request->date_to) && $request->date_from != '' && $request->date_to != '') {
-            $customer_codes = $request->rep_codes;
+            $customer_codes = str_replace(',,', ',', $request->rep_codes);
             // $email = $request->rep_email;
+
             $customer_codes_array = explode(',', $customer_codes);
             $customer_ids = Customer::join('reps', 'reps.customer_id', 'customers.id')
                 ->where('customers.type', 'reps')
