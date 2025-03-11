@@ -3,6 +3,7 @@
 namespace App\Models\Invoice;
 
 use App\Models\Stock\Item;
+use App\Models\Warehouse\Warehouse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 

@@ -752,7 +752,7 @@ class ApiController extends Controller
                     ->where('dispatched_products.sent_to_rep', 0)
                     ->whereBetween('dispatched_products.updated_at', [$date_from, $date_to])
                     // ->where('dispatched_products.updated_at', '<=', $date_to)
-                    ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'users.name as rep_name', 'users.email as rep_email', 'items.name as product', 'items.code as product_code', 'invoices.invoice_number', 'waybills.waybill_no', 'quantity_supplied', 'items.package_type as unit_of_measurement', 'dispatched_products.updated_at as date', /*, 'dispatched_products.date_sent_to_rep', 'sent_to_rep'*/)
+                    ->select('dispatched_products.id as id', 'dispatched_products.dispatch_id', 'customers.code as rep_code', 'users.name as rep_name', 'users.email as rep_email', 'items.name as product', 'items.code as product_code', 'invoices.invoice_number', 'waybills.waybill_no', 'items.basic_unit as unit_of_measurement', 'dispatched_products.updated_at as date', DB::raw('(dispatched_products.quantity_supplied * items.basic_unit_quantity_per_package_type) as quantity_supplied')/*, 'dispatched_products.date_sent_to_rep', 'sent_to_rep'*/)
                     ->get();
 
 
