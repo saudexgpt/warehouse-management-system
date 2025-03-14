@@ -1402,6 +1402,7 @@ class ReportsController extends Controller
 
             // ->where('supply_status', '!=', 'Complete')
             ->where('invoices.status', '=', 'auditor approved')
+            ->orWhere('invoices.status', '=', 'partially supplied')
             ->selectRaw(
                 'warehouses.name as warehouse,
                 users.name as customer,
