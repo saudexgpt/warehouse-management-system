@@ -285,7 +285,7 @@ class Controller extends BaseController
         $expense_types = ['Insurance', 'Maintenance / Repairs', 'Fuel'];
         $package_types = ['Bottles', 'Boxes', 'Bundles', 'Cartons', 'Clips', 'Packets', 'Pieces', 'Rolls', 'Tins'];
         $product_return_reasons = ['Product short-dated', 'Mass return - expired', 'Mass return - unexpired', 'Rep. resignation/sack - expired', 'Rep. resignation/sack - unexpired', 'Spillage', 'Others'];
-        $teams = ['Allied', 'Bull', 'Confectionaries', 'Cosmestics', 'Consumer Health Team', 'Eagle', 'East Market Area', 'Electronics', 'Falcons', 'Funbact', 'Jaguar', 'Key Account', 'Lagos Market Area', 'Lion', 'National Market Business Area', 'North Market Area', 'REP', 'Stallion', 'West Market Area'];
+        $teams = ['Allied', 'Bull', 'Confectionaries', 'Cosmestics', 'Consumer Health Team', 'Eagle', 'East Market Area', 'Electronics', 'Falcons', 'Funbact', 'Green Allied Energy', 'Jaguar', 'Key Account', 'Lagos Market Area', 'Lion', 'National Market Business Area', 'North Market Area', 'REP', 'Stallion', 'West Market Area'];
         $dispatch_companies = ['GREENLIFE LOGISTICS', 'COURIER SERVICE', 'FOB (Free On Board)'];
         $all_roles = Role::orderBy('name')->select('name')->get();
         $default_roles = Role::where('role_type', 'default')->orderBy('name')->select('name')->get();
