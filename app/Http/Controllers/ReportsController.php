@@ -12,6 +12,7 @@ use App\Models\Invoice\WaybillItem;
 use App\Models\Logistics\Vehicle;
 use App\Models\Logistics\VehicleCondition;
 use App\Models\Logistics\VehicleExpense;
+use App\Models\Stock\Category;
 use App\Models\Stock\ExpiredProduct;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
