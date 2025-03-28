@@ -1141,11 +1141,21 @@ class ReportsController extends Controller
         if ($item_id != '' && $item_id != 'all') {
             $items = Item::where('id', $item_id)->paginate(1);
         } else {
-
+            $product_type = $request->product_type;
+            $category_ids = Category::where('group_name', $product_type)->pluck('id');
+            // $item_ids = Item::whereIn('category_id', $category_ids)->pluck('id');
             if ($is_download == 'yes') {
-                $items = Item::join('categories', 'categories.id', '=', 'items.category_id')->where('categories.name', '!=', 'Promo')->orderBy('items.name')->select('items.id', 'items.name', 'package_type')->get();
+                $items = Item::join('categories', 'categories.id', '=', 'items.category_id')
+                    ->whereIn('category_id', $category_ids)
+                    ->orderBy('items.name')
+                    ->select('items.id', 'items.name', 'package_type')
+                    ->get();
             } else {
-                $items = Item::join('categories', 'categories.id', '=', 'items.category_id')->where('categories.name', '!=', 'Promo')->orderBy('items.name')->select('items.id', 'items.name', 'package_type')->paginate($request->limit);
+                $items = Item::join('categories', 'categories.id', '=', 'items.category_id')
+                    ->whereIn('category_id', $category_ids)
+                    ->orderBy('items.name')
+                    ->select('items.id', 'items.name', 'package_type')
+                    ->paginate($request->limit);
             }
         }
 

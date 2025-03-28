@@ -22,7 +22,15 @@
           </el-select>
 
         </el-col>
-        <el-col :xs="24" :sm="68" :md="8">
+        <el-col :xs="24" :sm="8" :md="8">
+          <label for="">Select Product Category</label>
+          <el-select v-model="form.product_type" placeholder="Select Product Category" class="span" filterable @input="fetchItemStocks">
+            <el-option v-for="(productType, index) in params.product_types" :key="index" :value="productType" :label="productType" />
+
+          </el-select>
+
+        </el-col>
+        <el-col :xs="24" :sm="8" :md="8">
           <label for="">Filter by Product: </label>
           <el-select
             v-model="form.item_id"
@@ -161,6 +169,7 @@ export default {
       downloadLoading: false,
       form: {
         warehouse_id: '',
+        product_type: 'Pharma',
         item_id: '',
         from: '',
         to: '',
