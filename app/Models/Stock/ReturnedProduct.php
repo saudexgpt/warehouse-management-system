@@ -18,6 +18,10 @@ class ReturnedProduct extends Model
     {
         return $this->belongsTo(Customer::class);
     }
+    public function stockReturn()
+    {
+        return $this->belongsTo(StockReturn::class, 'return_id', 'id');
+    }
     public function item()
     {
         return $this->belongsTo(Item::class);

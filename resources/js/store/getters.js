@@ -21,5 +21,6 @@ const getters = {
   customer_types: state => state.customer.customer_types,
   baseUrl: state => state.app.baseUrl,
   unsavedInvoice: state => state.invoice.unsavedInvoice,
+  unsavedReturns: state => state.returns.unsavedReturns,
 };
 export default getters;

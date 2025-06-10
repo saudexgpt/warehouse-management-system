@@ -72,37 +72,11 @@
                 <span>
                   <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
 
-                  <!-- <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)" /> -->
-
-                  <el-popover
-                    placement="right"
-                    width="400"
-                    trigger="click"
-                  >
-                    <el-input v-model="approvalForm.approved_quantity" type="number" placeholder="Enter quantity for approval" />
-                    <div style="text-align: right; margin: 0">
-                      <el-button type="danger" @click="dialogVisible = false; approvalForm.approved_quantity = null">Cancel</el-button>
-                      <el-button type="primary" @click="approveProduct(); ">Approve</el-button>
-                    </div>
-                    <el-button v-if="props.row.confirmed_by !== null && checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" slot="reference" type="success" round @click="openDialog(props.row, props.index, false)">
-                      <el-tooltip content="Approve Product" placement="top">
-                        <i class="fa fa-check" />
-                      </el-tooltip>
-                    </el-button>
-                  </el-popover>
+                  <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)"><i class="fa fa-check" /> </a>
                 </span>
               </div>
 
             </v-client-table>
-            <el-row :gutter="20">
-              <pagination
-                v-show="total > 0"
-                :total="total"
-                :page.sync="form.page"
-                :limit.sync="form.limit"
-                @pagination="fetchItemStocks"
-              />
-            </el-row>
           </el-tab-pane>
           <el-tab-pane label="Approved" name="approved">
             <approved-returned-products />
@@ -132,7 +106,7 @@ import moment from 'moment';
 import { parseTime } from '@/utils';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
-import Pagination from '@/components/Pagination';
+
 import ApprovedReturnedProducts from './ApprovedReturnedProducts';
 import AddNewReturns from './partials/AddNewReturns';
 import EditReturns from './partials/EditReturns';
@@ -145,7 +119,7 @@ const approveReturnedProducts = new Resource('stock/returns/approve-products');
 const confirmItemReturned = new Resource('audit/confirm/returned-products');
 export default {
   name: 'Returns',
-  components: { ApprovedReturnedProducts, AddNewReturns, EditReturns, Pagination },
+  components: { ApprovedReturnedProducts, AddNewReturns, EditReturns },
   data() {
     return {
       activeActivity: 'unapproved',
@@ -154,11 +128,10 @@ export default {
       downloadLoading: false,
       warehouses: [],
       returned_products: [],
-      columns: ['action', 'stock_return.returns_no', 'confirmer.name', 'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
+      columns: ['action', 'confirmer.name', 'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {
-          'stock_return.returns_no': 'Return No.',
           'confirmer.name': 'Confirmed By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
@@ -179,24 +152,18 @@ export default {
           filter: 'Search:',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['stock_return.returns_no', 'item.name', 'batch_no', 'expiry_date', 'date_returned'],
-        filterable: ['stock_return.returns_no', 'item.name', 'batch_no', 'expiry_date', 'date_returned'],
+        sortable: ['item.name', 'batch_no', 'expiry_date', 'date_returned'],
+        filterable: ['item.name', 'batch_no', 'expiry_date', 'date_returned'],
       },
       page: {
         option: 'list',
       },
+      // params: {},
       form: {
-        warehouse_id: 7,
         warehouse_index: '',
-        from: '',
-        to: '',
-        panel: '',
-        status: 'pending',
-        page: 1,
-        limit: 10,
-        keyword: '',
+        // warehouse_id: '',
+        warehouse_id: 7,
       },
-      total: 0,
       in_warehouse: '',
       returnedProduct: {},
       selected_row_index: '',
@@ -265,17 +232,11 @@ export default {
     fetchItemStocks() {
       const app = this;
       const loader = returnedProducts.loaderShow();
-      const { limit, page } = app.form;
       app.page.option = 'list';
       const param = app.form;
       returnedProducts.list(param)
         .then(response => {
           app.returned_products = response.returned_products;
-          app.returned_products = response.returned_products.data;
-          app.returned_products.forEach((element, index) => {
-            element['index'] = (page - 1) * limit + index + 1;
-          });
-          app.total = response.returned_products.total;
           // app.in_warehouse = 'in ' + app.warehouses[param.warehouse_index].name;
           loader.hide();
         })
@@ -320,11 +281,11 @@ export default {
     //       });
     //   }
     // },
-    openDialog(product, selected_row_index, show = true) {
+    openDialog(product, selected_row_index){
       const app = this;
       app.approvalForm.product_details = product;
       app.selected_row_index = selected_row_index;
-      app.dialogVisible = show;
+      app.dialogVisible = true;
     },
     approveProduct(){
       const app = this;

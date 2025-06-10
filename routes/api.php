@@ -383,6 +383,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->get('/approved', 'ReturnsController@approvedReturnedProducts')->middleware('permission:view returned products|manage returned products');
 
             $router->group(['middleware' => 'permission:manage returned products'], function () use ($router) {
+                $router->get('fetch-product-batches', 'ReturnsController@fetchProductBatches');
                 $router->post('store', 'ReturnsController@store');
                 $router->put('update/{returned_product}', 'ReturnsController@update');
                 $router->delete('delete/{returned_product}', 'ReturnsController@destroy');

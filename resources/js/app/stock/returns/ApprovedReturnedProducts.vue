@@ -76,11 +76,12 @@ export default {
       downloadLoading: false,
       warehouses: [],
       returned_products: [],
-      columns: ['stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
+      columns: ['stock_return.returns_no', 'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {
           // 'confirmer.name': 'Confirmed By',
+          'stock_return.returns_no': 'Return No.',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
           batch_no: 'Batch No.',
@@ -100,8 +101,8 @@ export default {
           filter: 'Search:',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['item.name', 'batch_no', 'expiry_date', 'date_returned'],
-        filterable: ['item.name', 'batch_no', 'expiry_date', 'date_returned'],
+        sortable: ['stock_return.returns_no', 'item.name', 'batch_no', 'expiry_date', 'date_returned'],
+        filterable: ['stock_return.returns_no', 'item.name', 'batch_no', 'expiry_date', 'date_returned'],
       },
       page: {
         option: 'list',

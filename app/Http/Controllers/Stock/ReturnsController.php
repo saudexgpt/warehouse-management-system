@@ -5,21 +5,34 @@ namespace App\Http\Controllers\Stock;
 use App\Http\Controllers\Controller;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Stock\ReturnedProduct;
+use App\Models\Stock\StockReturn;
 use Illuminate\Http\Request;
 
 class ReturnsController extends Controller
 {
-    //
+
     public function index(Request $request)
     {
         //
         $warehouse_id = $request->warehouse_id;
-        $returned_products = ReturnedProduct::with(['warehouse', 'item', 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->whereRaw('quantity > quantity_approved')->orderBy('id', 'DESC')->get();
-
-        // $items_in_stock = ItemStock::with(['warehouse', 'item'])->groupBy('item_id')->having('warehouse_id', $warehouse_id)
-        // ->select('*',\DB::raw('SUM(quantity) as total_quantity'))->get();
+        $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
+            ->where('warehouse_id', $warehouse_id)
+            ->whereRaw('quantity > quantity_approved')
+            ->orderBy('id', 'DESC')
+            ->paginate($request->limit);
         return response()->json(compact('returned_products'));
     }
+    // public function index(Request $request)
+    // {
+    //     //
+    //     $warehouse_id = $request->warehouse_id;
+    //     $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
+    //     ->where('warehouse_id', $warehouse_id)
+    //     ->whereRaw('quantity > quantity_approved')
+    //     ->orderBy('id', 'DESC')
+    //     ->get();
+    //     return response()->json(compact('returned_products'));
+    // }
     public function approvedReturnedProducts(Request $request)
     {
         //
@@ -29,42 +42,90 @@ class ReturnsController extends Controller
             $is_download = $request->is_download;
         }
         if ($is_download == 'yes') {
-            $returned_products = ReturnedProduct::with(['warehouse', 'item', 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->whereRaw('quantity = quantity_approved')->orderBy('id', 'DESC')->get();
+            $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
+                ->where('warehouse_id', $warehouse_id)
+                ->whereRaw('quantity = quantity_approved')
+                ->orderBy('id', 'DESC')
+                ->get();
         } else {
-            $returned_products = ReturnedProduct::with(['warehouse', 'item', 'stocker', 'confirmer'])->where('warehouse_id', $warehouse_id)->whereRaw('quantity = quantity_approved')->orderBy('id', 'DESC')->paginate($request->limit);
+            $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
+                ->where('warehouse_id', $warehouse_id)
+                ->whereRaw('quantity = quantity_approved')
+                ->orderBy('id', 'DESC')
+                ->paginate($request->limit);
         }
         // $items_in_stock = ItemStock::with(['warehouse', 'item'])->groupBy('item_id')->having('warehouse_id', $warehouse_id)
         // ->select('*',\DB::raw('SUM(quantity) as total_quantity'))->get();
         return response()->json(compact('returned_products'));
     }
+    public function fetchProductBatches(Request $request)
+    {
+        $item_id = $request->item_id;
+        $batches = ItemStockSubBatch::groupBy('batch_no')
+            ->where('warehouse_id', '!=', 7)
+            ->where('item_id', $item_id)
+            ->whereRaw('balance < quantity')
+            ->whereRaw('confirmed_by IS NOT NULL')
+            ->get();
+
+        return response()->json(compact('batches'), 200);
+    }
     public function store(Request $request)
     {
-        //
         $user = $this->getUser();
+        $stock_return = new StockReturn();
+        $stock_return->warehouse_id = $request->warehouse_id;
+        $stock_return->customer_id = $request->customer_id;
+        $stock_return->customer_name = $request->customer_name;
+        $stock_return->returns_no = 'RTN-' . $request->customer_id . randomcode();
+        $stock_return->date_returned = $request->date_returned;
+        $stock_return->stocked_by = $user->id;
+        $stock_return->save();
 
-        $returned_product = new ReturnedProduct();
-        $returned_product->warehouse_id = $request->warehouse_id;
-        $returned_product->item_id = $request->item_id;
-        $returned_product->batch_no = $request->batch_no;
-        $returned_product->customer_id = $request->customer_id;
-        $returned_product->customer_name = $request->customer_name;
-        $returned_product->expiry_date = $request->expiry_date;
-        $returned_product->date_returned = $request->date_returned;
-        $returned_product->quantity = $request->quantity;
-        $returned_product->reason = $request->reason;
-        if ($request->reason == 'Others' && $request->other_reason != null) {
-            $returned_product->reason = $request->other_reason;
+        $returns_items = json_decode(json_encode($request->returns_items));
+
+        foreach ($returns_items as $returns_item) {
+            $returned_product = new ReturnedProduct();
+            $returned_product->warehouse_id = $request->warehouse_id;
+            $returned_product->return_id = $stock_return->id;
+            $returned_product->item_id = $returns_item->item_id;
+            $returned_product->batch_no = $returns_item->batch_no;
+            $returned_product->customer_id = $request->customer_id;
+            $returned_product->customer_name = $request->customer_name;
+            $returned_product->expiry_date = $returns_item->expiry_date;
+            $returned_product->date_returned = $request->date_returned;
+            $returned_product->quantity = (int) $returns_item->quantity;
+            $returned_product->reason = $returns_item->reason;
+            if ($returns_item->reason == 'Others' && $returns_item->other_reason != null) {
+                $returned_product->reason = $returns_item->other_reason;
+            }
+
+            $returned_product->stocked_by = $user->id;
+            $returned_product->save();
         }
+        // $returned_product = new ReturnedProduct();
+        // $returned_product->warehouse_id = $request->warehouse_id;
+        // $returned_product->item_id = $request->item_id;
+        // $returned_product->batch_no = $request->batch_no;
+        // $returned_product->customer_id = $request->customer_id;
+        // $returned_product->customer_name = $request->customer_name;
+        // $returned_product->expiry_date = $request->expiry_date;
+        // $returned_product->date_returned = $request->date_returned;
+        // $returned_product->quantity = $request->quantity;
+        // $returned_product->reason = $request->reason;
+        // if ($request->reason == 'Others' && $request->other_reason != null) {
+        //     $returned_product->reason = $request->other_reason;
+        // }
 
-        $returned_product->stocked_by = $user->id;
-        $returned_product->save();
+        // $returned_product->stocked_by = $user->id;
+        // $returned_product->save();
 
-        $title = "Products returned";
-        $description = "Products were returned to " . $returned_product->warehouse->name . " by  $returned_product->customer_name. Details created by $user->name ($user->email)";
-        //log this activity
-        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
-        $this->logUserActivity($title, $description, $roles);
-        return $this->show($returned_product);
+        // $title = "Products returned";
+        // $description = "Products were returned to " . $returned_product->warehouse->name . " by  $returned_product->customer_name. Details created by $user->name ($user->email)";
+        // //log this activity
+        // $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+        // $this->logUserActivity($title, $description, $roles);
+        // return $this->show($returned_product);
     }
     /**
      * Update the specified resource in storage.

@@ -835,7 +835,7 @@ function randomcode()
 {
     $tokens = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ23456789';
     $serial = '';
-    for ($i = 0; $i < 3; $i++) {
+    for ($i = 0; $i < 6; $i++) {
         $serial .= $tokens[mt_rand(0, strlen($tokens) - 1)];
     }
     return $serial;

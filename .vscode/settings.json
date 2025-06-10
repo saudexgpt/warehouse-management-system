@@ -3,5 +3,11 @@
     "eslint.lintTask.enable": true,
     "eslint.onIgnoredFiles": "warn",
     "editor.formatOnSave": true,
-    "editor.formatOnType": true
+    "editor.formatOnType": true,
+    "i18n-ally.localesPaths": [
+        "resources/lang",
+        "resources/js/lang",
+        "public/static/tinymce4.7.5/langs",
+        "resources/js/views/i18n"
+    ]
 }

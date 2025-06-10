@@ -1,111 +1,276 @@
 <template>
-  <div class="box">
-    <div class="box-header">
-      <h4 class="box-title">Add Returned Product</h4>
-      <span class="pull-right">
-        <a class="btn btn-danger" @click="page.option = 'list'"> Back</a>
-      </span>
-    </div>
-    <div class="box-body">
-      <aside>
-        <el-form ref="form" :model="form" label-width="120px">
-          <el-row :gutter="5" class="padded">
-            <el-col :xs="24" :sm="12" :md="12">
-              <label for="">Select Warehouse</label>
-              <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable class="span">
-                <el-option
-                  v-for="(warehouse, index) in params.warehouses"
-                  :key="index"
-                  :value="warehouse.id"
-                  :label="warehouse.name"
-                  :disabled="warehouse.id !== 7"
+  <div class="app-container">
+    <div>
+      <div v-if="params" class="box">
+        <div class="box-header">
+          <h4 class="box-title">Add Returned Products</h4>
+          <span class="pull-right">
+            <a class="btn btn-danger" @click="page.option = 'list'"> Back</a>
+          </span>
+          <!-- <span class="pull-right">
+            <a
+              v-if="checkPermission(['create invoice']) && upload_type ==='normal'"
+              class="btn btn-success"
+              @click="upload_type ='bulk'"
+            >Bulk Upload</a>
+            <a
+              v-if="checkPermission(['create invoice']) && upload_type ==='bulk'"
+              class="btn btn-primary"
+              @click="upload_type ='normal'"
+            >Normal Upload</a>
+            <router-link
+              v-if="checkPermission(['view invoice'])"
+              :to="{name:'Invoices'}"
+              class="btn btn-danger"
+            >Cancel</router-link>
+            <el-button
+              type="primary"
+              @click="loadOfflineData()"
+            >Load Unsaved Invoice</el-button>
+
+          </span> -->
+        </div>
+        <div class="box-body">
+          <el-form ref="form" v-loading="loadForm" :model="form" label-width="120px">
+            <el-row :gutter="5" class="padded">
+              <el-col :xs="24" :sm="12" :md="12">
+                <label for>Select Warehouse</label>
+                <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable class="span">
+                  <el-option
+                    v-for="(warehouse, index) in params.warehouses"
+                    :key="index"
+                    :value="warehouse.id"
+                    :label="warehouse.name"
+                    :disabled="warehouse.id !== 7"
+                  />
+
+                </el-select>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="12">
+                <label for>
+                  Select Customer
+                </label>
+                <el-select
+                  v-model="selectedCustomer"
+                  placeholder="Select Customer"
+                  filterable
+                  value-key="id"
+                  class="span"
+                  @input="show_product_list = true"
+                >
+                  <el-option
+                    v-for="(customer, customer_index) in customers"
+                    :key="customer_index"
+                    :value="customer"
+                    :label="(customer.user) ? customer.user.name : ''"
+                  />
+                </el-select>
+                <!-- <el-select
+                  v-model="form.customer_id"
+                  placeholder="Select Customer"
+                  filterable
+                  class="span"
+                  @input="show_product_list = true"
+                >
+                  <el-option
+                    v-for="(customer, customer_index) in customers"
+                    :key="customer_index"
+                    :value="customer.id"
+                    :label="(customer.user) ? customer.user.name : ''"
+                  />
+                </el-select> -->
+                <label for>Returned Date</label>
+                <el-date-picker
+                  v-model="form.date_returned"
+                  type="date"
+                  placeholder="Returned Date"
+                  style="width: 100%;"
+                  format="yyyy/MM/dd"
+                  value-format="yyyy-MM-dd"
+                  :picker-options="pickerOptions"
                 />
+              </el-col>
+            </el-row>
+            <div v-if="show_product_list">
+              <el-row :gutter="2" class="padded">
+                <el-col>
+                  <div style="overflow: auto">
+                    <label for>Products</label>
+                    <table class="table table-bordered">
+                      <thead>
+                        <tr>
+                          <th />
+                          <th>Choose Product</th>
+                          <th>Quantity</th>
+                          <th>Batch No & Expiry Date</th>
+                          <th>Reason for return</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(invoice_item, index) in returns_items" :key="index">
+                          <td>
+                            <span v-if="!can_submit">
+                              <a
+                                class="btn btn-danger btn-flat fa fa-trash"
+                                @click="removeLine(index)"
+                              />
+                              <a
+                                v-if="index + 1 === returns_items.length"
+                                class="btn btn-info btn-flat fa fa-plus"
+                                @click="addLine(index)"
+                              />
+                            </span>
+                            <span v-else>
+                              {{ index + 1 }}
+                            </span>
+                          </td>
+                          <td>
+                            <el-select
+                              v-model="invoice_item.item"
+                              value-key="id"
+                              placeholder="Select Product"
+                              filterable
+                              class="span"
+                              :disabled="can_submit"
+                              @input="fetchItemDetails(index)"
+                            >
+                              <el-option
+                                v-for="(item, item_index) in params.items"
+                                :key="item_index"
+                                :value="item"
+                                :label="item.name"
+                                :disabled="item.enabled === 0"
+                              />
+                            </el-select>
+                          </td>
+                          <td>
+                            <el-input v-model="invoice_item.quantity" type="text" placeholder="Quantity" class="span" @input="calculateNoOfCartons(index);">
+                              <template slot="append">{{ invoice_item.type }}</template>
+                            </el-input>
+                            <!-- <el-input
+                              v-model="invoice_item.quantity"
+                              type="number"
+                              outline
+                              placeholder="Quantity"
+                              min="0"
+                              :disabled="can_submit"
+                              @input="calculateNoOfCartons(index);"
+                            /> -->
+                            <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
+                          </td>
+                          <td v-loading="invoice_item.load">
+                            <el-select
+                              v-model="invoice_item.selectedBatch"
+                              value-key="id"
+                              placeholder="Select Product"
+                              filterable
+                              class="span"
+                              :disabled="can_submit"
+                              @input="invoice_item.batch_no = $event.batch_no; invoice_item.expiry_date = $event.expiry_date;"
+                            >
+                              <el-option
+                                v-for="(batch, item_index) in invoice_item.batches"
+                                :key="item_index"
+                                :value="batch"
+                                :label="`${batch.batch_no} | ${batch.expiry_date}`"
+                              />
+                            </el-select>
+                            <el-tag>Batch No: {{ invoice_item.batch_no }}</el-tag><br>
+                            <el-tag>Expiry Date: {{ invoice_item.expiry_date }}</el-tag>
+                          </td>
+                          <td>
+                            <el-select v-model="invoice_item.reason" placeholder="Select Reason" filterable class="span">
+                              <el-option v-for="(reason, reason_index) in params.product_return_reasons" :key="reason_index" :value="reason" :label="reason" />
 
-              </el-select>
+                            </el-select>
+                            <div v-if="invoice_item.reason === 'Others'">
+                              <label for="">Specify Other Reasons</label>
+                              <el-input v-model="invoice_item.other_reason" type="text" placeholder="Specify" class="span" />
+                            </div>
+                          </td>
+                        </tr>
+                        <tr v-if="fill_fields_error">
+                          <td colspan="5">
+                            <label
+                              class="label label-danger"
+                            >Please fill all empty fields before adding another row</label>
+                          </td>
+                        </tr>
+                        <!-- <tr>
+                          <td align="right">Notes</td>
+                          <td colspan="5">
+                            <textarea
+                              v-model="form.notes"
+                              class="form-control"
+                              rows="3"
+                              placeholder="Type extra note on this invoice here..."
+                            />
+                          </td>
+                        </tr> -->
+                      </tbody>
+                    </table>
+                  </div>
+                </el-col>
+              </el-row>
+              <el-row :gutter="2" class="padded">
+                <el-col :xs="24" :sm="24" :md="24">
+                  <div align="center">
+                    <el-button type="success" @click="submitNewInvoice">
+                      <i class="el-icon-plus" />
+                      Submit Invoice
+                    </el-button>
+                    <!-- <div v-if="can_submit">
 
-              <label for="">Select Product</label>
-              <el-select v-model="selectedItem" placeholder="Select Product" filterable value-key="id" class="span">
-                <el-option v-for="(item, index) in params.items" :key="index" :value="item" :label="item.name" />
+                      <el-button type="success" @click="submitNewInvoice">
+                        <i class="el-icon-plus" />
+                        Submit Invoice
+                      </el-button>
+                      <el-button type="danger" @click="can_submit = false">
+                        <i class="el-icon-edit" />
+                        Alter Entry
+                      </el-button>
+                    </div>
+                    <el-button v-else :loading="loadPreview" type="primary" @click="checkProductsQuantityInStock">
+                      <i class="el-icon-file" />
+                      Preview Entry
+                    </el-button> -->
+                  </div>
+                </el-col>
+              </el-row>
+            </div>
+          </el-form>
+          <add-new-customer
+            :dialog-form-visible="dialogFormVisible"
+            :params="params"
+            @created="onCreateUpdate"
+            @close="dialogFormVisible=false"
+          />
 
-              </el-select>
-              <label for="">Customer Name</label>
-              <!-- <el-input v-model="form.customer_name" placeholder="Customer Name" class="span" /> -->
-              <el-select
-                v-model="selectedCustomer"
-                placeholder="Select Customer"
-                filterable
-                value-key="id"
-                class="span"
-              >
-                <el-option
-                  v-for="(customer, customer_index) in customers"
-                  :key="customer_index"
-                  :value="customer"
-                  :label="(customer.user) ? customer.user.name : ''"
-                />
-              </el-select>
-              <label for="">Quantity</label>
-              <el-input v-model="form.quantity" type="text" placeholder="Quantity" class="span">
-                <template slot="append">{{ selectedItem.package_type }}</template>
-              </el-input>
-            </el-col>
-            <el-col :xs="24" :sm="12" :md="12">
-              <label for="">Batch No.</label>
-              <el-input v-model="form.batch_no" placeholder="Batch No." class="span" />
-
-              <label for="">Product Expiry Date</label>
-              <el-date-picker v-model="form.expiry_date" type="date" outline format="yyyy/MM/dd" value-format="yyyy-MM-dd" style="width: 100%" />
-
-              <label for="">Date of Return</label>
-              <el-date-picker v-model="form.date_returned" type="date" outline format="yyyy/MM/dd" value-format="yyyy-MM-dd" style="width: 100%" :picker-options="pickerOptions" />
-              <label for="">Reason for return</label>
-              <el-select v-model="form.reason" placeholder="Select Product" filterable class="span">
-                <el-option v-for="(reason, index) in params.product_return_reasons" :key="index" :value="reason" :label="reason" />
-
-              </el-select>
-              <div v-if="form.reason === 'Others'">
-                <label for="">Specify Other Reasons</label>
-                <el-input v-model="form.other_reason" type="text" placeholder="Specify" class="span" />
-              </div>
-
-            </el-col>
-          </el-row>
-        </el-form>
-      </aside>
-      <el-row :gutter="2" class="padded">
-        <el-col :xs="24" :sm="6" :md="6">
-          <el-button type="success" @click="addNewReturnedProduct"><i class="el-icon-plus" />
-            Add
-          </el-button>
-        </el-col>
-      </el-row>
+        </div>
+      </div>
     </div>
+
   </div>
 </template>
 
 <script>
 import moment from 'moment';
+import checkPermission from '@/utils/permission';
+import checkRole from '@/utils/role';
+import showItemsInCartons from '@/utils/functions';
+import AddNewCustomer from '@/app/users/AddNewCustomer';
 import Resource from '@/api/resource';
-const createReturnedProduct = new Resource('stock/returns/store');
-
+const checkProductsInStock = new Resource('invoice/general/check-product-quantity-in-stock');
 export default {
+  // name: 'CreateInvoice',
+  components: { AddNewCustomer },
   props: {
-    params: {
-      type: Object,
-      default: () => ({}),
-    },
-    returnedProducts: {
-      type: Array,
-      default: () => ([]),
-    },
-
     page: {
       type: Object,
       default: () => ({
         option: 'add_new',
       }),
     },
-
   },
   data() {
     return {
@@ -116,72 +281,355 @@ export default {
           return date > d;
         },
       },
+      currency: '₦',
+      upload_type: 'normal',
+      // customers: [],
+      // customer_types: [],
+      items_in_stock_dialog: false,
+      dialogFormVisible: false,
+      userCreating: false,
+      loadPreview: false,
       fill_fields_error: false,
+      show_product_list: false,
+      loadForm: false,
+      batches_of_items_in_stock: [],
+      disable_submit: false,
+      can_submit: false,
+      selectedCustomer: '',
       form: {
         warehouse_id: 7,
-        item_id: '',
         customer_id: '',
         customer_name: '',
-        quantity: '',
-        batch_no: '',
-        expiry_date: '',
+        status: 'pending',
         date_returned: '',
-        reason: null,
-        other_reason: null,
-
+        notes: '',
+        returns_items: [
+          {
+            item: null,
+            load: false,
+            item_id: '',
+            quantity: '',
+            batch_no: '',
+            batches: [],
+            expiry_date: '',
+            date_returned: '',
+            reason: null,
+            other_reason: null,
+            type: '',
+          },
+        ],
       },
-      selectedCustomer: '',
-      selectedItem: { package_type: '' },
-
+      empty_form: {
+        warehouse_id: 7,
+        customer_id: '',
+        customer_name: '',
+        status: 'pending',
+        date_returned: '',
+        notes: '',
+        returns_items: [
+          {
+            item: null,
+            load: false,
+            item_id: '',
+            quantity: '',
+            batch_no: '',
+            batches: [],
+            expiry_date: '',
+            date_returned: '',
+            reason: null,
+            other_reason: null,
+            type: '',
+          },
+        ],
+      },
+      returns_items: [],
+      newCustomer: {
+        name: '',
+        email: null,
+        phone: null,
+        address: '',
+        role: 'customer',
+        customer_type_id: '',
+        password: '',
+        confirmPassword: '',
+      },
+      rules: {
+        customer_type: [
+          {
+            required: true,
+            message: 'Customer Type is required',
+            trigger: 'change',
+          },
+        ],
+        name: [
+          { required: true, message: 'Name is required', trigger: 'blur' },
+        ],
+        // email: [
+        //   { required: true, message: 'Email is required', trigger: 'blur' },
+        //   { type: 'email', message: 'Please input correct email address', trigger: ['blur', 'change'] },
+        // ],
+        // phone: [{ required: true, message: 'Phone is required', trigger: 'blur' }],
+      },
+      discount_rate: 0,
     };
   },
   computed: {
+    params() {
+      return this.$store.getters.params;
+    },
     customers() {
       return this.$store.getters.customers;
     },
+    customer_types() {
+      return this.$store.getters.customer_types;
+    },
+    unsavedReturns() {
+      return this.$store.getters.unsavedReturns;
+    },
+  },
+  watch: {
+    returns_items() {
+      this.blockRemoval = this.returns_items.length <= 1;
+    },
   },
   mounted() {
+    this.loadOfflineData();
+    this.fetchNecessaryParams();
     this.fetchCustomers();
+    this.addLine();
   },
   methods: {
     moment,
+    checkPermission,
+    checkRole,
+    showItemsInCartons,
+    loadOfflineData() {
+      this.loadForm = true;
+      this.$store.dispatch('returns/loadOfflineReturns').then(() => {
+        this.form = this.unsavedReturns;
+        this.returns_items = this.form.returns_items;
+        if (this.form.warehouse_id !== '') {
+          this.show_product_list = true;
+        }
+        this.loadForm = false;
+      });
+    },
+    rowIsEmpty() {
+      this.fill_fields_error = false;
+      const checkEmptyLines = this.returns_items.filter(
+        (detail) =>
+          detail.item_id === '' ||
+          detail.quantity === '' ||
+          detail.batch_no === '' ||
+          detail.expiry_date === '' ||
+          detail.reason === null,
+      );
+      if (checkEmptyLines.length >= 1) {
+        this.fill_fields_error = true;
+        // this.returns_items[index].seleted_category = true;
+        return true;
+      }
+      false;
+    },
+    addLine(index) {
+      if (this.rowIsEmpty() && this.returns_items.length > 0) {
+        return;
+      } else {
+        // if (this.returns_items.length > 0)
+        //     this.returns_items[index].grade = '';
+        this.returns_items.push({
+          item: null,
+          load: false,
+          item_id: '',
+          quantity: 0,
+          batches: [],
+          batch_no: '',
+          expiry_date: '',
+          date_returned: '',
+          reason: null,
+          other_reason: null,
+          type: '',
+        });
+        const unsavedReturns = this.form;
+        unsavedReturns.returns_items = this.returns_items;
+        this.$store.dispatch('returns/saveUnsavedReturns', unsavedReturns);
+      }
+    },
+    removeLine(detailId) {
+      this.fill_fields_error = false;
+      if (!this.blockRemoval) {
+        this.returns_items.splice(detailId, 1);
+        // this.calculateTotal(null);
+        const unsavedReturns = this.form;
+        unsavedReturns.returns_items = this.returns_items;
+        this.$store.dispatch('returns/saveUnsavedReturns', unsavedReturns);
+      }
+    },
+    fetchNecessaryParams() {
+      const app = this;
+      app.$store.dispatch('app/setNecessaryParams');
+    },
     fetchCustomers() {
       const app = this;
       app.$store.dispatch('customer/fetch');
     },
-    addNewReturnedProduct() {
+    checkProductsQuantityInStock() {
       const app = this;
-      const load = createReturnedProduct.loaderShow();
-      var form = app.form;
-      form.customer_id = app.selectedCustomer.id;
-      form.item_id = app.selectedItem.id;
-      form.customer_name = app.selectedCustomer.user.name;
-      createReturnedProduct.store(form)
-        .then(response => {
-          app.resetForm();
-          app.$message({ message: 'Returned Products Added Successfully!!!', type: 'success' });
-          app.returnedProducts.push(response.returned_product);
-          app.$emit('update', response);
-          load.hide();
+      const form = app.form;
+      form.returns_items = app.returns_items;
+      app.loadPreview = true;
+      checkProductsInStock
+        .store(form)
+        .then((response) => {
+          app.can_submit = response.can_submit;
+          app.returns_items = response.returns_items;
+          app.loadPreview = false;
         })
-        .catch(error => {
-          load.hide();
-          alert(error.message);
+        .catch((error) => {
+          app.loadPreview = false;
+          console.log(error.message);
         });
     },
-    resetForm(){
-      this.form = {
-        warehouse_id: 7,
-        item_id: '',
-        customer_id: '',
-        customer_name: '',
-        quantity: '',
-        batch_no: '',
-        expiry_date: '',
-        date_returned: '',
-        reason: null,
-        other_reason: null,
+    submitNewInvoice() {
+      const app = this;
+      if (this.rowIsEmpty()) {
+        app.$alert('Please fill in all fields on each row');
+        return;
+      }
+      var form = app.form;
+      const checkEmptyFields =
+        form.warehouse_id === '' ||
+        app.selectedCustomer === '' ||
+        form.date_returned === '';
+      if (!checkEmptyFields) {
+        app.loadForm = true;
+        form.returns_items = app.returns_items;
+        form.customer_id = app.selectedCustomer.id;
+        form.customer_name = app.selectedCustomer.user.name;
+        app.disable_submit = true;
+        const createInvoice = new Resource('stock/returns/store');
+        createInvoice
+          .store(form)
+          .then((response) => {
+            app.$message({
+              message: 'Returns Created Successfully!!!',
+              type: 'success',
+            });
+            const warehouse_id = app.form.warehouse_id;
+            app.form = app.empty_form;
+            app.form.warehouse_id = warehouse_id;
+            app.returns_items = app.form.returns_items;
+
+            // persist it
+            const unsavedReturns = this.form;
+            app.$store.dispatch('returns/saveUnsavedReturns', unsavedReturns);
+            app.$emit('update', response);
+            app.loadForm = false;
+          })
+          .catch((error) => {
+            app.loadForm = false;
+            console.log(error.message);
+          });
+      } else {
+        alert('Please fill the form fields completely');
+      }
+    },
+
+    onCreateUpdate(created_row) {
+      const app = this;
+      app.customers.push(created_row);
+    },
+    fetchItemDetails(index) {
+      const app = this;
+      const item = app.returns_items[index].item;
+      app.setProductBatches(index, item.id);
+      app.returns_items[index].item_rate = item.price.sale_price;
+      app.returns_items[index].rate = item.price.sale_price;
+      app.returns_items[index].item_id = item.id;
+      app.returns_items[index].type = item.package_type;
+      app.returns_items[index].quantity_per_carton = item.quantity_per_carton;
+      app.returns_items[index].no_of_cartons = 0;
+      app.returns_items[index].quantity = 1;
+    },
+    setProductBatches(index, item_id) {
+      const app = this;
+      app.returns_items[index].load = true;
+      app.returns_items[index].batch_no = '';
+      app.returns_items[index].expiry_date = '';
+      const param = {
+        item_id: item_id,
       };
+      const fetchProductBatches = new Resource('stock/returns/fetch-product-batches');
+      fetchProductBatches.list(param).then((response) => {
+        app.returns_items[index].load = false;
+
+        app.returns_items[index].batches = response.batches;
+      });
+    },
+    showItemsInStock(index) {
+      const app = this;
+      app.batches_of_items_in_stock =
+        app.returns_items[index].batches_of_items_in_stock;
+      app.items_in_stock_dialog = true;
+    },
+    calculateNoOfCartons(index) {
+      const app = this;
+      if (index !== null) {
+        const quantity = app.returns_items[index].quantity;
+        const quantity_per_carton = app.returns_items[index].quantity_per_carton;
+        if (quantity_per_carton > 0) {
+          const no_of_cartons = quantity / quantity_per_carton;
+          app.returns_items[index].no_of_cartons = no_of_cartons; // + parseFloat(tax);
+        }
+      }
+    },
+    checkStockBalance(index) {
+      const app = this;
+      // Get total amount for this item without tax
+      if (app.params.enable_stock_quantity_check_when_raising_invoice === 'yes') {
+        // if (index !== null) {
+        //   const invoice_item = app.returns_items[index];
+        //   const item = app.returns_items[index].item;
+        //   const quantity = invoice_item.quantity;
+        //   const available_stock = invoice_item.total_stocked - invoice_item.total_invoiced_quantity;
+        //   app.disable_submit = false;
+        //   if (quantity > available_stock) {
+        //     app.disable_submit = true;
+        //     app.$alert(`${item} stock balance is less than ${quantity}. Please enter a value within range`);
+        //     app.returns_items[index].quantity = 0;
+        //     app.calculateTotal(index);
+        //   }
+        // }
+      }
+    },
+    calculateTotal(index) {
+      const app = this;
+      // Get total amount for this item without tax
+      if (index !== null) {
+        const quantity = app.returns_items[index].quantity;
+        const unit_rate = app.returns_items[index].rate;
+        app.returns_items[index].amount = parseFloat(
+          quantity * unit_rate,
+        ).toFixed(2); // + parseFloat(tax);
+      }
+
+      // we now calculate the running total of items invoiceed for with tax //////////
+      // let total_tax = 0;
+      let subtotal = 0;
+      for (let count = 0; count < app.returns_items.length; count++) {
+        // const tax_rate = app.returns_items[count].tax;
+        // const quantity = app.returns_items[count].quantity;
+        // const unit_rate = app.returns_items[count].rate;
+        // total_tax += parseFloat(tax_rate * quantity * unit_rate);
+        subtotal += parseFloat(app.returns_items[count].amount);
+      }
+      // app.form.tax = total_tax.toFixed(2);
+      app.form.subtotal = subtotal.toFixed(2);
+      app.form.discount = parseFloat(
+        (app.discount_rate / 100) * subtotal,
+      ).toFixed(2);
+      // subtract discount
+      app.form.amount = parseFloat(subtotal - app.form.discount).toFixed(2);
     },
 
   },

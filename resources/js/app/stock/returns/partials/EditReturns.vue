@@ -7,7 +7,7 @@
       </span>
     </div>
     <div class="box-body">
-      <aside>
+      <aside v-if="form !== null">
         <el-form ref="form" :model="form" label-width="120px">
           <el-row :gutter="5" class="padded">
             <el-col :xs="24" :sm="12" :md="12">
@@ -85,8 +85,7 @@ export default {
   },
   data() {
     return {
-      form: {
-      },
+      form: null,
     };
   },
   computed: {
