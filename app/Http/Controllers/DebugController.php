@@ -94,7 +94,7 @@ class DebugController extends Controller
     {
         set_time_limit(0);
         ini_set('memory_limit', '1024M');
-        $dispatched_products = DispatchedProduct::whereIn('item_stock_sub_batch_id', [12622, 12693, 14177, 14391, 15550, 16668, 17020, 17487, 17960, 19172, 19568, 20198, 20235, 21769, 23568, 24139, 25414, 25802, 25989, 27545, 27614, 28549, 28992, 29223, 29224, 29278, 29533, 29836, 29854, 30073, 30144, 30486, 30929, 30931, 30935, 31167])->get();
+        $dispatched_products = DispatchedProduct::whereIn('item_stock_sub_batch_id', [12622, 12693, 14177, 14391, 15550, 16668, 17020, 17487, 17960, 19172, 19568, 20198, 20235, 21769, 23568, 24139, 25414, 25802, 25989, 27545, 27614, 28549, 28992, 29223, 29224, 29278, 29533, 29836, 29854, 30073, 30144, 30486, 30929, 30931, 30935, 31167])->where('created_at', 'LIKE', '%2025-07-04%')->get();
 
         $untreated = [];
         foreach ($dispatched_products as $dispatched_product) {
