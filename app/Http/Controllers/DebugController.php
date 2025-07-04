@@ -120,7 +120,7 @@ class DebugController extends Controller
                 $former_stock->in_transit -= $quantity;
                 $former_stock->save();
 
-                $invoice_batch = InvoiceItemBatch::where(['item_id' => $item_id, 'waybill_item_id' => $waybill_item_id, 'item_stock_sub_batch_id' => $old_item_stock_sub_batch_id])->first();
+                $invoice_batch = InvoiceItemBatch::where(['waybill_item_id' => $waybill_item_id, 'item_stock_sub_batch_id' => $old_item_stock_sub_batch_id])->first();
                 $invoice_batch->item_stock_sub_batch_id = $stock->id;
                 $invoice_batch->save();
 
