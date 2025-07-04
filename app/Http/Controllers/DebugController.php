@@ -129,6 +129,7 @@ class DebugController extends Controller
                 $stock->save();
             }
         }
+        return $untreated;
         // ItemStockSubBatch::chunkById(200, function (Collection $item_stock_batches) {
         //     foreach ($item_stock_batches as $item_stock_batch) {
         //         $item_stock_batch_id = $item_stock_batch->id;
