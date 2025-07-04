@@ -92,12 +92,15 @@ class DebugController extends Controller
     }
     public function resetStock()
     {
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M');
         ItemStockSubBatch::chunkById(200, function (Collection $item_stock_batches) {
             foreach ($item_stock_batches as $item_stock_batch) {
                 $item_stock_batch_id = $item_stock_batch->id;
                 $total = DispatchedProduct::where('item_stock_sub_batch_id', $item_stock_batch_id)->select(\DB::raw('SUM(quantity_supplied) as supplied'))->first();
                 $transferred = TransferRequestDispatchedProduct::where('item_stock_sub_batch_id', $item_stock_batch_id)->select(\DB::raw('SUM(quantity_supplied) as supplied'))->first();
 
+                $stocked_quantity = $item_stock_batch->quantity;
                 $supplied = $total->supplied;
                 $transferred = $transferred->supplied;
 
@@ -106,9 +109,12 @@ class DebugController extends Controller
                 $item_stock_batch->total_out = $total_out;
                 $item_stock_batch->total_sold = $supplied;
                 $item_stock_batch->total_transferred = $transferred;
+                $item_stock_batch->balance = $stocked_quantity - $total_out;
+                $item_stock_batch->supplied = $total_out;
                 $item_stock_batch->save();
             }
         }, $column = 'id');
+        ini_set('memory_limit', '128M');
         // $item_stock_batches = ItemStockSubBatch::get();
         // foreach ($item_stock_batches as $item_stock_batch) {
         //     $item_stock_batch->reserved_for_supply = 0;
