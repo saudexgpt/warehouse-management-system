@@ -43,22 +43,22 @@ $router->group(['prefix' => 'report'], function () use ($router) {
 
 
 $router->post('auth/login', 'AuthController@login');
-$router->get('dispatch-product/issue', 'DebugController@solveDispatchProductIssue');
-$router->get('update-dispatch-product-invoice', 'DebugController@updateDispatchProductInvoiceId');
+// $router->get('dispatch-product/issue', 'DebugController@solveDispatchProductIssue');
+// $router->get('update-dispatch-product-invoice', 'DebugController@updateDispatchProductInvoiceId');
 
-$router->get('total-product', 'DebugController@totalDispatchedProduct');
-$router->get('reserved-', 'DebugController@reservedProducts');
-$router->get('stock-balance', 'DebugController@balanceStockAccount');
-$router->get('stock-balance-product', 'DebugController@balanceStockAccountPerProduct');
-$router->get('balance-invoice-items', 'DebugController@balanceInvoiceItems');
-$router->get('stabilize-account', 'DeproductbugController@stabilizeAccount');
+// $router->get('total-product', 'DebugController@totalDispatchedProduct');
+// $router->get('reserved-', 'DebugController@reservedProducts');
+// $router->get('stock-balance', 'DebugController@balanceStockAccount');
+// $router->get('stock-balance-product', 'DebugController@balanceStockAccountPerProduct');
+// $router->get('balance-invoice-items', 'DebugController@balanceInvoiceItems');
+// $router->get('stabilize-account', 'DeproductbugController@stabilizeAccount');
 $router->get('reset', 'DebugController@resetStock');
-$router->get('split', 'DebugController@splitExcessStock');
-$router->get('stabilize-invoice-items', 'Invoice\InvoicesController@stabilizeInvoiceItems');
-$router->get('deliver-items', 'Invoice\InvoicesController@deliverProducts');
-$router->get('correct-dispatch-product', 'Invoice\InvoicesController@correctDispatchProductDate');
-$router->get('invoice-items-without-waybill', 'Invoice\InvoicesController@checkInvoiceItemsWithoutWaybill');
-$router->get('set-transfer-request-warehouse', 'Transfers\GoodsTransferController@setTransferRequestWarehouse');
+// $router->get('split', 'DebugController@splitExcessStock');
+// $router->get('stabilize-invoice-items', 'Invoice\InvoicesController@stabilizeInvoiceItems');
+// $router->get('deliver-items', 'Invoice\InvoicesController@deliverProducts');
+// $router->get('correct-dispatch-product', 'Invoice\InvoicesController@correctDispatchProductDate');
+// $router->get('invoice-items-without-waybill', 'Invoice\InvoicesController@checkInvoiceItemsWithoutWaybill');
+// $router->get('set-transfer-request-warehouse', 'Transfers\GoodsTransferController@setTransferRequestWarehouse');
 
 $router->get('clear-partial-invoices', 'Invoice\InvoicesController@clearPartialInvoices');
 $router->group(['middleware' => 'auth:api'], function () use ($router) {

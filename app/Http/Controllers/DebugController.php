@@ -8,6 +8,7 @@ use App\Models\Invoice\InvoiceItemBatch;
 use App\Models\Invoice\WaybillItem;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
+use App\Models\Transfers\TransferRequestDispatchedProduct;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 
@@ -58,7 +59,7 @@ class DebugController extends Controller
     public function updateDispatchProductInvoiceId()
     {
         set_time_limit(0);
-        DispatchedProduct::with('waybillItem')/*->where('invoice_id', NULL)*/->chunkById(200, function (Collection $dispatch_products) {
+        DispatchedProduct::with('waybillItem')/*->where('invoice_id', NULL)*/ ->chunkById(200, function (Collection $dispatch_products) {
             foreach ($dispatch_products as $dispatch_product) {
                 $waybill_item = $dispatch_product->waybillItem;
                 $quantity_supplied = $dispatch_product->quantity_supplied;
@@ -91,16 +92,33 @@ class DebugController extends Controller
     }
     public function resetStock()
     {
-        $item_stock_batches = ItemStockSubBatch::get();
-        foreach ($item_stock_batches as $item_stock_batch) {
-            $item_stock_batch->reserved_for_supply = 0;
-            $item_stock_batch->in_transit = 0;
-            $item_stock_batch->supplied = 0;
-            $item_stock_batch->balance = $item_stock_batch->quantity;
+        ItemStockSubBatch::chunkById(200, function (Collection $item_stock_batches) {
+            foreach ($item_stock_batches as $item_stock_batch) {
+                $item_stock_batch_id = $item_stock_batch->id;
+                $total = DispatchedProduct::where('item_stock_sub_batch_id', $item_stock_batch_id)->select(\DB::raw('SUM(quantity_supplied) as supplied'))->first();
+                $transferred = TransferRequestDispatchedProduct::where('item_stock_sub_batch_id', $item_stock_batch_id)->select(\DB::raw('SUM(quantity_supplied) as supplied'))->first();
 
-            $item_stock_batch->save();
-        }
-        return 'true';
+                $supplied = $total->supplied;
+                $transferred = $transferred->supplied;
+
+                $total_out = $supplied + $transferred;
+
+                $item_stock_batch->total_out = $total_out;
+                $item_stock_batch->total_sold = $supplied;
+                $item_stock_batch->total_transferred = $transferred;
+                $item_stock_batch->save();
+            }
+        }, $column = 'id');
+        // $item_stock_batches = ItemStockSubBatch::get();
+        // foreach ($item_stock_batches as $item_stock_batch) {
+        //     $item_stock_batch->reserved_for_supply = 0;
+        //     $item_stock_batch->in_transit = 0;
+        //     $item_stock_batch->supplied = 0;
+        //     $item_stock_batch->balance = $item_stock_batch->quantity;
+
+        //     $item_stock_batch->save();
+        // }
+        // return 'true';
     }
     public function balanceStockAccount()
     {
@@ -114,7 +132,7 @@ class DebugController extends Controller
 
             $reserved = InvoiceItemBatch::where('item_stock_sub_batch_id', $item_stock_batch->id)->select(\DB::raw('SUM(quantity) as quantity'))->get();
 
-            $reserved_for_supply  = 0;
+            $reserved_for_supply = 0;
             if ($reserved[0]->quantity != null) {
                 $reserved_for_supply = $reserved[0]->quantity;
             }
