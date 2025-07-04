@@ -92,65 +92,65 @@ class DebugController extends Controller
     }
     public function resetStock()
     {
-        set_time_limit(0);
-        ini_set('memory_limit', '1024M');
-        $dispatched_products = DispatchedProduct::whereIn('item_stock_sub_batch_id', [12622, 12693, 14177, 14391, 15550, 16668, 17020, 17487, 17960, 19172, 19568, 20198, 20235, 21769, 23568, 24139, 25414, 25802, 25989, 27545, 27614, 28549, 28992, 29223, 29224, 29278, 29533, 29836, 29854, 30073, 30144, 30486, 30929, 30931, 30935, 31167])->where('created_at', 'LIKE', '%2025-07-04%')->get();
+        // set_time_limit(0);
+        // ini_set('memory_limit', '1024M');
+        // $dispatched_products = DispatchedProduct::whereIn('item_stock_sub_batch_id', [12622, 12693, 14177, 14391, 15550, 16668, 17020, 17487, 17960, 19172, 19568, 20198, 20235, 21769, 23568, 24139, 25414, 25802, 25989, 27545, 27614, 28549, 28992, 29223, 29224, 29278, 29533, 29836, 29854, 30073, 30144, 30486, 30929, 30931, 30935, 31167])->where('created_at', 'LIKE', '%2025-07-04%')->get();
 
-        $untreated = [];
-        foreach ($dispatched_products as $dispatched_product) {
-            $old_item_stock_sub_batch_id = $dispatched_product->item_stock_sub_batch_id;
-            $quantity = $dispatched_product->quantity_supplied;
-            $item_id = $dispatched_product->item_id;
-            $waybill_item_id = $dispatched_product->waybill_item_id;
-            $warehouse_id = $dispatched_product->warehouse_id;
-            $stock = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
-                ->whereRaw('confirmed_by IS NOT NULL')
-                ->whereRaw("balance - reserved_for_supply >= $quantity")
-                ->first();
-            if (!$stock) {
-                $untreated[] = $old_item_stock_sub_batch_id;
-            } else {
+        // $untreated = [];
+        // foreach ($dispatched_products as $dispatched_product) {
+        //     $old_item_stock_sub_batch_id = $dispatched_product->item_stock_sub_batch_id;
+        //     $quantity = $dispatched_product->quantity_supplied;
+        //     $item_id = $dispatched_product->item_id;
+        //     $waybill_item_id = $dispatched_product->waybill_item_id;
+        //     $warehouse_id = $dispatched_product->warehouse_id;
+        //     $stock = ItemStockSubBatch::where(['item_id' => $item_id, 'warehouse_id' => $warehouse_id])
+        //         ->whereRaw('confirmed_by IS NOT NULL')
+        //         ->whereRaw("balance - reserved_for_supply >= $quantity")
+        //         ->first();
+        //     if (!$stock) {
+        //         $untreated[] = $old_item_stock_sub_batch_id;
+        //     } else {
 
-                $dispatched_product->item_stock_sub_batch_id = $stock->id;
-                $dispatched_product->save();
+        //         $dispatched_product->item_stock_sub_batch_id = $stock->id;
+        //         $dispatched_product->save();
 
-                $former_stock = ItemStockSubBatch::find($old_item_stock_sub_batch_id);
-                $former_stock->balance += $quantity;
-                $former_stock->supplied -= $quantity;
-                $former_stock->in_transit -= $quantity;
-                $former_stock->save();
+        //         $former_stock = ItemStockSubBatch::find($old_item_stock_sub_batch_id);
+        //         $former_stock->balance += $quantity;
+        //         $former_stock->supplied -= $quantity;
+        //         $former_stock->in_transit -= $quantity;
+        //         $former_stock->save();
 
-                $invoice_batch = InvoiceItemBatch::where(['waybill_item_id' => $waybill_item_id, 'item_stock_sub_batch_id' => $old_item_stock_sub_batch_id])->first();
-                $invoice_batch->item_stock_sub_batch_id = $stock->id;
-                $invoice_batch->save();
+        //         $invoice_batch = InvoiceItemBatch::where(['waybill_item_id' => $waybill_item_id, 'item_stock_sub_batch_id' => $old_item_stock_sub_batch_id])->first();
+        //         $invoice_batch->item_stock_sub_batch_id = $stock->id;
+        //         $invoice_batch->save();
 
-                $stock->balance -= $quantity;
-                $stock->supplied += $quantity;
-                $stock->save();
-            }
-        }
-        return $untreated;
-        // ItemStockSubBatch::chunkById(200, function (Collection $item_stock_batches) {
-        //     foreach ($item_stock_batches as $item_stock_batch) {
-        //         $item_stock_batch_id = $item_stock_batch->id;
-        //         $total = DispatchedProduct::where('item_stock_sub_batch_id', $item_stock_batch_id)->select(\DB::raw('SUM(quantity_supplied) as supplied'))->first();
-        //         $transferred = TransferRequestDispatchedProduct::where('item_stock_sub_batch_id', $item_stock_batch_id)->select(\DB::raw('SUM(quantity_supplied) as supplied'))->first();
-
-        //         $stocked_quantity = $item_stock_batch->quantity;
-        //         $supplied = $total->supplied;
-        //         $transferred = $transferred->supplied;
-
-        //         $total_out = $supplied + $transferred;
-
-        //         $item_stock_batch->total_out = $total_out;
-        //         $item_stock_batch->total_sold = $supplied;
-        //         $item_stock_batch->total_transferred = $transferred;
-        //         $item_stock_batch->balance = $stocked_quantity - $total_out;
-        //         $item_stock_batch->supplied = $total_out;
-        //         $item_stock_batch->save();
+        //         $stock->balance -= $quantity;
+        //         $stock->supplied += $quantity;
+        //         $stock->save();
         //     }
-        // }, $column = 'id');
-        ini_set('memory_limit', '128M');
+        // }
+        // return $untreated;
+        // // ItemStockSubBatch::chunkById(200, function (Collection $item_stock_batches) {
+        // //     foreach ($item_stock_batches as $item_stock_batch) {
+        // //         $item_stock_batch_id = $item_stock_batch->id;
+        // //         $total = DispatchedProduct::where('item_stock_sub_batch_id', $item_stock_batch_id)->select(\DB::raw('SUM(quantity_supplied) as supplied'))->first();
+        // //         $transferred = TransferRequestDispatchedProduct::where('item_stock_sub_batch_id', $item_stock_batch_id)->select(\DB::raw('SUM(quantity_supplied) as supplied'))->first();
+
+        // //         $stocked_quantity = $item_stock_batch->quantity;
+        // //         $supplied = $total->supplied;
+        // //         $transferred = $transferred->supplied;
+
+        // //         $total_out = $supplied + $transferred;
+
+        // //         $item_stock_batch->total_out = $total_out;
+        // //         $item_stock_batch->total_sold = $supplied;
+        // //         $item_stock_batch->total_transferred = $transferred;
+        // //         $item_stock_batch->balance = $stocked_quantity - $total_out;
+        // //         $item_stock_batch->supplied = $total_out;
+        // //         $item_stock_batch->save();
+        // //     }
+        // // }, $column = 'id');
+        // ini_set('memory_limit', '128M');
         // $item_stock_batches = ItemStockSubBatch::get();
         // foreach ($item_stock_batches as $item_stock_batch) {
         //     $item_stock_batch->reserved_for_supply = 0;

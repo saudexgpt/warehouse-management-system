@@ -11,7 +11,7 @@
 */
 // api to fetch all registered products for external requests
 
-$router->get('stabilize-delivery-trip-to-waybill-relationship', 'Invoice\InvoicesController@stabilizeDeliveryTripToWaybillRelationship');
+// $router->get('stabilize-delivery-trip-to-waybill-relationship', 'Invoice\InvoicesController@stabilizeDeliveryTripToWaybillRelationship');
 $router->get('get-warehouse-products', 'ApiController@warehouseProducts');
 $router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
 
@@ -22,8 +22,8 @@ $router->get('check-already-received-stock', 'ApiController@checkAlreadyReceived
 
 $router->get('fetch-reps-details', 'ApiController@fetchRepsForTransferToSalesApp');
 // $router->post('fetch-reps-details', 'ApiController@fetchRepsForTransferToSalesApp');
-$router->get('resolve-incomplete-supplies', 'Controller@resolveIncompleteSupplies');
-$router->get('partial-invoices', 'Controller@normalizePartialSuppliedInvoices');
+// $router->get('resolve-incomplete-supplies', 'Controller@resolveIncompleteSupplies');
+// $router->get('partial-invoices', 'Controller@normalizePartialSuppliedInvoices');
 $router->get('hello-message', function () {
     return response()->json(['message' => 'Hello World'], 200);
 });
@@ -52,7 +52,7 @@ $router->post('auth/login', 'AuthController@login');
 // $router->get('stock-balance-product', 'DebugController@balanceStockAccountPerProduct');
 // $router->get('balance-invoice-items', 'DebugController@balanceInvoiceItems');
 // $router->get('stabilize-account', 'DeproductbugController@stabilizeAccount');
-$router->get('reset', 'DebugController@resetStock');
+// $router->get('reset', 'DebugController@resetStock');
 // $router->get('split', 'DebugController@splitExcessStock');
 // $router->get('stabilize-invoice-items', 'Invoice\InvoicesController@stabilizeInvoiceItems');
 // $router->get('deliver-items', 'Invoice\InvoicesController@deliverProducts');
