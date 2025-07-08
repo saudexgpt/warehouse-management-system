@@ -13,7 +13,7 @@
 
 // $router->get('stabilize-delivery-trip-to-waybill-relationship', 'Invoice\InvoicesController@stabilizeDeliveryTripToWaybillRelationship');
 $router->get('get-warehouse-products', 'ApiController@warehouseProducts');
-$router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
+// $router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
 
 $router->post('receive-rep-stock', 'ApiController@sendRepStock');
 $router->put('mark-stock-as-received/{dispatchProduct}', 'ApiController@flagSupplyAsReceived');
@@ -52,7 +52,7 @@ $router->post('auth/login', 'AuthController@login');
 // $router->get('stock-balance-product', 'DebugController@balanceStockAccountPerProduct');
 // $router->get('balance-invoice-items', 'DebugController@balanceInvoiceItems');
 // $router->get('stabilize-account', 'DeproductbugController@stabilizeAccount');
-$router->get('reset', 'DebugController@resetStock');
+// $router->get('reset', 'DebugController@resetStock');
 // $router->get('split', 'DebugController@splitExcessStock');
 // $router->get('stabilize-invoice-items', 'Invoice\InvoicesController@stabilizeInvoiceItems');
 // $router->get('deliver-items', 'Invoice\InvoicesController@deliverProducts');
