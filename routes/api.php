@@ -52,7 +52,7 @@ $router->post('auth/login', 'AuthController@login');
 // $router->get('stock-balance-product', 'DebugController@balanceStockAccountPerProduct');
 // $router->get('balance-invoice-items', 'DebugController@balanceInvoiceItems');
 // $router->get('stabilize-account', 'DeproductbugController@stabilizeAccount');
-// $router->get('reset', 'DebugController@resetStock');
+$router->get('reset', 'DebugController@resetStock');
 // $router->get('split', 'DebugController@splitExcessStock');
 // $router->get('stabilize-invoice-items', 'Invoice\InvoicesController@stabilizeInvoiceItems');
 // $router->get('deliver-items', 'Invoice\InvoicesController@deliverProducts');

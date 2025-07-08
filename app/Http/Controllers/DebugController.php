@@ -92,8 +92,22 @@ class DebugController extends Controller
     }
     public function resetStock()
     {
-        // set_time_limit(0);
-        // ini_set('memory_limit', '1024M');
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M');
+        InvoiceItemBatch::where('quantity', '>', 0)
+            ->groupBy('item_stock_sub_batch_id')
+            ->select('*', \DB::raw('SUM(quantity) as reserved'))
+            ->chunkById(200, function (Collection $invoice_batches) {
+                foreach ($invoice_batches as $invoice_batch) {
+                    $item_stock_batch_id = $invoice_batch->item_stock_sub_batch_id;
+                    $item_stock_batch = ItemStockSubBatch::find($item_stock_batch_id);
+
+                    $item_stock_batch->reserved_for_supply = $invoice_batch->reserved;
+                    $item_stock_batch->save();
+                }
+            }, $column = 'id');
+        //         $invoice_batch->item_stock_sub_batch_id = $stock->id;
+        //         $invoice_batch->save();
         // $dispatched_products = DispatchedProduct::whereIn('item_stock_sub_batch_id', [12622, 12693, 14177, 14391, 15550, 16668, 17020, 17487, 17960, 19172, 19568, 20198, 20235, 21769, 23568, 24139, 25414, 25802, 25989, 27545, 27614, 28549, 28992, 29223, 29224, 29278, 29533, 29836, 29854, 30073, 30144, 30486, 30929, 30931, 30935, 31167])->where('created_at', 'LIKE', '%2025-07-04%')->get();
 
         // $untreated = [];
