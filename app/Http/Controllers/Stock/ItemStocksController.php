@@ -8,6 +8,7 @@ use App\Models\Invoice\WaybillItem;
 use App\Models\Stock\Category;
 use App\Models\Stock\ExpiredProduct;
 use App\Models\Stock\Item;
+use App\Models\Stock\ItemPrice;
 use App\Models\Stock\ItemStock;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Stock\StockCount;
@@ -274,8 +275,10 @@ class ItemStocksController extends Controller
             $item_stock_sub_batch->warehouse_id = $request->warehouse_id;
             $item_stock_sub_batch->expired_from = (isset($request->expired_from)) ? $request->expired_from : NULL;
             $item_stock_sub_batch->confirmed_by = (isset($request->confirmed_by)) ? $request->confirmed_by : NULL;
-
-            $item_stock_sub_batch->item_id = $batch['item_id'];
+            $item_id = $batch['item_id'];
+            $item_price = ItemPrice::where('item_id', $item_id)->first();
+            $item_stock_sub_batch->item_id = $item_id;
+            $item_stock_sub_batch->price = ($item_price) ? $item_price->sale_price : 0.00;
             $item_stock_sub_batch->batch_no = $batch['batch_no'];
             $item_stock_sub_batch->sub_batch_no = $batch['batch_no'];
             $item_stock_sub_batch->quantity = $batch['quantity'];

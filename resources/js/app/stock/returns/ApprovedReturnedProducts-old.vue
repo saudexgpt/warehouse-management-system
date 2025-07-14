@@ -1,26 +1,13 @@
 <template>
   <div class="app-container">
-    <!-- <el-button
+    <el-button
       :loading="downloadLoading"
       style="margin:0 0 20px 20px;"
       type="primary"
       icon="document"
       @click="handleDownload"
-    >Export Excel</el-button> -->
-    <el-popover
-      placement="right"
-      trigger="click"
-    >
-      <date-range-picker :from="$route.query.from" :to="$route.query.to" :panel="panel" :panels="panels" :submit-title="submitTitle" :future="future" @update="setDateRange" />
-      <el-button id="pick_outbound_date2" slot="reference" type="success">
-        <i class="el-icon-date" /> Export Excel
-      </el-button>
-    </el-popover>
+    >Export Excel</el-button>
     <v-client-table v-model="returned_products" :columns="columns" :options="options">
-      <div slot="child_row" slot-scope="{row}">
-        <Details :products="row.products" @update="fetchItemStocks" />
-
-      </div>
       <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
         <!-- {{ row.quantity }} -->
         {{ row.quantity }} {{ row.item.package_type }}
@@ -31,7 +18,7 @@
         {{ row.quantity_approved }} {{ row.item.package_type }}
 
       </div>
-      <div slot="expiry_date" slot-scope="{row}" :class="'alert alert-'+ expiryFlag(moment(row.expiry_date).format('x'))">
+      <div slot="expiry_date" slot-scope="{row}">
         <span>
           {{ moment(row.expiry_date).calendar() }}
         </span>
@@ -40,16 +27,18 @@
         {{ moment(row.created_at).calendar() }}
 
       </div>
-      <div slot="confirmer.name" slot-scope="{row}">
+      <!-- <div slot="confirmer.name" slot-scope="{row}">
         <div :id="row.id">
-          <div v-if="row.confirmed_by == null">
-            <a v-if="checkPermission(['audit confirm actions']) && row.stocked_by !== userId" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(row.id);"><i class="fa fa-check" /> </a>
-          </div>
-          <div v-else>
-            {{ row.confirmer.name }}
-          </div>
+          {{ row.confirmer.name }}
         </div>
-      </div>
+      </div> -->
+      <!-- <div slot="action" slot-scope="props">
+        <span>
+          <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
+
+          <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)"><i class="fa fa-check" /> </a>
+        </span>
+      </div> -->
 
     </v-client-table>
     <el-row :gutter="20">
@@ -69,7 +58,6 @@ import { parseTime } from '@/utils';
 import Pagination from '@/components/Pagination';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
-import Details from './partials/ApprovedDetails';
 
 import Resource from '@/api/resource';
 // import Vue from 'vue';
@@ -80,7 +68,6 @@ export default {
   name: 'Returns',
   components: {
     Pagination,
-    Details,
   },
   data() {
     return {
@@ -89,7 +76,7 @@ export default {
       downloadLoading: false,
       warehouses: [],
       returned_products: [],
-      columns: ['returns_no', 'stocker.name', 'customer_name', 'date_returned'],
+      columns: ['stock_return.returns_no', 'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {
@@ -125,9 +112,6 @@ export default {
         warehouse_id: 7,
         page: 1,
         limit: 10,
-        from: '',
-        to: '',
-        panel: '',
       },
       total: 0,
       in_warehouse: '',
@@ -173,26 +157,6 @@ export default {
           loader.hide();
           console.log(error.message);
         });
-    },
-    format(date) {
-      var month = date.toLocaleString('en-US', { month: 'short' });
-      return month + ' ' + date.getDate() + ', ' + date.getFullYear();
-    },
-    setDateRange(values){
-      const app = this;
-      document.getElementById('pick_outbound_date2').click();
-      let panel = app.panel;
-      let from = app.week_start;
-      let to = app.week_end;
-      if (values !== '') {
-        to = this.format(new Date(values.to));
-        from = this.format(new Date(values.from));
-        panel = values.panel;
-      }
-      app.form.from = from;
-      app.form.to = to;
-      app.form.panel = panel;
-      app.handleDownload();
     },
     formatPackageType(type){
       var formated_type = type + 's';

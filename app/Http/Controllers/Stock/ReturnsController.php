@@ -7,6 +7,7 @@ use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Stock\ReturnedProduct;
 use App\Models\Stock\StockReturn;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class ReturnsController extends Controller
 {
@@ -15,9 +16,25 @@ class ReturnsController extends Controller
     {
         //
         $warehouse_id = $request->warehouse_id;
-        $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
+        // $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
+        //     ->where('warehouse_id', $warehouse_id)
+        //     ->whereRaw('quantity > quantity_approved')
+        //     ->orderBy('id', 'DESC')
+        //     ->paginate($request->limit);
+        $returned_products = StockReturn::with([
+            'products' => function ($q) {
+                $q->whereRaw('quantity > quantity_approved');
+            },
+            'products.item',
+            'products.confirmer',
+            'customer',
+            'stocker'
+        ])
             ->where('warehouse_id', $warehouse_id)
-            ->whereRaw('quantity > quantity_approved')
+            ->whereHas('products', function ($query) {
+                $query->whereRaw('quantity > quantity_approved');
+            })
+            // ->whereRaw('quantity > quantity_approved')
             ->orderBy('id', 'DESC')
             ->paginate($request->limit);
         return response()->json(compact('returned_products'));
@@ -42,17 +59,59 @@ class ReturnsController extends Controller
             $is_download = $request->is_download;
         }
         if ($is_download == 'yes') {
+            $date_from = Carbon::now()->startOfMonth();
+            $date_to = Carbon::now()->endOfMonth();
+            $panel = 'month';
+            if (isset($request->from, $request->to)) {
+                $date_from = date('Y-m-d', strtotime($request->from)) . ' 00:00:00';
+                $date_to = date('Y-m-d', strtotime($request->to)) . ' 23:59:59';
+                $panel = $request->panel;
+            }
+            // $returned_products = StockReturn::with([
+            //     'products' => function ($q) {
+            //         $q->whereRaw('quantity = quantity_approved');
+            //     },
+            //     'products.item',
+            //     'products.confirmer',
+            //     'customer',
+            //     'stocker'
+            // ])
+            //     ->where('warehouse_id', $warehouse_id)
+            //     ->whereHas('products', function ($query) {
+            //         $query->whereRaw('quantity = quantity_approved');
+            //     })
+            //     // ->whereRaw('quantity > quantity_approved')
+            //     ->orderBy('id', 'DESC')
+            //     ->get();
             $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
                 ->where('warehouse_id', $warehouse_id)
                 ->whereRaw('quantity = quantity_approved')
+                ->where('created_at', '>=', $date_from)
+                ->where('created_at', '<=', $date_to)
                 ->orderBy('id', 'DESC')
                 ->get();
         } else {
-            $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
+            $returned_products = StockReturn::with([
+                'products' => function ($q) {
+                    $q->whereRaw('quantity = quantity_approved');
+                },
+                'products.item',
+                'products.confirmer',
+                'customer',
+                'stocker'
+            ])
                 ->where('warehouse_id', $warehouse_id)
-                ->whereRaw('quantity = quantity_approved')
+                ->whereHas('products', function ($query) {
+                    $query->whereRaw('quantity = quantity_approved');
+                })
+                // ->whereRaw('quantity > quantity_approved')
                 ->orderBy('id', 'DESC')
                 ->paginate($request->limit);
+            // $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
+            //     ->where('warehouse_id', $warehouse_id)
+            //     ->whereRaw('quantity = quantity_approved')
+            //     ->orderBy('id', 'DESC')
+            //     ->paginate($request->limit);
         }
         // $items_in_stock = ItemStock::with(['warehouse', 'item'])->groupBy('item_id')->having('warehouse_id', $warehouse_id)
         // ->select('*',\DB::raw('SUM(quantity) as total_quantity'))->get();
@@ -89,6 +148,7 @@ class ReturnsController extends Controller
             $returned_product->warehouse_id = $request->warehouse_id;
             $returned_product->return_id = $stock_return->id;
             $returned_product->item_id = $returns_item->item_id;
+            $returned_product->price = $returns_item->price;
             $returned_product->batch_no = $returns_item->batch_no;
             $returned_product->customer_id = $request->customer_id;
             $returned_product->customer_name = $request->customer_name;
@@ -138,6 +198,7 @@ class ReturnsController extends Controller
     {
         //
         $returned_product->item_id = $request->item_id;
+        $returned_product->price = $request->price;
         $returned_product->batch_no = $request->batch_no;
         $returned_product->customer_name = $request->customer_name;
         $returned_product->expiry_date = $request->expiry_date;
@@ -182,6 +243,7 @@ class ReturnsController extends Controller
         $item_stock_sub_batch->stocked_by = $user->id;
         $item_stock_sub_batch->warehouse_id = $warehouse_id;
         $item_stock_sub_batch->item_id = $details->item_id;
+        $item_stock_sub_batch->price = $details->price;
         $item_stock_sub_batch->batch_no = $details->batch_no;
         $item_stock_sub_batch->sub_batch_no = $details->batch_no;
         $item_stock_sub_batch->quantity = $approved_quantity;

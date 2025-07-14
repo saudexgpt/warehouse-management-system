@@ -166,7 +166,7 @@
                               filterable
                               class="span"
                               :disabled="can_submit"
-                              @input="invoice_item.batch_no = $event.batch_no; invoice_item.expiry_date = $event.expiry_date;"
+                              @input="invoice_item.batch_no = $event.batch_no; invoice_item.expiry_date = $event.expiry_date; invoice_item.price = $event.price;"
                             >
                               <el-option
                                 v-for="(batch, item_index) in invoice_item.batches"
@@ -176,7 +176,8 @@
                               />
                             </el-select>
                             <el-tag>Batch No: {{ invoice_item.batch_no }}</el-tag><br>
-                            <el-tag>Expiry Date: {{ invoice_item.expiry_date }}</el-tag>
+                            <el-tag>Expiry Date: {{ invoice_item.expiry_date }}</el-tag><br>
+                            <el-tag>Price: {{ invoice_item.price }}</el-tag>
                           </td>
                           <td>
                             <el-select v-model="invoice_item.reason" placeholder="Select Reason" filterable class="span">
@@ -309,6 +310,7 @@ export default {
             load: false,
             item_id: '',
             quantity: '',
+            price: '',
             batch_no: '',
             batches: [],
             expiry_date: '',
@@ -441,6 +443,7 @@ export default {
           item: null,
           load: false,
           item_id: '',
+          price: 0.00,
           quantity: 0,
           batches: [],
           batch_no: '',

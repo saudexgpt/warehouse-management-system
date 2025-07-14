@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ItemStockSubBatch extends Model
 {
     use SoftDeletes;
+
+    protected $fillable = ['price'];
     //
     // protected static function booted()
     // {

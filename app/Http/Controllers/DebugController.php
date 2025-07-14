@@ -7,6 +7,7 @@ use App\Models\Invoice\InvoiceItem;
 use App\Models\Invoice\InvoiceItemBatch;
 use App\Models\Invoice\WaybillItem;
 use App\Models\Stock\Item;
+use App\Models\Stock\ItemPrice;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Transfers\TransferRequestDispatchedProduct;
 use Illuminate\Database\Eloquent\Collection;
@@ -92,8 +93,15 @@ class DebugController extends Controller
     }
     public function resetStock()
     {
-        // set_time_limit(0);
-        // ini_set('memory_limit', '1024M');
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M');
+        ItemPrice::chunkById(200, function (Collection $itemPrices) {
+            foreach ($itemPrices as $itemPrice) {
+                $item_id = $itemPrice->item_id;
+                $price = $itemPrice->sale_price;
+                ItemStockSubBatch::where('item_id', $item_id)->update(['price' => $price]);
+            }
+        }, $column = 'id');
         // InvoiceItemBatch::where('quantity', '>', 0)
         //     ->groupBy('item_stock_sub_batch_id')
         //     ->select('*', \DB::raw('SUM(quantity) as reserved'))

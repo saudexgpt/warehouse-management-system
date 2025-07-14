@@ -1,119 +1,82 @@
 <template>
   <div class="app-container">
     <!-- <item-details v-if="page.option== 'view_details'" :item-in-stock="returnedProduct" :page="page" /> -->
-    <add-new-returns v-if="page.option== 'add_new'" :returned-products="returned_products" :params="params" :page="page" @update="fetchItemStocks" />
+    <!-- <add-new-returns v-if="page.option== 'add_new'" :returned-products="products" :params="params" :page="page" @update="fetchItemStocks" /> -->
 
     <edit-returns v-if="page.option== 'edit_returns'" :returned-product="returnedProduct" :params="params" :page="page" @update="onEditUpdate" />
     <div v-if="page.option=='list'" class="box">
-      <div class="box-header">
-        <h4 class="box-title">List of Returned Products {{ in_warehouse }}</h4>
+      <!-- <el-button
+        :loading="downloadLoading"
+        style="margin:0 0 20px 20px;"
+        type="primary"
+        icon="document"
+        @click="handleDownload"
+      >Export Excel</el-button> -->
+      <v-client-table v-model="products" :columns="columns" :options="options">
+        <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
+          <!-- {{ row.quantity }} -->
+          {{ row.quantity }} {{ row.item.package_type }}
 
-        <span class="pull-right">
-          <a v-if="checkPermission(['manage returned products'])" class="btn btn-info" @click="page.option = 'add_new'"> Add New</a>
-        </span>
+        </div>
+        <div slot="quantity_approved" slot-scope="{row}" class="alert alert-info">
+          <!-- {{ row.quantity_approved }} -->
+          {{ row.quantity_approved }} {{ row.item.package_type }}
 
-      </div>
-      <div v-loading="load" class="box-body">
-        <el-col :xs="24" :sm="12" :md="12">
-          <label for="">Select Warehouse</label>
-          <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" class="span" filterable @input="fetchItemStocks">
-            <el-option
-              v-for="(warehouse, index) in warehouses"
-              :key="index"
-              :value="warehouse.id"
-              :label="warehouse.name"
-              :disabled="warehouse.id !== 7"
-            />
+        </div>
+        <div slot="expiry_date" slot-scope="{row}" :class="'alert alert-'+ expiryFlag(moment(row.expiry_date).format('x'))">
+          <span>
+            {{ moment(row.expiry_date).calendar() }}
+          </span>
+        </div>
+        <div slot="created_at" slot-scope="{row}">
+          {{ moment(row.created_at).calendar() }}
 
-          </el-select>
+        </div>
+        <div slot="confirmer.name" slot-scope="{row}">
+          <div :id="row.id">
+            <div v-if="row.confirmed_by == null">
+              <a v-if="checkPermission(['audit confirm actions']) && row.stocked_by !== userId" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(row.id);"><i class="fa fa-check" /> </a>
+            </div>
+            <div v-else>
+              {{ row.confirmer.name }}
+            </div>
+          </div>
+        </div>
+        <div slot="action" slot-scope="props">
+          <span>
+            <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
 
-        </el-col>
-        <br><br><br><br>
-        <el-tabs v-model="activeActivity">
-          <el-tab-pane label="Unapproved" name="unapproved">
-            <!-- <el-button
-              :loading="downloadLoading"
-              style="margin:0 0 20px 20px;"
-              type="primary"
-              icon="document"
-              @click="handleDownload"
-            >Export Excel</el-button> -->
-            <v-client-table v-model="returned_products" :columns="columns" :options="options">
-              <div slot="child_row" slot-scope="{row}">
-                <Details :products="row.products" @update="fetchItemStocks" />
+            <!-- <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)" /> -->
 
+            <el-popover
+              placement="right"
+              width="400"
+              trigger="click"
+            >
+              <el-input v-model="approvalForm.approved_quantity" type="number" placeholder="Enter quantity for approval" />
+              <div style="text-align: right; margin: 0">
+                <el-button type="danger" @click="dialogVisible = false; approvalForm.approved_quantity = null">Clear</el-button>
+                <el-button type="primary" @click="approveProduct(); ">Approve</el-button>
               </div>
-              <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
-                <!-- {{ row.quantity }} -->
-                {{ row.quantity }} {{ row.item.package_type }}
+              <el-button v-if="props.row.confirmed_by !== null && checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" slot="reference" type="success" round @click="openDialog(props.row, props.index, false)">
+                <el-tooltip content="Approve Product" placement="top">
+                  <i class="fa fa-check" />
+                </el-tooltip>
+              </el-button>
+            </el-popover>
+          </span>
+        </div>
 
-              </div>
-              <div slot="quantity_approved" slot-scope="{row}" class="alert alert-info">
-                <!-- {{ row.quantity_approved }} -->
-                {{ row.quantity_approved }} {{ row.item.package_type }}
-
-              </div>
-              <div slot="expiry_date" slot-scope="{row}" :class="'alert alert-'+ expiryFlag(moment(row.expiry_date).format('x'))">
-                <span>
-                  {{ moment(row.expiry_date).calendar() }}
-                </span>
-              </div>
-              <div slot="created_at" slot-scope="{row}">
-                {{ moment(row.created_at).calendar() }}
-
-              </div>
-              <div slot="confirmer.name" slot-scope="{row}">
-                <div :id="row.id">
-                  <div v-if="row.confirmed_by == null">
-                    <a v-if="checkPermission(['audit confirm actions']) && row.stocked_by !== userId" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(row.id);"><i class="fa fa-check" /> </a>
-                  </div>
-                  <div v-else>
-                    {{ row.confirmer.name }}
-                  </div>
-                </div>
-              </div>
-              <div slot="action" slot-scope="props">
-                <span>
-                  <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
-
-                  <!-- <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)" /> -->
-
-                  <el-popover
-                    placement="right"
-                    width="400"
-                    trigger="click"
-                  >
-                    <el-input v-model="approvalForm.approved_quantity" type="number" placeholder="Enter quantity for approval" />
-                    <div style="text-align: right; margin: 0">
-                      <el-button type="danger" @click="dialogVisible = false; approvalForm.approved_quantity = null">Cancel</el-button>
-                      <el-button type="primary" @click="approveProduct(); ">Approve</el-button>
-                    </div>
-                    <el-button v-if="props.row.confirmed_by !== null && checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" slot="reference" type="success" round @click="openDialog(props.row, props.index, false)">
-                      <el-tooltip content="Approve Product" placement="top">
-                        <i class="fa fa-check" />
-                      </el-tooltip>
-                    </el-button>
-                  </el-popover>
-                </span>
-              </div>
-
-            </v-client-table>
-            <el-row :gutter="20">
-              <pagination
-                v-show="total > 0"
-                :total="total"
-                :page.sync="form.page"
-                :limit.sync="form.limit"
-                @pagination="fetchItemStocks"
-              />
-            </el-row>
-          </el-tab-pane>
-          <el-tab-pane label="Approved" name="approved">
-            <approved-returned-products />
-          </el-tab-pane>
-        </el-tabs>
-
-      </div>
+      </v-client-table>
+      <el-row :gutter="20">
+        <pagination
+          v-show="total > 0"
+          :total="total"
+          :page.sync="form.page"
+          :limit.sync="form.limit"
+          @pagination="fetchItemStocks"
+        />
+      </el-row>
       <el-dialog
         title="Confirm Quantity for Approval"
         :visible.sync="dialogVisible"
@@ -137,10 +100,7 @@ import { parseTime } from '@/utils';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 import Pagination from '@/components/Pagination';
-import ApprovedReturnedProducts from './ApprovedReturnedProducts';
-import AddNewReturns from './partials/AddNewReturns';
-import EditReturns from './partials/EditReturns';
-import Details from './partials/Details';
+import EditReturns from './EditReturns';
 import Resource from '@/api/resource';
 // import Vue from 'vue';
 // const necessaryParams = new Resource('fetch-necessary-params');
@@ -150,7 +110,13 @@ const approveReturnedProducts = new Resource('stock/returns/approve-products');
 const confirmItemReturned = new Resource('audit/confirm/returned-products');
 export default {
   name: 'Returns',
-  components: { Details, ApprovedReturnedProducts, AddNewReturns, EditReturns, Pagination },
+  components: { EditReturns, Pagination },
+  props: {
+    products: {
+      type: Array,
+      required: true,
+    },
+  },
   data() {
     return {
       activeActivity: 'unapproved',
@@ -158,12 +124,10 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      returned_products: [],
-      columns: ['returns_no', 'stocker.name', 'customer_name', 'date_returned'],
+      columns: ['action', 'confirmer.name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {
-          returns_no: 'Return No.',
           'confirmer.name': 'Confirmed By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
@@ -184,8 +148,8 @@ export default {
           filter: 'Search:',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['returns_no', 'date_returned'],
-        filterable: ['returns_no', 'date_returned'],
+        sortable: ['item.name', 'batch_no', 'expiry_date', 'date_returned'],
+        filterable: ['item.name', 'batch_no', 'expiry_date', 'date_returned'],
       },
       page: {
         option: 'list',
@@ -223,7 +187,7 @@ export default {
   },
   mounted() {
     // this.getWarehouse();
-    this.fetchNecessaryParams();
+    // this.fetchNecessaryParams();
   },
   beforeDestroy() {
 
@@ -275,12 +239,12 @@ export default {
       const param = app.form;
       returnedProducts.list(param)
         .then(response => {
-          app.returned_products = response.returned_products;
-          app.returned_products = response.returned_products.data;
-          app.returned_products.forEach((element, index) => {
+          app.products = response.products;
+          app.products = response.products.data;
+          app.products.forEach((element, index) => {
             element['index'] = (page - 1) * limit + index + 1;
           });
-          app.total = response.returned_products.total;
+          app.total = response.products.total;
           // app.in_warehouse = 'in ' + app.warehouses[param.warehouse_index].name;
           loader.hide();
         })
@@ -292,8 +256,7 @@ export default {
 
     onEditUpdate(updated_row) {
       const app = this;
-      // app.returned_products.splice(app.returnedProduct.index-1, 1);
-      app.returned_products[app.selected_row_index - 1] = updated_row;
+      app.$emit('update');
     },
     expiryFlag(date){
       const product_expiry_date_alert = this.product_expiry_date_alert_in_months;
@@ -314,7 +277,7 @@ export default {
     //   if (confirm(message)) {
     //     deleteItemInStock.destroy(row.id, row)
     //       .then(response => {
-    //         app.returned_products.splice(row.index - 1, 1);
+    //         app.products.splice(row.index - 1, 1);
     //         this.$message({
     //           message: 'Item has been deleted',
     //           type: 'success',
@@ -342,8 +305,10 @@ export default {
           app.load = true;
           approveReturnedProducts.store(param)
             .then(response => {
-              // app.returned_products[app.selected_row_index - 1] = response.returned_product;
-              app.fetchItemStocks();
+              // app.products[app.selected_row_index - 1] = response.returned_product;
+              // app.fetchItemStocks();
+              app.$message('Action Successful');
+              app.$emit('update');
               app.load = false;
             })
             .catch(error => {
@@ -370,7 +335,7 @@ export default {
       this.downloadLoading = true;
       const param = this.form;
       param.is_download = 'yes';
-      const { returned_products } = await returnedProducts.list(param);
+      const { products } = await returnedProducts.list(param);
       import('@/vendor/Export2Excel').then(excel => {
         const multiHeader = [[this.table_title, '', '', '', '', '', '', '', '', '']];
         const tHeader = [
@@ -387,7 +352,7 @@ export default {
         const filterVal = [
           'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned',
         ];
-        const list = returned_products;
+        const list = products;
         const data = this.formatJson(filterVal, list);
         excel.export_json_to_excel({
           multiHeader,

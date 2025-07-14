@@ -20,6 +20,8 @@
               <el-input v-model="form.customer_name" disabled placeholder="Customer Name" class="span" />
               <label for="">Quantity</label>
               <el-input v-model="form.quantity" type="text" placeholder="Quantity" class="span" />
+              <label for="">Price</label>
+              <el-input v-model="form.price" type="number" placeholder="Price" class="span" />
               <label for="">Batch No.</label>
               <el-input v-model="form.batch_no" placeholder="Batch No." class="span" />
             </el-col>
