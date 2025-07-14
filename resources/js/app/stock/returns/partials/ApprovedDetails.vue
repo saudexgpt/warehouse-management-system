@@ -89,7 +89,7 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      columns: ['confirmer.name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
+      columns: ['confirmer.name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {
@@ -307,6 +307,7 @@ export default {
           'STOCKED BY',
           'CUSTOMER NAME',
           'PRODUCT',
+          'PRICE',
           'BATCH NO.',
           'QUANTITY',
           'QUANTITY APPROVED',
@@ -315,7 +316,7 @@ export default {
           'DATE RETURNED',
         ];
         const filterVal = [
-          'stocker.name', 'customer_name', 'item.name', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned',
+          'stocker.name', 'customer_name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned',
         ];
         const list = products;
         const data = this.formatJson(filterVal, list);
