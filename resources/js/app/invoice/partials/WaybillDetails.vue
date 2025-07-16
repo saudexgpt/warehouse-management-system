@@ -407,11 +407,13 @@ export default {
       const batch_nos = [];
       const expiry_dates = [];
       batches.forEach(batch => {
-        if (!batch_nos.includes(batch.item_stock_batch.batch_no)) {
-          batch_nos.push(batch.item_stock_batch.batch_no);
-        }
-        if (!expiry_dates.includes(batch.item_stock_batch.expiry_date)) {
-          expiry_dates.push(batch.item_stock_batch.expiry_date);
+        if (batch.item_stock_batch) {
+          if (!batch_nos.includes(batch.item_stock_batch.batch_no)) {
+            batch_nos.push(batch.item_stock_batch.batch_no);
+          }
+          if (!expiry_dates.includes(batch.item_stock_batch.expiry_date)) {
+            expiry_dates.push(batch.item_stock_batch.expiry_date);
+          }
         }
       });
       if (option === 'batch') {
