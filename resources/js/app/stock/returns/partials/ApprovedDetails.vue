@@ -1,17 +1,40 @@
 <template>
   <div class="app-container">
-    <!-- <item-details v-if="page.option== 'view_details'" :item-in-stock="returnedProduct" :page="page" /> -->
-    <!-- <add-new-returns v-if="page.option== 'add_new'" :returned-products="products" :params="params" :page="page" @update="fetchItemStocks" /> -->
-
-    <edit-returns v-if="page.option== 'edit_returns'" :returned-product="returnedProduct" :params="params" :page="page" @update="onEditUpdate" />
-    <div v-if="page.option=='list'" class="box">
-      <!-- <el-button
-        :loading="downloadLoading"
-        style="margin:0 0 20px 20px;"
-        type="primary"
-        icon="document"
-        @click="handleDownload"
-      >Export Excel</el-button> -->
+    <el-button
+      type="primary"
+      icon="el-icon-printer"
+      @click="doPrint(returnData.id)"
+    >Print</el-button>
+    <div :id="returnData.id" class="box padded">
+      <div>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>
+                <label>Customer Name</label>
+                <address>
+                  <label>{{ returnData.customer_name.toUpperCase() }}</label>
+                </address>
+              </th>
+              <th>
+                <label>Stocked By</label>
+                <address>
+                  <strong>{{ returnData.stocker.name }}</strong>
+                </address>
+              </th>
+              <th>
+                <label>Returns No.: {{ returnData.returns_no }}</label>
+                <br>
+                <label>Date:</label>
+                {{
+                  moment(returnData.date_returned).format('MMMM Do YYYY')
+                }}
+                <br>
+              </th>
+            </tr>
+          </thead>
+        </table>
+      </div>
       <v-client-table v-model="products" :columns="columns" :options="options">
         <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
           <!-- {{ row.quantity }} -->
@@ -42,17 +65,15 @@
             </div>
           </div>
         </div>
+        <div slot="auditor.name" slot-scope="{row}">
+          <div :id="row.id">
+            {{ (row.auditor) ? row.auditor.name : '' }}
+            <br>
+            <el-tag v-if="row.audited_by !== null" style="cursor: pointer;" @click="$alert(row.auditor_comment)">View comment</el-tag>
+          </div>
+        </div>
 
       </v-client-table>
-      <el-row :gutter="20">
-        <pagination
-          v-show="total > 0"
-          :total="total"
-          :page.sync="form.page"
-          :limit.sync="form.limit"
-          @pagination="fetchItemStocks"
-        />
-      </el-row>
 
     </div>
 
@@ -64,8 +85,6 @@ import moment from 'moment';
 import { parseTime } from '@/utils';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
-import Pagination from '@/components/Pagination';
-import EditReturns from './EditReturns';
 import Resource from '@/api/resource';
 // import Vue from 'vue';
 // const necessaryParams = new Resource('fetch-necessary-params');
@@ -75,10 +94,13 @@ const approveReturnedProducts = new Resource('stock/returns/approve-products');
 const confirmItemReturned = new Resource('audit/confirm/returned-products');
 export default {
   name: 'Returns',
-  components: { EditReturns, Pagination },
   props: {
     products: {
       type: Array,
+      required: true,
+    },
+    returnData: {
+      type: Object,
       required: true,
     },
   },
@@ -89,10 +111,11 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      columns: ['confirmer.name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
+      columns: ['auditor.name', 'confirmer.name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date'],
 
       options: {
         headings: {
+          'auditor.name': 'Audited By',
           'confirmer.name': 'Confirmed By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
@@ -100,7 +123,6 @@ export default {
           expiry_date: 'Expiry Date',
           quantity: 'QTY',
           quantity_approved: 'QTY Approved',
-          date_returned: 'Date Returned',
 
           // id: 'S/N',
         },
@@ -108,13 +130,11 @@ export default {
           dropdown: true,
           chunk: 20,
         },
-        filterByColumn: true,
+        filterByColumn: false,
         texts: {
           filter: 'Search:',
         },
-        // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['item.name', 'batch_no', 'expiry_date', 'date_returned'],
-        filterable: ['item.name', 'batch_no', 'expiry_date', 'date_returned'],
+        filter: false,
       },
       page: {
         option: 'list',
@@ -161,6 +181,21 @@ export default {
     moment,
     checkPermission,
     checkRole,
+    doPrint(elementId) {
+      var prtContent = document.getElementById(elementId);
+      var WinPrint = window.open('', '', 'left=0,top=0,width=800,height=600,toolbar=0,scrollbars=1,status=0');
+      WinPrint.document.write(prtContent.innerHTML);
+      WinPrint.document.close();
+      WinPrint.focus();
+      WinPrint.print();
+      WinPrint.close();
+      // var printContent = document.getElementById(elementId).innerHTML;
+      // var originalContent = document.body.innerHTML;
+
+      // document.body.innerHTML = printContent; // Replace body content with the section
+      // window.print(); // Open the print dialog
+      // document.body.innerHTML = originalContent; // Restore the original content
+    },
     fetchNecessaryParams() {
       const app = this;
       app.$store.dispatch('app/setNecessaryParams');

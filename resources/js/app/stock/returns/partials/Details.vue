@@ -34,37 +34,61 @@
         </div>
         <div slot="confirmer.name" slot-scope="{row}">
           <div :id="row.id">
-            <div v-if="row.confirmed_by == null">
-              <a v-if="checkPermission(['audit confirm actions']) && row.stocked_by !== userId" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(row.id);"><i class="fa fa-check" /> </a>
-            </div>
-            <div v-else>
-              {{ row.confirmer.name }}
-            </div>
+            {{ (row.confirmer) ? row.confirmer.name : '' }}
+          </div>
+        </div>
+        <div slot="auditor.name" slot-scope="{row}">
+          <div :id="row.id">
+            {{ (row.auditor) ? row.auditor.name : '' }}
+            <br>
+            <el-tag v-if="row.audited_by !== null" style="cursor: pointer;" @click="$alert(row.auditor_comment)">View comment</el-tag>
           </div>
         </div>
         <div slot="action" slot-scope="props">
-          <span>
-            <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
-
-            <!-- <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)" /> -->
-
-            <el-popover
-              placement="right"
-              width="400"
-              trigger="click"
-            >
-              <el-input v-model="approvalForm.approved_quantity" type="number" placeholder="Enter quantity for approval" />
-              <div style="text-align: right; margin: 0">
-                <el-button type="danger" @click="dialogVisible = false; approvalForm.approved_quantity = null">Clear</el-button>
-                <el-button type="primary" @click="approveProduct(); ">Approve</el-button>
-              </div>
-              <el-button v-if="props.row.confirmed_by !== null && checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" slot="reference" type="success" round @click="openDialog(props.row, props.index, false)">
-                <el-tooltip content="Approve Product" placement="top">
-                  <i class="fa fa-check" />
-                </el-tooltip>
-              </el-button>
-            </el-popover>
-          </span>
+          <el-dropdown>
+            <el-button type="primary">
+              Action<i class="el-icon-arrow-down el-icon--right" />
+            </el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item v-if="checkPermission(['manage returned products'])">
+                <a class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> Edit</a>
+              </el-dropdown-item>
+              <el-dropdown-item v-if="checkPermission(['manage returned products']) && props.row.stocked_by !== userId && props.row.confirmed_by === null">
+                <a v-if="checkPermission(['audit confirm actions'])" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(props.row.id);"><i class="fa fa-check" /> Confirm</a>
+              </el-dropdown-item>
+              <el-dropdown-item v-if="checkPermission(['audit check returned products']) && props.row.confirmed_by !== null && props.row.audited_by === null">
+                <el-popover
+                  placement="right"
+                  width="400"
+                  trigger="click"
+                >
+                  <el-input v-model="auditCheckForm.comment" type="textarea" placeholder="Give a comment" />
+                  <div style="text-align: right; margin: 0">
+                    <el-button type="primary" @click="submitAuditorComment(props.row.id); ">Submit</el-button>
+                  </div>
+                  <el-button slot="reference" type="warning" round>
+                    <i class="fa fa-thumbs-up" /> Auditor's Check
+                  </el-button>
+                  <br>
+                </el-popover>
+              </el-dropdown-item>
+              <el-dropdown-item v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved) && props.row.audited_by !== null">
+                <el-popover
+                  placement="right"
+                  width="400"
+                  trigger="click"
+                >
+                  <el-input v-model="approvalForm.approved_quantity" type="number" placeholder="Enter quantity for approval" />
+                  <div style="text-align: right; margin: 0">
+                    <el-button type="primary" @click="approveProduct(); ">Approve</el-button>
+                  </div>
+                  <el-button slot="reference" type="success" round @click="openDialog(props.row, props.index, false)">
+                    <i class="fa fa-check" /> Approve
+                  </el-button>
+                </el-popover>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </div>
 
       </v-client-table>
@@ -124,11 +148,12 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      columns: ['action', 'confirmer.name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
+      columns: ['action', 'confirmer.name', 'auditor.name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {
           'confirmer.name': 'Confirmed By',
+          'auditor.name': 'Audited By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
           batch_no: 'Batch No.',
@@ -172,6 +197,9 @@ export default {
       approvalForm: {
         approved_quantity: null,
         product_details: '',
+      },
+      auditCheckForm: {
+        comment: '',
       },
       product_expiry_date_alert_in_months: 9, // defaults to 9 months
 
@@ -293,6 +321,31 @@ export default {
       app.approvalForm.product_details = product;
       app.selected_row_index = selected_row_index;
       app.dialogVisible = show;
+    },
+    submitAuditorComment(id) {
+      const app = this;
+
+      const { comment } = app.auditCheckForm;
+      if (comment !== '') {
+        app.dialogVisible = false;
+        app.load = true;
+        const approveReturnedProducts = new Resource('stock/returns/auditor-comment');
+        approveReturnedProducts.update(id, { comment })
+          .then(response => {
+            // app.products[app.selected_row_index - 1] = response.returned_product;
+            // app.fetchItemStocks();
+            app.$message('Action Successful');
+            app.$emit('update');
+            app.load = false;
+          })
+          .catch(error => {
+            app.load = false;
+            console.log(error.message);
+          });
+      } else {
+        app.$alert('Please give a comment to proceed');
+        return;
+      }
     },
     approveProduct(){
       const app = this;

@@ -303,17 +303,19 @@ export default {
         const batches = [];
         const item_stock_batch_nos = [];
         waybill_item_batches.forEach((invoice_item_batch) => {
-          const supply_quantity = invoice_item_batch.quantity_total;
-          item_stock_batch_nos.push(invoice_item_batch.item_stock_batch.batch_no);
-          batches.push({
-            waybill_batch_id: invoice_item_batch.id,
-            batch_no: invoice_item_batch.item_stock_batch.batch_no,
-            expiry_date: invoice_item_batch.item_stock_batch.expiry_date,
-            balance: invoice_item_batch.item_stock_batch.balance - (invoice_item_batch.item_stock_batch.reserved_for_supply - supply_quantity),
-            supply_quantity: supply_quantity,
-            old_supply_quantity: supply_quantity,
+          if (invoice_item_batch.item_stock_batch) {
+            const supply_quantity = invoice_item_batch.quantity_total;
+            item_stock_batch_nos.push(invoice_item_batch.item_stock_batch.batch_no);
+            batches.push({
+              waybill_batch_id: invoice_item_batch.id,
+              batch_no: invoice_item_batch.item_stock_batch.batch_no,
+              expiry_date: invoice_item_batch.item_stock_batch.expiry_date,
+              balance: invoice_item_batch.item_stock_batch.balance - (invoice_item_batch.item_stock_batch.reserved_for_supply - supply_quantity),
+              supply_quantity: supply_quantity,
+              old_supply_quantity: supply_quantity,
 
-          });
+            });
+          }
         });
         item_stocks.forEach(item_stock => {
           if (!item_stock_batch_nos.includes(item_stock.batch_no)) {

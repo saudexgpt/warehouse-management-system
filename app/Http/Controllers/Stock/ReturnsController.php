@@ -27,6 +27,7 @@ class ReturnsController extends Controller
             },
             'products.item',
             'products.confirmer',
+            'products.auditor',
             'customer',
             'stocker'
         ])
@@ -83,7 +84,7 @@ class ReturnsController extends Controller
             //     // ->whereRaw('quantity > quantity_approved')
             //     ->orderBy('id', 'DESC')
             //     ->get();
-            $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer'])
+            $returned_products = ReturnedProduct::with(['warehouse', 'stockReturn', 'item', 'stocker', 'confirmer', 'auditor'])
                 ->where('warehouse_id', $warehouse_id)
                 ->whereRaw('quantity = quantity_approved')
                 ->where('created_at', '>=', $date_from)
@@ -97,6 +98,7 @@ class ReturnsController extends Controller
                 },
                 'products.item',
                 'products.confirmer',
+                'products.auditor',
                 'customer',
                 'stocker'
             ])
@@ -265,5 +267,21 @@ class ReturnsController extends Controller
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
         $this->logUserActivity($title, $description, $roles);
         return $this->show($returned_prod);
+    }
+
+    public function auditorCommentOnReturnedProducts(Request $request, ReturnedProduct $returned_product)
+    {
+        // This method is for the auditor to comment on returned products
+        $user = $this->getUser();
+        $returned_product->auditor_comment = $request->comment;
+        $returned_product->audited_by = $user->id;
+        $returned_product->save();
+
+        $title = "Auditor's comment on returned products";
+        $description = "Auditor commented on returned product with entry id: " . $returned_product->id . " by $user->name ($user->email)";
+        //log this activity
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+        $this->logUserActivity($title, $description, $roles);
+        return response()->json(['message' => 'Comment submitted successfully'], 200);
     }
 }

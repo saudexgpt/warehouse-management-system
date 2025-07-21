@@ -34,4 +34,8 @@ class ReturnedProduct extends Model
     {
         return $this->belongsTo(User::class, 'confirmed_by', 'id');
     }
+    public function auditor()
+    {
+        return $this->belongsTo(User::class, 'audited_by', 'id');
+    }
 }

@@ -18,7 +18,7 @@
     </el-popover>
     <v-client-table v-model="returned_products" :columns="columns" :options="options">
       <div slot="child_row" slot-scope="{row}">
-        <Details :products="row.products" @update="fetchItemStocks" />
+        <Details :products="row.products" :return-data="row" @update="fetchItemStocks" />
 
       </div>
       <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
@@ -93,8 +93,8 @@ export default {
 
       options: {
         headings: {
-          // 'confirmer.name': 'Confirmed By',
-          'stock_return.returns_no': 'Return No.',
+          returns_no: 'Return No.',
+          'confirmer.name': 'Confirmed By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
           batch_no: 'Batch No.',
@@ -114,12 +114,17 @@ export default {
           filter: 'Search:',
         },
         // editableColumns:['name', 'category.name', 'sku'],
-        sortable: ['stock_return.returns_no', 'item.name', 'batch_no', 'expiry_date', 'date_returned'],
-        filterable: ['stock_return.returns_no', 'item.name', 'batch_no', 'expiry_date', 'date_returned'],
+        sortable: ['returns_no', 'date_returned'],
+        filterable: ['returns_no', 'date_returned'],
       },
       page: {
         option: 'list',
       },
+      submitTitle: 'Fetch Report',
+      panel: 'month',
+      future: false,
+      panels: ['range', 'week', 'month', 'quarter', 'year'],
+      show_calendar: false,
       // params: {},
       form: {
         warehouse_id: 7,
