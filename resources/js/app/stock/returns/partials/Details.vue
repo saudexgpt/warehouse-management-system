@@ -4,7 +4,12 @@
     <!-- <add-new-returns v-if="page.option== 'add_new'" :returned-products="products" :params="params" :page="page" @update="fetchItemStocks" /> -->
 
     <edit-returns v-if="page.option== 'edit_returns'" :returned-product="returnedProduct" :params="params" :page="page" @update="onEditUpdate" />
-    <div v-if="page.option=='list'" class="box">
+    <el-button
+      type="danger"
+      icon="el-icon-printer"
+      @click="doPrint(returnData.id)"
+    >Print</el-button>
+    <div v-if="page.option=='list'" :id="returnData.id" class="box">
       <!-- <el-button
         :loading="downloadLoading"
         style="margin:0 0 20px 20px;"
@@ -12,6 +17,36 @@
         icon="document"
         @click="handleDownload"
       >Export Excel</el-button> -->
+      <div>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>
+                <label>Customer Name</label>
+                <address>
+                  <label>{{ returnData.customer_name.toUpperCase() }}</label>
+                </address>
+              </th>
+              <th>
+                <label>Stocked By</label>
+                <address>
+                  <strong>{{ returnData.stocker.name }}</strong>
+                </address>
+              </th>
+              <th>
+                <label>Returns No.: {{ returnData.returns_no }}</label>
+                <br>
+                <label>Date:</label>
+                {{
+                  moment(returnData.date_returned).format('MMMM Do YYYY')
+                }}
+                <br>
+              </th>
+            </tr>
+          </thead>
+        </table>
+        Auditor's Remark: {{ returnData.auditor_comment }}
+      </div>
       <v-client-table v-model="products" :columns="columns" :options="options">
         <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
           <!-- {{ row.quantity }} -->
@@ -44,8 +79,8 @@
             <el-tag v-if="row.audited_by !== null" style="cursor: pointer;" @click="$alert(row.auditor_comment)">View comment</el-tag>
           </div>
         </div>
-        <div slot="action" slot-scope="props">
-          <el-dropdown>
+        <div slot="action" slot-scope="props" class="no-print">
+          <el-dropdown class="no-print">
             <el-button type="primary">
               Action<i class="el-icon-arrow-down el-icon--right" />
             </el-button>
@@ -53,10 +88,10 @@
               <el-dropdown-item v-if="checkPermission(['manage returned products'])">
                 <a class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> Edit</a>
               </el-dropdown-item>
-              <el-dropdown-item v-if="checkPermission(['manage returned products']) && props.row.stocked_by !== userId && props.row.confirmed_by === null">
-                <a v-if="checkPermission(['audit confirm actions'])" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(props.row.id);"><i class="fa fa-check" /> Confirm</a>
-              </el-dropdown-item>
-              <el-dropdown-item v-if="checkPermission(['audit check returned products']) && props.row.confirmed_by !== null && props.row.audited_by === null">
+              <!-- <el-dropdown-item v-if="checkPermission(['audit confirm actions']) && props.row.stocked_by !== userId && props.row.confirmed_by === null">
+                <a class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(props.row.id);"><i class="fa fa-check" /> Confirm</a>
+              </el-dropdown-item> -->
+              <!-- <el-dropdown-item v-if="checkPermission(['audit check returned products']) && props.row.audited_by === null">
                 <el-popover
                   placement="right"
                   width="400"
@@ -71,7 +106,7 @@
                   </el-button>
                   <br>
                 </el-popover>
-              </el-dropdown-item>
+              </el-dropdown-item> -->
               <el-dropdown-item v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved) && props.row.audited_by !== null">
                 <el-popover
                   placement="right"
@@ -92,15 +127,6 @@
         </div>
 
       </v-client-table>
-      <el-row :gutter="20">
-        <pagination
-          v-show="total > 0"
-          :total="total"
-          :page.sync="form.page"
-          :limit.sync="form.limit"
-          @pagination="fetchItemStocks"
-        />
-      </el-row>
       <el-dialog
         title="Confirm Quantity for Approval"
         :visible.sync="dialogVisible"
@@ -123,7 +149,7 @@ import moment from 'moment';
 import { parseTime } from '@/utils';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
-import Pagination from '@/components/Pagination';
+// import Pagination from '@/components/Pagination';
 import EditReturns from './EditReturns';
 import Resource from '@/api/resource';
 // import Vue from 'vue';
@@ -134,10 +160,14 @@ const approveReturnedProducts = new Resource('stock/returns/approve-products');
 const confirmItemReturned = new Resource('audit/confirm/returned-products');
 export default {
   name: 'Returns',
-  components: { EditReturns, Pagination },
+  components: { EditReturns },
   props: {
     products: {
       type: Array,
+      required: true,
+    },
+    returnData: {
+      type: Object,
       required: true,
     },
   },
@@ -148,7 +178,7 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      columns: ['action', 'confirmer.name', 'auditor.name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
+      columns: ['action', /* 'confirmer.name', */ 'auditor.name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {
@@ -164,6 +194,7 @@ export default {
 
           // id: 'S/N',
         },
+        per_page: 100,
         pagination: {
           dropdown: true,
           chunk: 20,
@@ -224,6 +255,21 @@ export default {
     moment,
     checkPermission,
     checkRole,
+    doPrint(elementId) {
+      var prtContent = document.getElementById(elementId);
+      var WinPrint = window.open('', '', 'left=0,top=0,width=800,height=600,toolbar=0,scrollbars=1,status=0');
+      WinPrint.document.write(prtContent.innerHTML);
+      WinPrint.document.close();
+      WinPrint.focus();
+      WinPrint.print();
+      WinPrint.close();
+      // var printContent = document.getElementById(elementId).innerHTML;
+      // var originalContent = document.body.innerHTML;
+
+      // document.body.innerHTML = printContent; // Replace body content with the section
+      // window.print(); // Open the print dialog
+      // document.body.innerHTML = originalContent; // Restore the original content
+    },
     fetchNecessaryParams() {
       const app = this;
       app.$store.dispatch('app/setNecessaryParams');
@@ -440,14 +486,25 @@ export default {
   },
 };
 </script>
-<style rel="stylesheet/scss" lang="scss" scoped>
+<style scoped>
 .alert {
   padding: 5px;
   margin: -5px;
   text-align: right;
 }
-td {
-  padding: 0px !important;
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .el-button {
+    display: none !important;
+  }
+  .el-dropdown {
+    display: none !important;
+  }
+  .el-tag {
+    display: none !important;
+  }
 }
 
 </style>

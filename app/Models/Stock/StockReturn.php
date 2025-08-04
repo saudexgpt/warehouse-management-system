@@ -27,4 +27,9 @@ class StockReturn extends Model
     {
         return $this->belongsTo(Customer::class);
     }
+
+    public function auditor()
+    {
+        return $this->belongsTo(User::class, 'audited_by', 'id');
+    }
 }

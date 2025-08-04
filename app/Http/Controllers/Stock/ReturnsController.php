@@ -27,7 +27,7 @@ class ReturnsController extends Controller
             },
             'products.item',
             'products.confirmer',
-            'products.auditor',
+            'auditor',
             'customer',
             'stocker'
         ])
@@ -269,16 +269,16 @@ class ReturnsController extends Controller
         return $this->show($returned_prod);
     }
 
-    public function auditorCommentOnReturnedProducts(Request $request, ReturnedProduct $returned_product)
+    public function auditorCommentOnReturnedProducts(Request $request, StockReturn $stockReturn)
     {
         // This method is for the auditor to comment on returned products
         $user = $this->getUser();
-        $returned_product->auditor_comment = $request->comment;
-        $returned_product->audited_by = $user->id;
-        $returned_product->save();
+        $stockReturn->auditor_comment = $request->comment;
+        $stockReturn->audited_by = $user->id;
+        $stockReturn->save();
 
         $title = "Auditor's comment on returned products";
-        $description = "Auditor commented on returned product with entry id: " . $returned_product->id . " by $user->name ($user->email)";
+        $description = "Auditor commented on returned product with number: " . $stockReturn->returns_no . " by $user->name ($user->email)";
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
         $this->logUserActivity($title, $description, $roles);

@@ -389,7 +389,7 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
                 $router->delete('delete/{returned_product}', 'ReturnsController@destroy');
             });
             $router->post('approve-products', 'ReturnsController@approveReturnedProducts');/*->middleware('permission:approve returned products');*/
-            $router->put('auditor-comment/{returned_product}', 'ReturnsController@auditorCommentOnReturnedProducts');/*->middleware('permission:approve returned products');*/
+            $router->put('auditor-comment/{stockReturn}', 'ReturnsController@auditorCommentOnReturnedProducts');/*->middleware('permission:approve returned products');*/
 
         });
     });

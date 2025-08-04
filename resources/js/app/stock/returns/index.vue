@@ -40,7 +40,7 @@
             >Export Excel</el-button> -->
             <v-client-table v-model="returned_products" :columns="columns" :options="options">
               <div slot="child_row" slot-scope="{row}">
-                <Details :products="row.products" @update="fetchItemStocks" />
+                <Details :products="row.products" :return-data="row" @update="fetchItemStocks" />
 
               </div>
               <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
@@ -62,39 +62,28 @@
                 {{ moment(row.created_at).calendar() }}
 
               </div>
-              <div slot="confirmer.name" slot-scope="{row}">
+              <div slot="auditor.name" slot-scope="{row}">
                 <div :id="row.id">
-                  <div v-if="row.confirmed_by == null">
-                    <a v-if="checkPermission(['audit confirm actions']) && row.stocked_by !== userId" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(row.id);"><i class="fa fa-check" /> </a>
+                  <div v-if="checkPermission(['audit check returned products']) && row.audited_by === null">
+                    <el-popover
+                      placement="right"
+                      width="400"
+                      trigger="click"
+                    >
+                      <el-input v-model="auditCheckForm.comment" type="textarea" placeholder="Give a comment" />
+                      <div style="text-align: right; margin: 0">
+                        <el-button type="primary" @click="submitAuditorComment(row.id); ">Submit</el-button>
+                      </div>
+                      <el-button slot="reference" type="warning" round>
+                        <i class="fa fa-thumbs-up" /> Auditor's Check
+                      </el-button>
+                      <br>
+                    </el-popover>
                   </div>
-                  <div v-else>
-                    {{ row.confirmer.name }}
+                  <div>
+                    {{ (row.auditor) ? row.auditor.name : '' }}
                   </div>
                 </div>
-              </div>
-              <div slot="action" slot-scope="props">
-                <span>
-                  <a v-if="checkPermission(['manage returned products'])" class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> </a>
-
-                  <!-- <a v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" class="btn btn-default" @click="openDialog(props.row, props.index)" /> -->
-
-                  <el-popover
-                    placement="right"
-                    width="400"
-                    trigger="click"
-                  >
-                    <el-input v-model="approvalForm.approved_quantity" type="number" placeholder="Enter quantity for approval" />
-                    <div style="text-align: right; margin: 0">
-                      <el-button type="danger" @click="dialogVisible = false; approvalForm.approved_quantity = null">Cancel</el-button>
-                      <el-button type="primary" @click="approveProduct(); ">Approve</el-button>
-                    </div>
-                    <el-button v-if="props.row.confirmed_by !== null && checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved)" slot="reference" type="success" round @click="openDialog(props.row, props.index, false)">
-                      <el-tooltip content="Approve Product" placement="top">
-                        <i class="fa fa-check" />
-                      </el-tooltip>
-                    </el-button>
-                  </el-popover>
-                </span>
               </div>
 
             </v-client-table>
@@ -159,12 +148,12 @@ export default {
       downloadLoading: false,
       warehouses: [],
       returned_products: [],
-      columns: ['returns_no', 'stocker.name', 'customer_name', 'date_returned'],
+      columns: ['auditor.name', 'returns_no', 'stocker.name', 'customer_name', 'date_returned'],
 
       options: {
         headings: {
           returns_no: 'Return No.',
-          'confirmer.name': 'Confirmed By',
+          'auditor.name': 'Auditor',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
           batch_no: 'Batch No.',
@@ -209,6 +198,9 @@ export default {
         approved_quantity: null,
         product_details: '',
       },
+      auditCheckForm: {
+        comment: '',
+      },
       product_expiry_date_alert_in_months: 9, // defaults to 9 months
 
     };
@@ -251,6 +243,31 @@ export default {
       //       app.fetchItemStocks();
       //     }
       //   });
+    },
+    submitAuditorComment(id) {
+      const app = this;
+
+      const { comment } = app.auditCheckForm;
+      if (comment !== '') {
+        app.dialogVisible = false;
+        app.load = true;
+        const approveReturnedProducts = new Resource('stock/returns/auditor-comment');
+        approveReturnedProducts.update(id, { comment })
+          .then(response => {
+            // app.products[app.selected_row_index - 1] = response.returned_product;
+            app.fetchItemStocks();
+            app.$message('Action Successful');
+            app.$emit('update');
+            app.load = false;
+          })
+          .catch(error => {
+            app.load = false;
+            console.log(error.message);
+          });
+      } else {
+        app.$alert('Please give a comment to proceed');
+        return;
+      }
     },
     confirmReturnedItem(id) {
       const app = this;
