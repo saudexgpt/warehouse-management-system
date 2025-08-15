@@ -18,6 +18,21 @@
               </el-select>
               <label for="">Customer Name</label>
               <el-input v-model="form.customer_name" disabled placeholder="Customer Name" class="span" />
+              <el-select
+                v-model="selectedCustomer"
+                placeholder="Select Customer"
+                filterable
+                value-key="id"
+                class="span"
+                @input="form.customer_name = $event.user.name; form.customer_id = $event.id"
+              >
+                <el-option
+                  v-for="(customer, customer_index) in customers"
+                  :key="customer_index"
+                  :value="customer"
+                  :label="(customer.user) ? customer.user.name : ''"
+                />
+              </el-select>
               <label for="">Quantity</label>
               <el-input v-model="form.quantity" type="text" placeholder="Quantity" class="span" />
               <label for="">Price</label>
@@ -88,6 +103,7 @@ export default {
   data() {
     return {
       form: null,
+      selectedCustomer: '',
     };
   },
   computed: {
@@ -96,10 +112,15 @@ export default {
     },
   },
   mounted() {
+    this.fetchCustomers();
     this.form = this.returnedProduct;
   },
   methods: {
     moment,
+    fetchCustomers() {
+      const app = this;
+      app.$store.dispatch('customer/fetch');
+    },
     editReturnedProduct() {
       const app = this;
       const load = updateReturnedProduct.loaderShow();

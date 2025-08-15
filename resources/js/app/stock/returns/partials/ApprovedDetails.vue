@@ -17,12 +17,6 @@
                 </address>
               </th>
               <th>
-                <label>Stocked By</label>
-                <address>
-                  <strong>{{ returnData.stocker.name }}</strong>
-                </address>
-              </th>
-              <th>
                 <label>Returns No.: {{ returnData.returns_no }}</label>
                 <br>
                 <label>Date:</label>
@@ -31,11 +25,30 @@
                 }}
                 <br>
               </th>
+              <th>
+                <label>Stocked By</label>
+                <address>
+                  <strong>{{ returnData.stocker.name }}</strong>
+                </address>
+              </th>
+              <th>
+                <h3>Total Amount: {{ currency + totalAmount.toLocaleString() }}</h3>
+              </th>
             </tr>
           </thead>
         </table>
       </div>
       <v-client-table v-model="products" :columns="columns" :options="options">
+        <div slot="price" slot-scope="{row}">
+          <!-- {{ row.quantity }} -->
+          {{ currency + Number(row.price).toLocaleString() }}
+
+        </div>
+        <div slot="total" slot-scope="{row}">
+          <!-- {{ row.quantity }} -->
+          {{ currency + (Number(row.quantity) * Number(row.price)).toLocaleString() }}
+
+        </div>
         <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
           <!-- {{ row.quantity }} -->
           {{ row.quantity }} {{ row.item.package_type }}
@@ -111,7 +124,7 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      columns: ['auditor.name', 'confirmer.name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date'],
+      columns: ['auditor.name', 'confirmer.name', 'item.name', 'batch_no', 'price', 'quantity', 'total', 'quantity_approved', 'reason', 'expiry_date'],
 
       options: {
         headings: {
@@ -119,6 +132,7 @@ export default {
           'confirmer.name': 'Confirmed By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
+          price: 'Unit price',
           batch_no: 'Batch No.',
           expiry_date: 'Expiry Date',
           quantity: 'QTY',
@@ -150,6 +164,8 @@ export default {
         limit: 10,
         keyword: '',
       },
+      currency: '',
+      totalAmount: 0,
       total: 0,
       in_warehouse: '',
       returnedProduct: {},
@@ -171,6 +187,8 @@ export default {
     ]),
   },
   mounted() {
+    this.currency = this.params.currency;
+    this.calculateTotalAmount();
     // this.getWarehouse();
     // this.fetchNecessaryParams();
   },
@@ -181,6 +199,13 @@ export default {
     moment,
     checkPermission,
     checkRole,
+    calculateTotalAmount() {
+      let total = 0;
+      this.products.forEach(product => {
+        total += Number(product.price) * Number(product.quantity);
+      });
+      this.totalAmount = total;
+    },
     doPrint(elementId) {
       var prtContent = document.getElementById(elementId);
       var WinPrint = window.open('', '', 'left=0,top=0,width=800,height=600,toolbar=0,scrollbars=1,status=0');

@@ -7,9 +7,15 @@
     <el-button
       type="danger"
       icon="el-icon-printer"
-      @click="doPrint(returnData.id)"
+      @click="doPrint('print_'+returnData.id)"
     >Print</el-button>
-    <div v-if="page.option=='list'" :id="returnData.id" class="box">
+    <el-button
+      v-if="checkPermission(['approve returned products']) && returnData.audited_by !== null"
+      type="success"
+      icon="el-icon-check"
+      @click="approveAll(returnData)"
+    >Approve All</el-button>
+    <div v-if="page.option=='list'" :id="'print_'+returnData.id" class="box">
       <!-- <el-button
         :loading="downloadLoading"
         style="margin:0 0 20px 20px;"
@@ -28,12 +34,6 @@
                 </address>
               </th>
               <th>
-                <label>Stocked By</label>
-                <address>
-                  <strong>{{ returnData.stocker.name }}</strong>
-                </address>
-              </th>
-              <th>
                 <label>Returns No.: {{ returnData.returns_no }}</label>
                 <br>
                 <label>Date:</label>
@@ -42,15 +42,34 @@
                 }}
                 <br>
               </th>
+              <th>
+                <label>Stocked By</label>
+                <address>
+                  <strong>{{ returnData.stocker.name }}</strong>
+                </address>
+              </th>
+              <th>
+                <h3>Total Amount: {{ currency + totalAmount.toLocaleString() }}</h3>
+              </th>
             </tr>
           </thead>
         </table>
-        Auditor's Remark: {{ returnData.auditor_comment }}
+        <label>Auditor's Remark: {{ returnData.auditor_comment }}</label>
       </div>
       <v-client-table v-model="products" :columns="columns" :options="options">
         <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
           <!-- {{ row.quantity }} -->
           {{ row.quantity }} {{ row.item.package_type }}
+
+        </div>
+        <div slot="price" slot-scope="{row}">
+          <!-- {{ row.quantity }} -->
+          {{ currency + Number(row.price).toLocaleString() }}
+
+        </div>
+        <div slot="total" slot-scope="{row}">
+          <!-- {{ row.quantity }} -->
+          {{ currency + (Number(row.quantity) * Number(row.price)).toLocaleString() }}
 
         </div>
         <div slot="quantity_approved" slot-scope="{row}" class="alert alert-info">
@@ -107,7 +126,7 @@
                   <br>
                 </el-popover>
               </el-dropdown-item> -->
-              <el-dropdown-item v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved) && props.row.audited_by !== null">
+              <el-dropdown-item v-if="checkPermission(['approve returned products']) && parseInt(props.row.quantity) > parseInt(props.row.quantity_approved) && returnData.audited_by !== null">
                 <el-popover
                   placement="right"
                   width="400"
@@ -178,7 +197,7 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      columns: ['action', /* 'confirmer.name', */ 'auditor.name', 'item.name', 'price', 'batch_no', 'quantity', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
+      columns: ['action', /* 'confirmer.name', */ 'auditor.name', 'item.name', 'batch_no', 'price', 'quantity', 'total', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {
@@ -186,6 +205,7 @@ export default {
           'auditor.name': 'Audited By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
+          price: 'Unit price',
           batch_no: 'Batch No.',
           expiry_date: 'Expiry Date',
           quantity: 'QTY',
@@ -221,6 +241,8 @@ export default {
         limit: 10,
         keyword: '',
       },
+      currency: '',
+      totalAmount: 0,
       total: 0,
       in_warehouse: '',
       returnedProduct: {},
@@ -245,6 +267,8 @@ export default {
     ]),
   },
   mounted() {
+    this.currency = this.params.currency;
+    this.calculateTotalAmount();
     // this.getWarehouse();
     // this.fetchNecessaryParams();
   },
@@ -255,6 +279,13 @@ export default {
     moment,
     checkPermission,
     checkRole,
+    calculateTotalAmount() {
+      let total = 0;
+      this.products.forEach(product => {
+        total += Number(product.price) * Number(product.quantity);
+      });
+      this.totalAmount = total;
+    },
     doPrint(elementId) {
       var prtContent = document.getElementById(elementId);
       var WinPrint = window.open('', '', 'left=0,top=0,width=800,height=600,toolbar=0,scrollbars=1,status=0');
@@ -391,6 +422,24 @@ export default {
       } else {
         app.$alert('Please give a comment to proceed');
         return;
+      }
+    },
+    approveAll(returnData) {
+      const app = this;
+      if (confirm(`Click OK to confirm the approval of all product quantities on this return: ${returnData.returns_no}`)) {
+        const approveAllReturnedProducts = new Resource('stock/returns/approve-all-products');
+        approveAllReturnedProducts.update(returnData.id)
+          .then(response => {
+            // app.products[app.selected_row_index - 1] = response.returned_product;
+            // app.fetchItemStocks();
+            app.$message('Action Successful');
+            app.$emit('update');
+            app.load = false;
+          })
+          .catch(error => {
+            app.load = false;
+            console.log(error.message);
+          });
       }
     },
     approveProduct(){

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Stock;
 
 use App\Http\Controllers\Controller;
+use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Stock\ReturnedProduct;
 use App\Models\Stock\StockReturn;
@@ -199,9 +200,15 @@ class ReturnsController extends Controller
     public function update(Request $request, ReturnedProduct $returned_product)
     {
         //
+        $return_id = $returned_product->return_id;
+        $stockReturn = StockReturn::find($return_id);
+        $stockReturn->customer_id = $request->customer_id;
+        $stockReturn->customer_name = $request->customer_name;
+        $stockReturn->save();
         $returned_product->item_id = $request->item_id;
         $returned_product->price = $request->price;
         $returned_product->batch_no = $request->batch_no;
+        $returned_product->customer_id = $request->customer_id;
         $returned_product->customer_name = $request->customer_name;
         $returned_product->expiry_date = $request->expiry_date;
         $returned_product->date_returned = $request->date_returned;
@@ -227,7 +234,51 @@ class ReturnsController extends Controller
         $returned_product = $returned_product->with(['warehouse', 'item', 'stocker', 'confirmer'])->find($returned_product->id);
         return response()->json(compact('returned_product'), 200);
     }
+    public function approveAllReturnedProducts(Request $request, StockReturn $stockReturn)
+    {
+        $user = $this->getUser();
+        $warehouse_id = 7;
 
+        $returned_products = ReturnedProduct::where('return_id', $stockReturn->id)
+            ->where('quantity', '>', 'quantity_approved')
+            ->get();
+        foreach ($returned_products as $returned_prod) {
+            $approved_quantity = $returned_prod->quantity - $returned_prod->approved_quantity;
+
+            $returned_prod->quantity_approved += $approved_quantity;
+            if ($returned_prod->quantity >= $returned_prod->quantity_approved) {
+                $returned_prod->save();
+            }
+            $item = Item::find($returned_prod->item_id);
+
+            $item_stock_sub_batch = new ItemStockSubBatch();
+            $item_stock_sub_batch->stocked_by = $user->id;
+            $item_stock_sub_batch->warehouse_id = $warehouse_id;
+            $item_stock_sub_batch->item_id = $returned_prod->item_id;
+            $item_stock_sub_batch->price = $returned_prod->price;
+            $item_stock_sub_batch->batch_no = $returned_prod->batch_no;
+            $item_stock_sub_batch->sub_batch_no = $returned_prod->batch_no;
+            $item_stock_sub_batch->quantity = $approved_quantity;
+            $item_stock_sub_batch->reserved_for_supply = 0;
+            $item_stock_sub_batch->in_transit = 0; // initial values set to zero
+            $item_stock_sub_batch->supplied = 0;
+            $item_stock_sub_batch->balance = $approved_quantity;
+            $item_stock_sub_batch->comments = "Returned by $returned_prod->customer_name on $returned_prod->date_returned. Reason: $returned_prod->reason. Approved By: $user->name";
+            // $item_stock_sub_batch->goods_received_note = ($details->grn) ? $details->grn : $details->batch_no;
+            $item_stock_sub_batch->expiry_date = date('Y-m-d', strtotime($returned_prod->expiry_date));
+            $item_stock_sub_batch->save();
+
+
+
+
+            $title = "Returned products approval";
+            $description = "$approved_quantity $item->package_type of $item->name returned with entry batch no: " . $returned_prod->batch_no . " was approved by $user->name ($user->phone)";
+            //log this activity
+            $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+            $this->logUserActivity($title, $description, $roles);
+            return $this->show($returned_prod);
+        }
+    }
     public function approveReturnedProducts(Request $request)
     {
         // Virtual Warehouse ID is 7
@@ -241,6 +292,7 @@ class ReturnsController extends Controller
         if ($returned_prod->quantity >= $returned_prod->quantity_approved) {
             $returned_prod->save();
         }
+        $item = Item::find($returned_prod->item_id);
         $item_stock_sub_batch = new ItemStockSubBatch();
         $item_stock_sub_batch->stocked_by = $user->id;
         $item_stock_sub_batch->warehouse_id = $warehouse_id;
@@ -262,7 +314,7 @@ class ReturnsController extends Controller
 
 
         $title = "Returned products approval";
-        $description = "Product returned with entry batch no: " . $returned_prod->batch_no . " was approved by $user->name ($user->phone)";
+        $description = "$approved_quantity $item->package_type of $item->name returned with entry batch no: " . $returned_prod->batch_no . " was approved by $user->name ($user->phone)";
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
         $this->logUserActivity($title, $description, $roles);

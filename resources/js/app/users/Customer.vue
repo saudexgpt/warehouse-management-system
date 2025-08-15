@@ -376,7 +376,7 @@ export default {
           return v['roles'].join(', ');
         }
         if (j === 'code') {
-          return v['customer']['code'];
+          return (v['customer']) ? v['customer']['code'] : '';
         }
         return v[j];
       }));
