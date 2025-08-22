@@ -100,6 +100,7 @@ class ReturnsController extends Controller
                 'products.item',
                 'products.confirmer',
                 'products.auditor',
+                'auditor',
                 'customer',
                 'stocker'
             ])

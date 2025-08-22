@@ -68,7 +68,7 @@
           {{ moment(row.created_at).calendar() }}
 
         </div>
-        <div slot="confirmer.name" slot-scope="{row}">
+        <!-- <div slot="confirmer.name" slot-scope="{row}">
           <div :id="row.id">
             <div v-if="row.confirmed_by == null">
               <a v-if="checkPermission(['audit confirm actions', 'manage returned products']) && row.stocked_by !== userId" class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(row.id);"><i class="fa fa-check" /> </a>
@@ -77,7 +77,7 @@
               {{ row.confirmer.name }}
             </div>
           </div>
-        </div>
+        </div> -->
         <div slot="auditor.name" slot-scope="{row}">
           <div :id="row.id">
             {{ (row.auditor) ? row.auditor.name : '' }}
@@ -124,12 +124,12 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      columns: ['auditor.name', 'confirmer.name', 'item.name', 'batch_no', 'price', 'quantity', 'total', 'quantity_approved', 'reason', 'expiry_date'],
+      columns: ['auditor.name', /* 'confirmer.name',*/ 'item.name', 'batch_no', 'price', 'quantity', 'total', 'quantity_approved', 'reason', 'expiry_date'],
 
       options: {
         headings: {
           'auditor.name': 'Audited By',
-          'confirmer.name': 'Confirmed By',
+          // 'confirmer.name': 'Confirmed By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
           price: 'Unit price',
