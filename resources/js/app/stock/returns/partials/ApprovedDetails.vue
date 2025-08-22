@@ -79,7 +79,7 @@
           </div>
         </div> -->
         <div slot="auditor">
-          <div :id="row.id">
+          <div>
             {{ (returnData.auditor) ? returnData.auditor.name : '' }}
           </div>
         </div>
