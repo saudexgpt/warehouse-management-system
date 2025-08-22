@@ -242,6 +242,7 @@ class ReturnsController extends Controller
 
         $returned_products = ReturnedProduct::where('return_id', $stockReturn->id)
             ->where('quantity', '>', 'quantity_approved')
+            ->where('audited_by', '!=', NULL)
             ->get();
         foreach ($returned_products as $returned_prod) {
             $approved_quantity = $returned_prod->quantity - $returned_prod->approved_quantity;
