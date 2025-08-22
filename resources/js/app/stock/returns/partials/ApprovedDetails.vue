@@ -78,11 +78,9 @@
             </div>
           </div>
         </div> -->
-        <div slot="auditor.name" slot-scope="{row}">
+        <div slot="auditor">
           <div :id="row.id">
-            {{ (row.auditor) ? row.auditor.name : '' }}
-            <br>
-            <el-tag v-if="row.audited_by !== null" style="cursor: pointer;" @click="$alert(row.auditor_comment)">View comment</el-tag>
+            {{ (returnData.auditor) ? returnData.auditor.name : '' }}
           </div>
         </div>
 
@@ -124,11 +122,11 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      columns: ['auditor.name', /* 'confirmer.name',*/ 'item.name', 'batch_no', 'price', 'quantity', 'total', 'quantity_approved', 'reason', 'expiry_date'],
+      columns: ['auditor', /* 'confirmer.name',*/ 'item.name', 'batch_no', 'price', 'quantity', 'total', 'quantity_approved', 'reason', 'expiry_date'],
 
       options: {
         headings: {
-          'auditor.name': 'Audited By',
+          'auditor': 'Audited By',
           // 'confirmer.name': 'Confirmed By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',

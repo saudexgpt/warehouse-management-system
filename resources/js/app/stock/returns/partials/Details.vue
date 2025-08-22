@@ -91,11 +91,9 @@
             {{ (row.confirmer) ? row.confirmer.name : '' }}
           </div>
         </div>
-        <div slot="auditor.name" slot-scope="{row}">
+        <div slot="auditor">
           <div :id="row.id">
-            {{ (row.auditor) ? row.auditor.name : '' }}
-            <br>
-            <el-tag v-if="row.audited_by !== null" style="cursor: pointer;" @click="$alert(row.auditor_comment)">View comment</el-tag>
+            {{ (returnData.auditor) ? returnData.auditor.name : '' }}
           </div>
         </div>
         <div slot="action" slot-scope="props" class="no-print">
@@ -197,12 +195,12 @@ export default {
       dialogVisible: false,
       downloadLoading: false,
       warehouses: [],
-      columns: ['action', /* 'confirmer.name', */ 'auditor.name', 'item.name', 'batch_no', 'price', 'quantity', 'total', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
+      columns: ['action', /* 'confirmer.name', */ 'auditor', 'item.name', 'batch_no', 'price', 'quantity', 'total', 'quantity_approved', 'reason', 'expiry_date', 'date_returned'],
 
       options: {
         headings: {
           'confirmer.name': 'Confirmed By',
-          'auditor.name': 'Audited By',
+          'auditor': 'Audited By',
           'stocker.name': 'Stocked By',
           'item.name': 'Product',
           price: 'Unit price',

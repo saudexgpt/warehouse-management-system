@@ -96,6 +96,7 @@ class ReturnsController extends Controller
             $returned_products = StockReturn::with([
                 'products' => function ($q) {
                     $q->whereRaw('quantity = quantity_approved');
+
                 },
                 'products.item',
                 'products.confirmer',
