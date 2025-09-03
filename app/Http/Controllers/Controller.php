@@ -268,7 +268,7 @@ class Controller extends BaseController
         } else {
             $warehouses = $user->warehouses()->with('vehicles')->where('enabled', 1)->get();
         }
-        $items = Item::with(['taxes', 'price'])->orderBy('name')->get();
+        $items = Item::with(['taxes', 'price'])->where('enabled', 1)->orderBy('name')->get();
         $currencies = Currency::get();
         $taxes = Tax::get();
         //$order_statuses = OrderStatus::get();
