@@ -160,6 +160,7 @@
                                 :label="`${batch.batch_no} | ${batch.expiry_date}`"
                               />
                             </el-select>
+                            <el-tag>Invoice No: {{ invoice_item.invoice_no }}</el-tag><br>
                             <el-tag>Batch No: {{ invoice_item.batch_no }}</el-tag><br>
                             <el-tag>Expiry Date: {{ invoice_item.expiry_date }}</el-tag><br>
                             <el-tag>Price: {{ invoice_item.price }}</el-tag>
