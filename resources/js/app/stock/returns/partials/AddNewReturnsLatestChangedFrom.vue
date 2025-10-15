@@ -101,8 +101,8 @@
                         <tr>
                           <th />
                           <th>Choose Product</th>
-                          <th>Batch No & Expiry Date</th>
                           <th>Quantity</th>
+                          <th>Batch No & Expiry Date</th>
                           <th>Reason for return</th>
                         </tr>
                       </thead>
@@ -132,7 +132,7 @@
                               filterable
                               class="span"
                               :disabled="can_submit"
-                              @input="fetchDeliveredInvoices($event.id, index);"
+                              @input="fetchItemDetails(index)"
                             >
                               <el-option
                                 v-for="(item, item_index) in params.items"
@@ -142,27 +142,6 @@
                                 :disabled="item.enabled === 0"
                               />
                             </el-select>
-                          </td>
-                          <td v-loading="invoice_item.load">
-                            <el-select
-                              v-model="invoice_item.selectedBatch"
-                              value-key="id"
-                              placeholder="Select Batch"
-                              filterable
-                              class="span"
-                              :disabled="can_submit"
-                              @input="invoice_item.invoice_no = $event.invoice_no; invoice_item.batch_no = $event.batch_no; invoice_item.expiry_date = $event.expiry_date; invoice_item.price = $event.price; invoice_item.max_quantity = $event.max_quantity; invoice_item.dispatched_product_id = $event.dispatched_product_id; invoice_item.batch_id = $event.id"
-                            >
-                              <el-option
-                                v-for="(batch, batch_index) in invoice_item.batches"
-                                :key="batch_index"
-                                :value="batch"
-                                :label="`${batch.batch_no} | ${batch.expiry_date}`"
-                              />
-                            </el-select>
-                            <el-tag>Batch No: {{ invoice_item.batch_no }}</el-tag><br>
-                            <el-tag>Expiry Date: {{ invoice_item.expiry_date }}</el-tag><br>
-                            <el-tag>Price: {{ invoice_item.price }}</el-tag>
                           </td>
                           <td>
                             <el-input v-model="invoice_item.quantity" type="text" placeholder="Quantity" class="span" @input="calculateNoOfCartons(index);">
@@ -178,10 +157,27 @@
                               @input="calculateNoOfCartons(index);"
                             /> -->
                             <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
-                            <br>
-                            <el-tag type="danger">Maximum Returnable Quantity:
-                              <span v-html="showItemsInCartons(invoice_item.max_quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
-                            </el-tag>
+                          </td>
+                          <td v-loading="invoice_item.load">
+                            <el-select
+                              v-model="invoice_item.selectedBatch"
+                              value-key="id"
+                              placeholder="Select Product"
+                              filterable
+                              class="span"
+                              :disabled="can_submit"
+                              @input="invoice_item.batch_no = $event.batch_no; invoice_item.expiry_date = $event.expiry_date; invoice_item.price = $event.price;"
+                            >
+                              <el-option
+                                v-for="(batch, item_index) in invoice_item.batches"
+                                :key="item_index"
+                                :value="batch"
+                                :label="`${batch.batch_no} | ${batch.expiry_date}`"
+                              />
+                            </el-select>
+                            <el-tag>Batch No: {{ invoice_item.batch_no }}</el-tag><br>
+                            <el-tag>Expiry Date: {{ invoice_item.expiry_date }}</el-tag><br>
+                            <el-tag>Price: {{ invoice_item.price }}</el-tag>
                           </td>
                           <td>
                             <el-select v-model="invoice_item.reason" placeholder="Select Reason" filterable class="span">
@@ -222,7 +218,7 @@
                   <div align="center">
                     <el-button type="success" @click="submitNewInvoice">
                       <i class="el-icon-plus" />
-                      Submit Entry
+                      Submit Invoice
                     </el-button>
                     <!-- <div v-if="can_submit">
 
@@ -301,13 +297,12 @@ export default {
       disable_submit: false,
       can_submit: false,
       selectedCustomer: '',
-      dispatched_products: [],
       form: {
         warehouse_id: 7,
         customer_id: '',
         customer_name: '',
         status: 'pending',
-        date_returned: new Date(),
+        date_returned: '',
         notes: '',
         returns_items: [
           {
@@ -331,7 +326,7 @@ export default {
         customer_id: '',
         customer_name: '',
         status: 'pending',
-        date_returned: new Date(),
+        date_returned: '',
         notes: '',
         returns_items: [
           {
@@ -400,7 +395,7 @@ export default {
     },
   },
   mounted() {
-    // this.loadOfflineData();
+    this.loadOfflineData();
     this.fetchNecessaryParams();
     this.fetchCustomers();
     this.addLine();
@@ -451,16 +446,11 @@ export default {
           price: 0.00,
           quantity: 0,
           batches: [],
-          batch_id: null,
-          dispatched_product_id: null,
           batch_no: '',
           expiry_date: '',
           date_returned: '',
           reason: null,
           other_reason: null,
-          max_quantity: 0,
-          showMaxQuantity: false,
-          invoice_no: '',
           type: '',
         });
         const unsavedReturns = this.form;
@@ -509,17 +499,6 @@ export default {
         app.$alert('Please fill in all fields on each row');
         return;
       }
-      let overflowCount = 0;
-      app.returns_items.forEach(element => {
-        if (app.isQuantityOverflow(element.quantity, element.max_quantity)) {
-          element.showMaxQuantity = true;
-          overflowCount++;
-        }
-      });
-      if (overflowCount > 0) {
-        app.$alert('Please ensure you do not exceed the maximum returnable quantity for each row');
-        return;
-      }
       var form = app.form;
       const checkEmptyFields =
         form.warehouse_id === '' ||
@@ -563,25 +542,10 @@ export default {
       const app = this;
       app.customers.push(created_row);
     },
-    fetchDeliveredInvoices(itemId, index) {
-      const app = this;
-      app.fetchItemDetails(index);
-      const form = { item_id: itemId, customer_id: app.selectedCustomer.id };
-      const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-delivered-invoices');
-      fetchDeliveredInvoicesResource
-        .list(form)
-        .then((response) => {
-          const dispatched_products = response.dispatched_products;
-          app.setProductBatches(dispatched_products, index);
-        })
-        .catch((error) => {
-          app.loadForm = false;
-          console.log(error.message);
-        });
-    },
     fetchItemDetails(index) {
       const app = this;
       const item = app.returns_items[index].item;
+      app.setProductBatches(index, item.id);
       app.returns_items[index].item_rate = item.price.sale_price;
       app.returns_items[index].rate = item.price.sale_price;
       app.returns_items[index].item_id = item.id;
@@ -590,34 +554,26 @@ export default {
       app.returns_items[index].no_of_cartons = 0;
       app.returns_items[index].quantity = 1;
     },
-    setProductBatches(dispatchedProducts, index) {
+    setProductBatches(index, item_id) {
       const app = this;
-      app.returns_items[index].batches = batches;
-      app.returns_items[index].selectedBatch = null;
+      app.returns_items[index].load = true;
       app.returns_items[index].batch_no = '';
-      app.returns_items[index].batch_id = null;
-      app.returns_items[index].dispatched_product_id = null;
       app.returns_items[index].expiry_date = '';
-      app.returns_items[index].max_quantity = 0;
-      app.returns_items[index].invoice_no = '';
-      app.returns_items[index].showMaxQuantity = false;
-      const batches = [];
-      dispatchedProducts.forEach(element => {
-        batches.push({
-          id: element.item_stock_sub_batch_id,
-          batch_id: element.item_stock_sub_batch_id,
-          dispatched_product_id: element.id,
-          batch_no: element.batch_no,
-          expiry_date: element.expiry_date,
-          price: element.rate,
-          invoice_no: element.invoice_number,
-          max_quantity: (element.quantity_returned) ? parseInt(element.quantity_supplied) - parseInt(element.quantity_returned) : parseInt(element.quantity_supplied),
-        });
+      const param = {
+        item_id: item_id,
+      };
+      const fetchProductBatches = new Resource('stock/returns/fetch-product-batches');
+      fetchProductBatches.list(param).then((response) => {
+        app.returns_items[index].load = false;
+
+        app.returns_items[index].batches = response.batches;
       });
-      app.returns_items[index].batches = batches;
     },
-    isQuantityOverflow(quantity, maxQuantity) {
-      return quantity > maxQuantity;
+    showItemsInStock(index) {
+      const app = this;
+      app.batches_of_items_in_stock =
+        app.returns_items[index].batches_of_items_in_stock;
+      app.items_in_stock_dialog = true;
     },
     calculateNoOfCartons(index) {
       const app = this;

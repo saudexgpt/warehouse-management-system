@@ -3,7 +3,7 @@
     <!-- <item-details v-if="page.option== 'view_details'" :item-in-stock="returnedProduct" :page="page" /> -->
     <add-new-returns v-if="page.option== 'add_new'" :returned-products="returned_products" :params="params" :page="page" @update="fetchItemStocks" />
 
-    <edit-returns v-if="page.option== 'edit_returns'" :returned-product="returnedProduct" :params="params" :page="page" @update="onEditUpdate" />
+    <edit-returns v-if="page.option== 'edit_returns'" :returned-product="returnedProduct" :selected-customer="returnedProduct.customer" :params="params" :page="page" @update="onEditUpdate" />
     <div v-if="page.option=='list'" class="box">
       <div class="box-header">
         <h4 class="box-title">List of Returned Products {{ in_warehouse }}</h4>
@@ -85,6 +85,37 @@
                   </div>
                 </div>
               </div>
+              <div slot="action" slot-scope="props" class="no-print">
+                <el-dropdown class="no-print">
+                  <el-button type="primary">
+                    Action<i class="el-icon-arrow-down el-icon--right" />
+                  </el-button>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item v-if="checkPermission(['manage returned products'])">
+                      <a class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> Edit</a>
+                    </el-dropdown-item>
+                    <!-- <el-dropdown-item v-if="checkPermission(['audit confirm actions']) && props.row.stocked_by !== userId && props.row.confirmed_by === null">
+                <a class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(props.row.id);"><i class="fa fa-check" /> Confirm</a>
+              </el-dropdown-item> -->
+                    <!-- <el-dropdown-item v-if="checkPermission(['audit check returned products']) && props.row.audited_by === null">
+                <el-popover
+                  placement="right"
+                  width="400"
+                  trigger="click"
+                >
+                  <el-input v-model="auditCheckForm.comment" type="textarea" placeholder="Give a comment" />
+                  <div style="text-align: right; margin: 0">
+                    <el-button type="primary" @click="submitAuditorComment(props.row.id); ">Submit</el-button>
+                  </div>
+                  <el-button slot="reference" type="warning" round>
+                    <i class="fa fa-thumbs-up" /> Auditor's Check
+                  </el-button>
+                  <br>
+                </el-popover>
+              </el-dropdown-item> -->
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </div>
 
             </v-client-table>
             <el-row :gutter="20">
@@ -148,7 +179,7 @@ export default {
       downloadLoading: false,
       warehouses: [],
       returned_products: [],
-      columns: ['auditor.name', 'returns_no', 'stocker.name', 'customer_name', 'date_returned'],
+      columns: ['auditor.name', 'returns_no', 'stocker.name', 'customer_name', 'date_returned', 'action'],
 
       options: {
         headings: {
@@ -161,6 +192,7 @@ export default {
           quantity: 'QTY',
           quantity_approved: 'QTY Approved',
           date_returned: 'Date Returned',
+          action: 'Action',
 
           // id: 'S/N',
         },
@@ -309,8 +341,9 @@ export default {
 
     onEditUpdate(updated_row) {
       const app = this;
+      app.fetchItemStocks();
       // app.returned_products.splice(app.returnedProduct.index-1, 1);
-      app.returned_products[app.selected_row_index - 1] = updated_row;
+      // app.returned_products[app.selected_row_index - 1] = updated_row;
     },
     expiryFlag(date){
       const product_expiry_date_alert = this.product_expiry_date_alert_in_months;

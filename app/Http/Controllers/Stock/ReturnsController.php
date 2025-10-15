@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Stock;
 
 use App\Http\Controllers\Controller;
+use App\Models\Invoice\DispatchedProduct;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Stock\ReturnedProduct;
@@ -29,7 +30,7 @@ class ReturnsController extends Controller
             'products.item',
             'products.confirmer',
             'auditor',
-            'customer',
+            'customer.user',
             'stocker'
         ])
             ->where('warehouse_id', $warehouse_id)
@@ -134,7 +135,7 @@ class ReturnsController extends Controller
 
         return response()->json(compact('batches'), 200);
     }
-    public function store(Request $request)
+    public function storeOld(Request $request)
     {
         $user = $this->getUser();
         $stock_return = new StockReturn();
@@ -192,6 +193,46 @@ class ReturnsController extends Controller
         // $this->logUserActivity($title, $description, $roles);
         // return $this->show($returned_product);
     }
+
+    public function store(Request $request)
+    {
+        $user = $this->getUser();
+        $stock_return = new StockReturn();
+        $stock_return->warehouse_id = $request->warehouse_id;
+        $stock_return->customer_id = $request->customer_id;
+        $stock_return->customer_name = $request->customer_name;
+        $stock_return->returns_no = 'RTN-' . $request->customer_id . randomcode();
+        $stock_return->date_returned = date('Y-m-d', strtotime($request->date_returned));
+        $stock_return->stocked_by = $user->id;
+        $stock_return->save();
+
+        $returns_items = json_decode(json_encode($request->returns_items));
+
+        foreach ($returns_items as $returns_item) {
+            $returned_product = new ReturnedProduct();
+            $returned_product->warehouse_id = $request->warehouse_id;
+            $returned_product->dispatched_product_id = $returns_item->dispatched_product_id;
+            $returned_product->item_stock_sub_batch_id = $returns_item->batch_id;
+            $returned_product->return_id = $stock_return->id;
+            $returned_product->item_id = $returns_item->item_id;
+            $returned_product->price = $returns_item->price;
+            $returned_product->batch_no = $returns_item->batch_no;
+            $returned_product->invoice_no = $returns_item->invoice_no;
+            $returned_product->customer_id = $request->customer_id;
+            $returned_product->customer_name = $request->customer_name;
+            $returned_product->expiry_date = $returns_item->expiry_date;
+            $returned_product->date_returned = date('Y-m-d', strtotime($request->date_returned));
+            $returned_product->quantity = (int) $returns_item->quantity;
+            $returned_product->max_returnable_quantity = (int) $returns_item->max_quantity;
+            $returned_product->reason = $returns_item->reason;
+            if ($returns_item->reason == 'Others' && $returns_item->other_reason != null) {
+                $returned_product->reason = $returns_item->other_reason;
+            }
+
+            $returned_product->stocked_by = $user->id;
+            $returned_product->save();
+        }
+    }
     /**
      * Update the specified resource in storage.
      *
@@ -199,32 +240,39 @@ class ReturnsController extends Controller
      * @param  \App\Models\Stock\ItemStock  $itemStock
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, ReturnedProduct $returned_product)
+    public function update(Request $request, StockReturn $stockReturn)
     {
         //
-        $return_id = $returned_product->return_id;
-        $stockReturn = StockReturn::find($return_id);
+        $user = $this->getUser();
         $stockReturn->customer_id = $request->customer_id;
         $stockReturn->customer_name = $request->customer_name;
         $stockReturn->save();
-        $returned_product->item_id = $request->item_id;
-        $returned_product->price = $request->price;
-        $returned_product->batch_no = $request->batch_no;
-        $returned_product->customer_id = $request->customer_id;
-        $returned_product->customer_name = $request->customer_name;
-        $returned_product->expiry_date = $request->expiry_date;
-        $returned_product->date_returned = $request->date_returned;
-        $returned_product->quantity = $request->quantity;
-        $returned_product->reason = $request->reason;
-        if ($request->reason == 'Others' && $request->other_reason != null) {
-            $returned_product->reason = $request->other_reason;
+        $returns_items = json_decode(json_encode($request->products));
+
+        foreach ($returns_items as $returns_item) {
+            $returned_product = ReturnedProduct::find($returns_item->id);
+            $returned_product->dispatched_product_id = $returns_item->dispatched_product_id;
+            $returned_product->item_stock_sub_batch_id = $returns_item->batch_id;
+            $returned_product->item_id = $returns_item->item_id;
+            $returned_product->price = $returns_item->price;
+            $returned_product->batch_no = $returns_item->batch_no;
+            $returned_product->invoice_no = $returns_item->invoice_no;
+            $returned_product->customer_id = $request->customer_id;
+            $returned_product->customer_name = $request->customer_name;
+            $returned_product->expiry_date = $returns_item->expiry_date;
+            $returned_product->date_returned = date('Y-m-d', strtotime($request->date_returned));
+            $returned_product->quantity = (int) $returns_item->quantity;
+            $returned_product->max_returnable_quantity = (int) $returns_item->max_quantity;
+            $returned_product->reason = $returns_item->reason;
+            if ($returns_item->reason == 'Others' && $returns_item->other_reason != null) {
+                $returned_product->reason = $returns_item->other_reason;
+            }
+
+            $returned_product->stocked_by = $user->id;
+            $returned_product->save();
         }
-
-        $returned_product->save();
-
-        $user = $this->getUser();
         $title = "Returned products updated";
-        $description = "Product returned with entry id: " . $returned_product->id . " was modified by $user->name ($user->email)";
+        $description = "Product returned with entry id: " . $stockReturn->returns_no . " was modified by $user->name ($user->email)";
         //log this activity
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
         $this->logUserActivity($title, $description, $roles);
@@ -235,6 +283,17 @@ class ReturnsController extends Controller
 
         $returned_product = $returned_product->with(['warehouse', 'item', 'stocker', 'confirmer'])->find($returned_product->id);
         return response()->json(compact('returned_product'), 200);
+    }
+    public function destroy(ReturnedProduct $returned_product)
+    {
+        $user = $this->getUser();
+        $title = "Returned product deleted";
+        $description = "Product returned with batch_no: " . $returned_product->batch_no . " was deleted by $user->name ($user->email)";
+        //log this activity
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
+        $this->logUserActivity($title, $description, $roles);
+        $returned_product = $returned_product->delete();
+        return response()->json([], 204);
     }
     public function approveAllReturnedProducts(Request $request, StockReturn $stockReturn)
     {
@@ -338,5 +397,44 @@ class ReturnsController extends Controller
         $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor', 'stock officer'];
         $this->logUserActivity($title, $description, $roles);
         return response()->json(['message' => 'Comment submitted successfully'], 200);
+    }
+
+    public function fetchDeliveredInvoices(Request $request)
+    {
+        $customer_id = $request->customer_id;
+        $item_id = $request->item_id;
+        $dispatched_products = DispatchedProduct::join('invoices', 'invoices.id', '=', 'dispatched_products.invoice_id')
+            ->join('invoice_items', 'invoice_items.id', '=', 'dispatched_products.invoice_item_id')
+            ->join('item_stock_sub_batches', 'item_stock_sub_batches.id', '=', 'dispatched_products.item_stock_sub_batch_id')
+            ->join('items', 'items.id', '=', 'dispatched_products.item_id')
+            ->leftJoin('returned_products', 'returned_products.dispatched_product_id', '=', 'dispatched_products.id')
+            ->where(function ($q) {
+                $q->where('returned_products.dispatched_product_id', '=', NULL);
+                // ->orWhereRaw('dispatched_products.quantity_supplied - returned_products.quantity > 0');
+            })
+            ->where('dispatched_products.customer_id', $customer_id)
+            ->where('dispatched_products.item_id', $item_id)
+            // ->whereRaw('dispatched_products.quantity_supplied - dispatched_products.quantity_returned > 0')
+            ->select('dispatched_products.*', 'invoices.invoice_number', 'invoice_items.rate', 'item_stock_sub_batches.batch_no', 'item_stock_sub_batches.expiry_date', 'returned_products.quantity as quantity_returned')
+            // ->groupBy(['dispatched_products.item_stock_sub_batch_id', 'dispatched_products.invoice_id', 'dispatched_products.item_id'])
+            ->get();
+        return response()->json(compact('dispatched_products'), 200);
+    }
+    public function fetchDeliveredInvoicesWithReturns(Request $request)
+    {
+        $customer_id = $request->customer_id;
+        $item_id = $request->item_id;
+        $dispatched_products = DispatchedProduct::join('invoices', 'invoices.id', '=', 'dispatched_products.invoice_id')
+            ->join('invoice_items', 'invoice_items.id', '=', 'dispatched_products.invoice_item_id')
+            ->join('item_stock_sub_batches', 'item_stock_sub_batches.id', '=', 'dispatched_products.item_stock_sub_batch_id')
+            ->join('items', 'items.id', '=', 'dispatched_products.item_id')
+            ->join('returned_products', 'returned_products.dispatched_product_id', '=', 'dispatched_products.id')
+            ->where('dispatched_products.customer_id', $customer_id)
+            ->where('dispatched_products.item_id', $item_id)
+            // ->whereRaw('dispatched_products.quantity_supplied - dispatched_products.quantity_returned > 0')
+            ->select('dispatched_products.*', 'invoices.invoice_number', 'invoice_items.rate', 'item_stock_sub_batches.batch_no', 'item_stock_sub_batches.expiry_date', 'returned_products.quantity as quantity_returned')
+            // ->groupBy(['dispatched_products.item_stock_sub_batch_id', 'dispatched_products.invoice_id', 'dispatched_products.item_id'])
+            ->get();
+        return response()->json(compact('dispatched_products'), 200);
     }
 }

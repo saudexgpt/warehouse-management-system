@@ -379,13 +379,16 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
 
         ///////////////////manage returned products//////////////////////////////////
         $router->group(['prefix' => 'returns'], function () use ($router) {
+            $router->get('/fetch-delivered-invoices', 'ReturnsController@fetchDeliveredInvoices')->middleware('permission:manage returned products');
+            $router->get('/fetch-delivered-invoices-with-returns', 'ReturnsController@fetchDeliveredInvoicesWithReturns')->middleware('permission:manage returned products');
+
             $router->get('/', 'ReturnsController@index')->middleware('permission:view returned products|manage returned products');
             $router->get('/approved', 'ReturnsController@approvedReturnedProducts')->middleware('permission:view returned products|manage returned products');
 
             $router->group(['middleware' => 'permission:manage returned products'], function () use ($router) {
                 $router->get('fetch-product-batches', 'ReturnsController@fetchProductBatches');
                 $router->post('store', 'ReturnsController@store');
-                $router->put('update/{returned_product}', 'ReturnsController@update');
+                $router->put('update/{stockReturn}', 'ReturnsController@update');
                 $router->delete('delete/{returned_product}', 'ReturnsController@destroy');
             });
             $router->post('approve-products', 'ReturnsController@approveReturnedProducts');/*->middleware('permission:approve returned products');*/

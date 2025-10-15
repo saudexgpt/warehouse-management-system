@@ -102,9 +102,9 @@
               Action<i class="el-icon-arrow-down el-icon--right" />
             </el-button>
             <el-dropdown-menu slot="dropdown">
-              <el-dropdown-item v-if="checkPermission(['manage returned products'])">
+              <!-- <el-dropdown-item v-if="checkPermission(['manage returned products'])">
                 <a class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> Edit</a>
-              </el-dropdown-item>
+              </el-dropdown-item> -->
               <!-- <el-dropdown-item v-if="checkPermission(['audit confirm actions']) && props.row.stocked_by !== userId && props.row.confirmed_by === null">
                 <a class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(props.row.id);"><i class="fa fa-check" /> Confirm</a>
               </el-dropdown-item> -->
