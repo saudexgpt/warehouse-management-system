@@ -388,6 +388,8 @@ class ReturnsController extends Controller
         // This method is for the auditor to comment on returned products
         $user = $this->getUser();
         $stockReturn->auditor_comment = $request->comment;
+        $stockReturn->approval_status = $request->approval_status;
+
         $stockReturn->audited_by = $user->id;
         $stockReturn->save();
 

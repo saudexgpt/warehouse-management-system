@@ -45,6 +45,38 @@
                   />
 
                 </el-select>
+                <br><br>
+                <div v-if="checkPermission(['audit check returned products']) && form.auditor_status !== 'confirmed'">
+
+                  <el-popover
+                    placement="right"
+                    width="400"
+                    trigger="click"
+                  >
+                    <el-input v-model="auditCheckForm.comment" type="textarea" placeholder="Give a reason for approving" />
+                    <div style="text-align: right; margin: 0">
+                      <el-button type="primary" @click="submitAuditorComment(form.id, 'confirmed'); ">Submit</el-button>
+                    </div>
+                    <el-button slot="reference" type="success">
+                      <i class="fa fa-thumbs-up" /> Approve
+                    </el-button>
+                    <br>
+                  </el-popover>
+                  <el-popover
+                    placement="right"
+                    width="400"
+                    trigger="click"
+                  >
+                    <el-input v-model="auditCheckForm.comment" type="textarea" placeholder="Give a reason for rejecting" />
+                    <div style="text-align: right; margin: 0">
+                      <el-button type="primary" @click="submitAuditorComment(form.id, 'rejected'); ">Submit</el-button>
+                    </div>
+                    <el-button slot="reference" type="danger">
+                      <i class="fa fa-thumbs-down" /> Reject
+                    </el-button>
+                    <br>
+                  </el-popover>
+                </div>
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>
@@ -178,7 +210,7 @@
                               :disabled="can_submit"
                               @input="calculateNoOfCartons(index);"
                             /> -->
-                            <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
+                            <br>Quantity Returned<code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                             <br>
                             <el-tag type="danger">Maximum Returnable Quantity:
                               <span v-html="showItemsInCartons(invoice_item.max_quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
@@ -218,7 +250,7 @@
                   </div>
                 </el-col>
               </el-row>
-              <el-row :gutter="2" class="padded">
+              <el-row v-if="checkPermission(['manage returned products']) && form.auditor_status !== 'confirmed'" :gutter="2" class="padded">
                 <el-col :xs="24" :sm="24" :md="24">
                   <div align="center">
                     <el-button type="success" @click="submitNewInvoice">
@@ -288,6 +320,9 @@ export default {
   },
   data() {
     return {
+      auditCheckForm: {
+        comment: '',
+      },
       pickerOptions: {
         disabledDate(date) {
           var d = new Date(); // today
@@ -418,6 +453,44 @@ export default {
     checkPermission,
     checkRole,
     showItemsInCartons,
+    submitAuditorComment(id, status) {
+      const app = this;
+      if (status === 'confirmed') {
+        let overflowCount = 0;
+        app.returns_items.forEach(element => {
+          if (app.isQuantityOverflow(element.quantity, element.max_quantity)) {
+            element.showMaxQuantity = true;
+            overflowCount++;
+          }
+        });
+        if (overflowCount > 0) {
+          app.$alert('Please ensure you do not exceed the maximum returnable quantity for each row');
+          return;
+        }
+      }
+
+      const { comment } = app.auditCheckForm;
+      if (comment !== '') {
+        app.dialogVisible = false;
+        app.load = true;
+        const approveReturnedProducts = new Resource('stock/returns/auditor-comment');
+        approveReturnedProducts.update(id, { comment, approval_status: status })
+          .then(response => {
+            // app.products[app.selected_row_index - 1] = response.returned_product;
+            app.fetchItemStocks();
+            app.$message('Action Successful');
+            app.$emit('update');
+            app.load = false;
+          })
+          .catch(error => {
+            app.load = false;
+            console.log(error.message);
+          });
+      } else {
+        app.$alert('Please give a comment to proceed');
+        return;
+      }
+    },
     loadData() {
       this.form = this.returnedProduct;
       this.returns_items = this.returnedProduct.products;

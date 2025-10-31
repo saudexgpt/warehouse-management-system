@@ -510,17 +510,17 @@ export default {
         app.$alert('Please fill in all fields on each row');
         return;
       }
-      let overflowCount = 0;
-      app.returns_items.forEach(element => {
-        if (app.isQuantityOverflow(element.quantity, element.max_quantity)) {
-          element.showMaxQuantity = true;
-          overflowCount++;
-        }
-      });
-      if (overflowCount > 0) {
-        app.$alert('Please ensure you do not exceed the maximum returnable quantity for each row');
-        return;
-      }
+      // let overflowCount = 0;
+      // app.returns_items.forEach(element => {
+      //   if (app.isQuantityOverflow(element.quantity, element.max_quantity)) {
+      //     element.showMaxQuantity = true;
+      //     overflowCount++;
+      //   }
+      // });
+      // if (overflowCount > 0) {
+      //   app.$alert('Please ensure you do not exceed the maximum returnable quantity for each row');
+      //   return;
+      // }
       var form = app.form;
       const checkEmptyFields =
         form.warehouse_id === '' ||

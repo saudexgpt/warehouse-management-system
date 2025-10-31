@@ -40,7 +40,13 @@
             >Export Excel</el-button> -->
             <v-client-table v-model="returned_products" :columns="columns" :options="options">
               <div slot="child_row" slot-scope="{row}">
-                <Details :products="row.products" :return-data="row" @update="fetchItemStocks" />
+                <div v-if="row.auditor_status === 'confirmed'">
+
+                  <Details :products="row.products" :return-data="row" @update="fetchItemStocks" />
+                </div>
+                <div v-else>
+                  <el-alert type="error">This is awaiting Auditor's Confirmation</el-alert>
+                </div>
 
               </div>
               <div slot="quantity" slot-scope="{row}" class="alert alert-warning">
@@ -64,24 +70,8 @@
               </div>
               <div slot="auditor.name" slot-scope="{row}">
                 <div :id="row.id">
-                  <div v-if="checkPermission(['audit check returned products']) && row.audited_by === null">
-                    <el-popover
-                      placement="right"
-                      width="400"
-                      trigger="click"
-                    >
-                      <el-input v-model="auditCheckForm.comment" type="textarea" placeholder="Give a comment" />
-                      <div style="text-align: right; margin: 0">
-                        <el-button type="primary" @click="submitAuditorComment(row.id); ">Submit</el-button>
-                      </div>
-                      <el-button slot="reference" type="warning" round>
-                        <i class="fa fa-thumbs-up" /> Auditor's Check
-                      </el-button>
-                      <br>
-                    </el-popover>
-                  </div>
                   <div>
-                    {{ (row.auditor) ? row.auditor.name : '' }}
+                    {{ (row.auditor) ? row.auditor.name : 'Not Audited' }}
                   </div>
                 </div>
               </div>
@@ -91,8 +81,11 @@
                     Action<i class="el-icon-arrow-down el-icon--right" />
                   </el-button>
                   <el-dropdown-menu slot="dropdown">
-                    <el-dropdown-item v-if="checkPermission(['manage returned products'])">
+                    <el-dropdown-item v-if="checkPermission(['manage returned products']) && props.row.auditor_status !== 'confirmed'">
                       <a class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> Edit</a>
+                    </el-dropdown-item>
+                    <el-dropdown-item v-if="checkPermission(['audit check returned products'])">
+                      <a class="btn btn-warning" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-check" /> Click to Audit</a>
                     </el-dropdown-item>
                     <!-- <el-dropdown-item v-if="checkPermission(['audit confirm actions']) && props.row.stocked_by !== userId && props.row.confirmed_by === null">
                 <a class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(props.row.id);"><i class="fa fa-check" /> Confirm</a>
@@ -179,7 +172,7 @@ export default {
       downloadLoading: false,
       warehouses: [],
       returned_products: [],
-      columns: ['auditor.name', 'returns_no', 'stocker.name', 'customer_name', 'date_returned', 'action'],
+      columns: ['auditor.name', 'auditor_status', 'returns_no', 'stocker.name', 'customer_name', 'date_returned', 'action'],
 
       options: {
         headings: {
