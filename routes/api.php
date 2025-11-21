@@ -381,6 +381,8 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
         $router->group(['prefix' => 'returns'], function () use ($router) {
             $router->get('/fetch-delivered-invoices', 'ReturnsController@fetchDeliveredInvoices')->middleware('permission:manage returned products');
             $router->get('/fetch-delivered-invoices-with-returns', 'ReturnsController@fetchDeliveredInvoicesWithReturns')->middleware('permission:manage returned products');
+            $router->get('/fetch-invoices-for-batch', 'ReturnsController@fetchInvoicesForBatchNo')->middleware('permission:manage returned products');
+
 
             $router->get('/', 'ReturnsController@index')->middleware('permission:view returned products|manage returned products');
             $router->get('/approved', 'ReturnsController@approvedReturnedProducts')->middleware('permission:view returned products|manage returned products');

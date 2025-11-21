@@ -4,6 +4,8 @@
     <add-new-returns v-if="page.option== 'add_new'" :returned-products="returned_products" :params="params" :page="page" @update="fetchItemStocks" />
 
     <edit-returns v-if="page.option== 'edit_returns'" :returned-product="returnedProduct" :selected-customer="returnedProduct.customer" :params="params" :page="page" @update="onEditUpdate" />
+    <confirm-returns v-if="page.option== 'confirm_returns'" :returned-product="returnedProduct" :selected-customer="returnedProduct.customer" :params="params" :page="page" @update="onEditUpdate" />
+    <print-returned-products v-if="page.option== 'print'" :returned-product="returnedProduct" :selected-customer="returnedProduct.customer" :params="params" :page="page" @update="onEditUpdate" />
     <div v-if="page.option=='list'" class="box">
       <div class="box-header">
         <h4 class="box-title">List of Returned Products {{ in_warehouse }}</h4>
@@ -85,7 +87,7 @@
                       <a class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> Edit</a>
                     </el-dropdown-item>
                     <el-dropdown-item v-if="checkPermission(['audit check returned products'])">
-                      <a class="btn btn-warning" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-check" /> Click to Audit</a>
+                      <a class="btn btn-warning" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'confirm_returns'"><i class="fa fa-check" /> Click to Confirm</a>
                     </el-dropdown-item>
                     <!-- <el-dropdown-item v-if="checkPermission(['audit confirm actions']) && props.row.stocked_by !== userId && props.row.confirmed_by === null">
                 <a class="btn btn-success" title="Click to confirm" @click="confirmReturnedItem(props.row.id);"><i class="fa fa-check" /> Confirm</a>
@@ -153,6 +155,8 @@ import Pagination from '@/components/Pagination';
 import ApprovedReturnedProducts from './ApprovedReturnedProducts';
 import AddNewReturns from './partials/AddNewReturns';
 import EditReturns from './partials/EditReturns';
+import ConfirmReturns from './partials/ConfirmReturns';
+import PrintReturnedProducts from './partials/PrintReturnedProducts';
 import Details from './partials/Details';
 import Resource from '@/api/resource';
 // import Vue from 'vue';
@@ -163,7 +167,7 @@ const approveReturnedProducts = new Resource('stock/returns/approve-products');
 const confirmItemReturned = new Resource('audit/confirm/returned-products');
 export default {
   name: 'Returns',
-  components: { Details, ApprovedReturnedProducts, AddNewReturns, EditReturns, Pagination },
+  components: { Details, ApprovedReturnedProducts, AddNewReturns, EditReturns, ConfirmReturns, PrintReturnedProducts, Pagination },
   data() {
     return {
       activeActivity: 'unapproved',

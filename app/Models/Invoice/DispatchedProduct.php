@@ -20,6 +20,14 @@ class DispatchedProduct extends Model
     {
         return $this->belongsTo(Waybill::class);
     }
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+    public function invoiceItem()
+    {
+        return $this->belongsTo(InvoiceItem::class);
+    }
     public function waybillItem()
     {
         return $this->belongsTo(WaybillItem::class);

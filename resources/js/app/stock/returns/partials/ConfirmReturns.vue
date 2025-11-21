@@ -1,11 +1,12 @@
 <template>
   <div class="app-container">
-    <div>
+    <div v-loading="loadForm">
       <div v-if="params" class="box">
         <div class="box-header">
-          <h4 class="box-title">Add Returned Products</h4>
+          <h4 class="box-title">Confirm Returned Products</h4>
           <span class="pull-right">
             <a class="btn btn-danger" @click="page.option = 'list'"> Back</a>
+            <a class="btn btn-info" @click="page.option = 'print'"><i class="el-icon-printer" /> Print Preview</a>
           </span>
           <!-- <span class="pull-right">
             <a
@@ -35,7 +36,7 @@
             <el-row :gutter="5" class="padded">
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>Select Warehouse</label>
-                <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable class="span">
+                <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable disabled class="span">
                   <el-option
                     v-for="(warehouse, index) in params.warehouses"
                     :key="index"
@@ -45,53 +46,18 @@
                   />
 
                 </el-select>
+                <br><br>
               </el-col>
               <el-col :xs="24" :sm="12" :md="12">
                 <label for>
-                  Select Customer
+                  Customer : {{ selectedCustomer.user.name }}
                 </label>
-                <el-select
-                  v-model="selectedCustomer"
-                  placeholder="Select Customer"
-                  filterable
-                  value-key="id"
-                  class="span"
-                  @input="show_product_list = true"
-                >
-                  <el-option
-                    v-for="(customer, customer_index) in customers"
-                    :key="customer_index"
-                    :value="customer"
-                    :label="(customer.user) ? customer.user.name : ''"
-                  />
-                </el-select>
-                <!-- <el-select
-                  v-model="form.customer_id"
-                  placeholder="Select Customer"
-                  filterable
-                  class="span"
-                  @input="show_product_list = true"
-                >
-                  <el-option
-                    v-for="(customer, customer_index) in customers"
-                    :key="customer_index"
-                    :value="customer.id"
-                    :label="(customer.user) ? customer.user.name : ''"
-                  />
-                </el-select> -->
-                <label for>Returned Date</label>
-                <el-date-picker
-                  v-model="form.date_returned"
-                  type="date"
-                  placeholder="Returned Date"
-                  style="width: 100%;"
-                  format="yyyy/MM/dd"
-                  value-format="yyyy-MM-dd"
-                  :picker-options="pickerOptions"
-                />
+                <br>
+                <label for>Returned Date: {{ form.date_returned }}</label>
+
               </el-col>
             </el-row>
-            <div v-if="show_product_list">
+            <div>
               <el-row :gutter="2" class="padded">
                 <el-col>
                   <div style="overflow: auto">
@@ -102,6 +68,7 @@
                           <th />
                           <th>Choose Product</th>
                           <th>Batch No & Expiry Date</th>
+                          <th>Invoices</th>
                           <th>Quantity</th>
                           <th>Reason for return</th>
                         </tr>
@@ -109,7 +76,8 @@
                       <tbody>
                         <tr v-for="(invoice_item, index) in returns_items" :key="index">
                           <td>
-                            <span v-if="!can_submit">
+                            {{ index + 1 }}
+                            <!-- <span v-if="!can_submit">
                               <a
                                 class="btn btn-danger btn-flat fa fa-trash"
                                 @click="removeLine(index)"
@@ -122,7 +90,7 @@
                             </span>
                             <span v-else>
                               {{ index + 1 }}
-                            </span>
+                            </span> -->
                           </td>
                           <td>
                             <el-select
@@ -131,7 +99,7 @@
                               placeholder="Select Product"
                               filterable
                               class="span"
-                              :disabled="can_submit"
+                              disabled
                               @input="fetchDeliveredInvoices($event.id, index);"
                             >
                               <el-option
@@ -150,8 +118,7 @@
                               placeholder="Select Batch"
                               filterable
                               class="span"
-                              :disabled="can_submit"
-                              @input="invoice_item.invoice_no = $event.invoice_no; invoice_item.batch_no = $event.batch_no; invoice_item.expiry_date = $event.expiry_date; invoice_item.price = $event.price; invoice_item.max_quantity = $event.max_quantity; invoice_item.dispatched_product_id = $event.dispatched_product_id; invoice_item.batch_id = $event.id"
+                              disabled
                             >
                               <el-option
                                 v-for="(batch, batch_index) in invoice_item.batches"
@@ -160,10 +127,25 @@
                                 :label="`${batch.batch_no} | ${batch.expiry_date}`"
                               />
                             </el-select>
-                            <!-- <el-tag>Invoice No: {{ invoice_item.invoice_no }}</el-tag><br>
                             <el-tag>Batch No: {{ invoice_item.batch_no }}</el-tag><br>
-                            <el-tag>Expiry Date: {{ invoice_item.expiry_date }}</el-tag><br>
-                            <el-tag>Price: {{ invoice_item.price }}</el-tag> -->
+                            <el-tag>Expiry Date: {{ invoice_item.expiry_date }}</el-tag>
+                          </td>
+                          <td v-loading="invoice_item.load">
+                            <el-select
+                              v-model="invoice_item.selected_dispatched_product"
+                              value-key="id"
+                              placeholder="Select Invoice"
+                              filterable
+                              class="span"
+                              @change="invoice_item.invoice_no = $event.invoice_number; invoice_item.price = $event.rate;"
+                            >
+                              <el-option
+                                v-for="(dispatched_product, invoice_index) in invoice_item.dispatched_products"
+                                :key="invoice_index"
+                                :value="dispatched_product"
+                                :label="`${dispatched_product.invoice_number} - ${currency} ${dispatched_product.rate}`"
+                              />
+                            </el-select>
                           </td>
                           <td>
                             <el-input v-model="invoice_item.quantity" type="text" placeholder="Quantity" class="span" @input="calculateNoOfCartons(index);">
@@ -178,14 +160,14 @@
                               :disabled="can_submit"
                               @input="calculateNoOfCartons(index);"
                             /> -->
-                            <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
+                            <br>Quantity Returned<code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                             <br>
                             <el-tag type="danger">Maximum Returnable Quantity:
                               <span v-html="showItemsInCartons(invoice_item.max_quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
                             </el-tag>
                           </td>
                           <td>
-                            <el-select v-model="invoice_item.reason" placeholder="Select Reason" filterable class="span">
+                            <el-select v-model="invoice_item.reason" placeholder="Select Reason" filterable disabled class="span">
                               <el-option v-for="(reason, reason_index) in params.product_return_reasons" :key="reason_index" :value="reason" :label="reason" />
 
                             </el-select>
@@ -221,10 +203,42 @@
               <el-row :gutter="2" class="padded">
                 <el-col :xs="24" :sm="24" :md="24">
                   <div align="center">
-                    <el-button type="success" @click="submitNewInvoice">
+                    <el-button v-if="checkPermission(['update returned products invoice selection']) && form.auditor_status !== 'confirmed'" type="warning" @click="submitNewInvoice">
                       <i class="el-icon-plus" />
-                      Submit Entry
+                      Update Entry
                     </el-button>
+
+                    <span v-if="checkPermission(['audit check returned products']) && form.auditor_status !== 'confirmed'">
+
+                      <el-popover
+                        placement="right"
+                        width="400"
+                        trigger="click"
+                      >
+                        <p>Click OK to confirm</p>
+                        <div style="text-align: right; margin: 0">
+                          <el-button type="primary" @click="submitAuditorComment(form.id, 'confirmed'); ">Okay</el-button>
+                        </div>
+                        <el-button slot="reference" type="success">
+                          <i class="fa fa-thumbs-up" /> Confirm
+                        </el-button>
+                        <br>
+                      </el-popover>
+                      <el-popover
+                        placement="right"
+                        width="400"
+                        trigger="click"
+                      >
+                        <el-input v-model="auditCheckForm.comment" type="textarea" placeholder="Give a reason for rejecting" />
+                        <div style="text-align: right; margin: 0">
+                          <el-button type="primary" @click="submitAuditorComment(form.id, 'rejected'); ">Submit</el-button>
+                        </div>
+                        <!-- <el-button slot="reference" type="danger">
+                          <i class="fa fa-thumbs-down" /> Reject
+                        </el-button> -->
+                        <br>
+                      </el-popover>
+                    </span>
                     <!-- <div v-if="can_submit">
 
                       <el-button type="success" @click="submitNewInvoice">
@@ -271,15 +285,26 @@ export default {
   // name: 'CreateInvoice',
   components: { AddNewCustomer },
   props: {
+    returnedProduct: {
+      type: Object,
+      default: () => ({}),
+    },
+    selectedCustomer: {
+      type: Object,
+      default: () => ({}),
+    },
     page: {
       type: Object,
       default: () => ({
-        option: 'add_new',
+        option: 'edit_returns',
       }),
     },
   },
   data() {
     return {
+      auditCheckForm: {
+        comment: '',
+      },
       pickerOptions: {
         disabledDate(date) {
           var d = new Date(); // today
@@ -301,14 +326,13 @@ export default {
       batches_of_items_in_stock: [],
       disable_submit: false,
       can_submit: false,
-      selectedCustomer: '',
       dispatched_products: [],
       form: {
         warehouse_id: 7,
         customer_id: '',
         customer_name: '',
         status: 'pending',
-        date_returned: new Date(),
+        date_returned: '',
         notes: '',
         returns_items: [
           {
@@ -332,7 +356,7 @@ export default {
         customer_id: '',
         customer_name: '',
         status: 'pending',
-        date_returned: new Date(),
+        date_returned: '',
         notes: '',
         returns_items: [
           {
@@ -401,26 +425,77 @@ export default {
     },
   },
   mounted() {
-    // this.loadOfflineData();
+    this.loadData();
     this.fetchNecessaryParams();
     this.fetchCustomers();
-    this.addLine();
+    // this.addLine();
   },
   methods: {
     moment,
     checkPermission,
     checkRole,
     showItemsInCartons,
-    loadOfflineData() {
-      this.loadForm = true;
-      this.$store.dispatch('returns/loadOfflineReturns').then(() => {
-        this.form = this.unsavedReturns;
-        this.returns_items = this.form.returns_items;
-        if (this.form.warehouse_id !== '') {
-          this.show_product_list = true;
+    submitAuditorComment(id, status) {
+      const app = this;
+      if (status === 'confirmed') {
+        let overflowCount = 0;
+        app.returns_items.forEach(element => {
+          if (app.isQuantityOverflow(element.quantity, element.max_quantity)) {
+            element.showMaxQuantity = true;
+            overflowCount++;
+          }
+        });
+        if (overflowCount > 0) {
+          app.$alert('Please ensure you do not exceed the maximum returnable quantity for each row');
+          return;
         }
-        this.loadForm = false;
-      });
+      }
+
+      const { comment } = app.auditCheckForm;
+      // if (comment !== '') {
+      app.dialogVisible = false;
+      app.loadForm = true;
+      const approveReturnedProducts = new Resource('stock/returns/auditor-comment');
+      approveReturnedProducts.update(id, { comment, approval_status: status })
+        .then(response => {
+          // app.products[app.selected_row_index - 1] = response.returned_product;
+          // app.fetchItemStocks();
+          app.$message('Action Successful');
+          app.$emit('update');
+          app.page.option = 'list';// return to list of items
+          app.loadForm = false;
+        })
+        .catch(error => {
+          app.loadForm = false;
+          console.log(error.message);
+        });
+      // } else {
+      //   app.$alert('Please give a comment to proceed');
+      //   return;
+      // }
+    },
+    loadData() {
+      this.form = this.returnedProduct;
+      this.returns_items = this.returnedProduct.products;
+      if (this.returns_items.length < 1) {
+        this.addLine();
+        return;
+      }
+      for (let index = 0; index < this.returns_items.length; index++) {
+        const element = this.returns_items[index];
+        const quantity = element.quantity;
+        const selectedBatch = {
+          id: element.item_stock_sub_batch_id,
+          batch_id: element.item_stock_sub_batch_id,
+          dispatched_product_id: element.dispatched_product_id,
+          batch_no: element.batch_no,
+          expiry_date: element.expiry_date,
+          price: element.price,
+          invoice_no: element.invoice_no,
+          max_quantity: element.max_returnable_quantity,
+        };
+        this.fetchInvoicesForBatchNo(element.item_id, index, quantity, selectedBatch, element.batch_no);
+      }
     },
     rowIsEmpty() {
       this.fill_fields_error = false;
@@ -453,6 +528,8 @@ export default {
           quantity: 0,
           batches: [],
           batch_id: null,
+          selected_dispatched_product: null,
+          dispatchedProducts: [],
           dispatched_product_id: null,
           batch_no: '',
           expiry_date: '',
@@ -474,9 +551,12 @@ export default {
       if (!this.blockRemoval) {
         this.returns_items.splice(detailId, 1);
         // this.calculateTotal(null);
+        const id = this.returns_items[detailId].id;
         const unsavedReturns = this.form;
         unsavedReturns.returns_items = this.returns_items;
         this.$store.dispatch('returns/saveUnsavedReturns', unsavedReturns);
+        this.deleteEntry(id);
+        this.loadData();
       }
     },
     fetchNecessaryParams() {
@@ -504,23 +584,31 @@ export default {
           console.log(error.message);
         });
     },
+    deleteEntry(id) {
+      const deleteInvoice = new Resource('stock/returns/delete');
+      deleteInvoice.destroy(id)
+        .then(response => {})
+        .catch(error => {
+          alert(error.message);
+        });
+    },
     submitNewInvoice() {
       const app = this;
       if (this.rowIsEmpty()) {
         app.$alert('Please fill in all fields on each row');
         return;
       }
-      // let overflowCount = 0;
-      // app.returns_items.forEach(element => {
-      //   if (app.isQuantityOverflow(element.quantity, element.max_quantity)) {
-      //     element.showMaxQuantity = true;
-      //     overflowCount++;
-      //   }
-      // });
-      // if (overflowCount > 0) {
-      //   app.$alert('Please ensure you do not exceed the maximum returnable quantity for each row');
-      //   return;
-      // }
+      let overflowCount = 0;
+      app.returns_items.forEach(element => {
+        if (app.isQuantityOverflow(element.quantity, element.max_quantity)) {
+          element.showMaxQuantity = true;
+          overflowCount++;
+        }
+      });
+      if (overflowCount > 0) {
+        app.$alert('Please ensure you do not exceed the maximum returnable quantity for each row');
+        return;
+      }
       var form = app.form;
       const checkEmptyFields =
         form.warehouse_id === '' ||
@@ -528,27 +616,19 @@ export default {
         form.date_returned === '';
       if (!checkEmptyFields) {
         app.loadForm = true;
-        form.returns_items = app.returns_items;
+        form.products = app.returns_items;
         form.customer_id = app.selectedCustomer.id;
         form.customer_name = app.selectedCustomer.user.name;
         app.disable_submit = true;
-        const createInvoice = new Resource('stock/returns/store');
+        const createInvoice = new Resource('stock/returns/update');
         createInvoice
-          .store(form)
+          .update(form.id, form)
           .then((response) => {
-            app.$message({
-              message: 'Returns Created Successfully!!!',
-              type: 'success',
-            });
-            const warehouse_id = app.form.warehouse_id;
-            app.form = app.empty_form;
-            app.form.warehouse_id = warehouse_id;
-            app.returns_items = app.form.returns_items;
+            app.$message({ message: 'Product Updated Successfully!!!', type: 'success' });
 
-            // persist it
-            const unsavedReturns = this.form;
-            app.$store.dispatch('returns/saveUnsavedReturns', unsavedReturns);
-            app.$emit('update', response);
+            app.$emit('update', response.returned_product);
+            app.page.option = 'list';// return to list of items
+
             app.loadForm = false;
           })
           .catch((error) => {
@@ -564,58 +644,48 @@ export default {
       const app = this;
       app.customers.push(created_row);
     },
-    fetchDeliveredInvoices(itemId, index) {
+    fetchInvoicesForBatchNo(itemId, index, quantity, selectedBatch, batch_no) {
       const app = this;
-      app.fetchItemDetails(index);
-      const form = { item_id: itemId, customer_id: app.selectedCustomer.id };
-      const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-delivered-invoices');
+      app.fetchItemDetails(index, quantity);
+      const form = { batch_no, item_id: itemId, customer_id: app.selectedCustomer.id };
+      const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-invoices-for-batch');
       fetchDeliveredInvoicesResource
         .list(form)
         .then((response) => {
           const dispatched_products = response.dispatched_products;
-          app.setProductBatches(dispatched_products, index);
+          app.setProductBatches(dispatched_products, index, selectedBatch);
         })
         .catch((error) => {
           app.loadForm = false;
           console.log(error.message);
         });
     },
-    fetchItemDetails(index) {
+    fetchItemDetails(index, quantity = 1) {
       const app = this;
       const item = app.returns_items[index].item;
-      app.returns_items[index].item_rate = item.price.sale_price;
-      app.returns_items[index].rate = item.price.sale_price;
       app.returns_items[index].item_id = item.id;
       app.returns_items[index].type = item.package_type;
       app.returns_items[index].quantity_per_carton = item.quantity_per_carton;
       app.returns_items[index].no_of_cartons = 0;
-      app.returns_items[index].quantity = 1;
+      app.returns_items[index].quantity = quantity;
     },
-    setProductBatches(dispatchedProducts, index) {
+    setProductBatches(dispatchedProducts, index, selectedBatch = null) {
       const app = this;
+      const batches = [selectedBatch];
       app.returns_items[index].batches = batches;
-      app.returns_items[index].selectedBatch = null;
-      app.returns_items[index].batch_no = '';
-      app.returns_items[index].batch_id = null;
-      app.returns_items[index].dispatched_product_id = null;
-      app.returns_items[index].expiry_date = '';
-      app.returns_items[index].max_quantity = 0;
-      app.returns_items[index].invoice_no = '';
+      app.returns_items[index].dispatched_products = dispatchedProducts;
+      app.returns_items[index].selected_dispatched_product = {
+        invoice_number: selectedBatch.invoice_no,
+        rate: selectedBatch.price,
+      };
+      app.returns_items[index].selectedBatch = selectedBatch;
+      app.returns_items[index].batch_no = (selectedBatch !== null) ? selectedBatch.batch_no : '';
+      app.returns_items[index].batch_id = (selectedBatch !== null) ? selectedBatch.batch_id : null;
+      app.returns_items[index].dispatched_product_id = (selectedBatch !== null) ? selectedBatch.dispatched_product_id : null;
+      app.returns_items[index].expiry_date = (selectedBatch !== null) ? selectedBatch.expiry_date : '';
+      app.returns_items[index].max_quantity = (selectedBatch !== null) ? selectedBatch.max_quantity : 0;
+      app.returns_items[index].invoice_no = (selectedBatch !== null) ? selectedBatch.invoice_no : '';
       app.returns_items[index].showMaxQuantity = false;
-      const batches = [];
-      dispatchedProducts.forEach(element => {
-        batches.push({
-          id: element.item_stock_sub_batch_id,
-          batch_id: element.item_stock_sub_batch_id,
-          dispatched_product_id: element.id,
-          batch_no: element.batch_no,
-          expiry_date: element.expiry_date,
-          price: element.rate,
-          invoice_no: element.invoice_number,
-          max_quantity: (element.quantity_returned) ? parseInt(element.quantity_supplied) - parseInt(element.quantity_returned) : parseInt(element.quantity_supplied),
-        });
-      });
-      app.returns_items[index].batches = batches;
     },
     isQuantityOverflow(quantity, maxQuantity) {
       return quantity > maxQuantity;

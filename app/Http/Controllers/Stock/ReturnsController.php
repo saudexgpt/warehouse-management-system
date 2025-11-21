@@ -388,7 +388,7 @@ class ReturnsController extends Controller
         // This method is for the auditor to comment on returned products
         $user = $this->getUser();
         $stockReturn->auditor_comment = $request->comment;
-        $stockReturn->approval_status = $request->approval_status;
+        $stockReturn->auditor_status = $request->approval_status;
 
         $stockReturn->audited_by = $user->id;
         $stockReturn->save();
@@ -405,7 +405,8 @@ class ReturnsController extends Controller
     {
         $customer_id = $request->customer_id;
         $item_id = $request->item_id;
-        $dispatched_products = DispatchedProduct::join('invoices', 'invoices.id', '=', 'dispatched_products.invoice_id')
+        $dispatched_products = DispatchedProduct::groupBy('dispatched_products.item_stock_sub_batch_id')
+            ->join('invoices', 'invoices.id', '=', 'dispatched_products.invoice_id')
             ->join('invoice_items', 'invoice_items.id', '=', 'dispatched_products.invoice_item_id')
             ->join('item_stock_sub_batches', 'item_stock_sub_batches.id', '=', 'dispatched_products.item_stock_sub_batch_id')
             ->join('items', 'items.id', '=', 'dispatched_products.item_id')
@@ -417,7 +418,7 @@ class ReturnsController extends Controller
             ->where('dispatched_products.customer_id', $customer_id)
             ->where('dispatched_products.item_id', $item_id)
             // ->whereRaw('dispatched_products.quantity_supplied - dispatched_products.quantity_returned > 0')
-            ->select('dispatched_products.*', 'invoices.invoice_number', 'invoice_items.rate', 'item_stock_sub_batches.batch_no', 'item_stock_sub_batches.expiry_date', 'returned_products.quantity as quantity_returned')
+            ->select('dispatched_products.*', \DB::raw('SUM(dispatched_products.quantity_supplied) as quantity_supplied'), 'invoices.invoice_number', 'invoice_items.rate', 'item_stock_sub_batches.batch_no', 'item_stock_sub_batches.expiry_date', 'returned_products.quantity as quantity_returned')
             // ->groupBy(['dispatched_products.item_stock_sub_batch_id', 'dispatched_products.invoice_id', 'dispatched_products.item_id'])
             ->get();
         return response()->json(compact('dispatched_products'), 200);
@@ -430,13 +431,32 @@ class ReturnsController extends Controller
             ->join('invoice_items', 'invoice_items.id', '=', 'dispatched_products.invoice_item_id')
             ->join('item_stock_sub_batches', 'item_stock_sub_batches.id', '=', 'dispatched_products.item_stock_sub_batch_id')
             ->join('items', 'items.id', '=', 'dispatched_products.item_id')
-            ->join('returned_products', 'returned_products.dispatched_product_id', '=', 'dispatched_products.id')
+            ->leftJoin('returned_products', 'returned_products.dispatched_product_id', '=', 'dispatched_products.id')
             ->where('dispatched_products.customer_id', $customer_id)
             ->where('dispatched_products.item_id', $item_id)
             // ->whereRaw('dispatched_products.quantity_supplied - dispatched_products.quantity_returned > 0')
-            ->select('dispatched_products.*', 'invoices.invoice_number', 'invoice_items.rate', 'item_stock_sub_batches.batch_no', 'item_stock_sub_batches.expiry_date', 'returned_products.quantity as quantity_returned')
+            ->select('dispatched_products.*', 'invoices.invoice_number', 'invoice_items.rate', 'item_stock_sub_batches.batch_no', 'item_stock_sub_batches.expiry_date', 'returned_products.quantity as quantity_returned', 'returned_products.max_returnable_quantity')
             // ->groupBy(['dispatched_products.item_stock_sub_batch_id', 'dispatched_products.invoice_id', 'dispatched_products.item_id'])
             ->get();
         return response()->json(compact('dispatched_products'), 200);
     }
+    public function fetchInvoicesForBatchNo(Request $request)
+    {
+        $customer_id = $request->customer_id;
+        $item_id = $request->item_id;
+        $batch_no = $request->batch_no;
+        $items_in_stock = ItemStockSubBatch::where('batch_no', $batch_no)->pluck('id');
+
+
+        $dispatched_products = DispatchedProduct::join('invoices', 'invoices.id', '=', 'dispatched_products.invoice_id')
+            ->join('invoice_items', 'invoice_items.id', '=', 'dispatched_products.invoice_item_id')
+            ->where('dispatched_products.customer_id', $customer_id)
+            ->where('dispatched_products.item_id', $item_id)
+            ->whereIn('item_stock_sub_batch_id', $items_in_stock)
+            ->select('invoices.invoice_number', 'invoice_items.rate')
+            ->distinct()
+            ->get();
+        return response()->json(compact('dispatched_products'), 200);
+    }
+
 }
