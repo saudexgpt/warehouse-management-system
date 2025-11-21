@@ -3,95 +3,44 @@
     <div>
       <div v-if="params" class="box">
         <div class="box-header">
-          <h4 class="box-title">Edit Returned Products</h4>
-          <span class="pull-right">
+          <h4 class="box-title">List of Returned Products</h4>
+          <span class="pull-right no-print">
             <a class="btn btn-danger" @click="page.option = 'list'"> Back</a>
-            <a class="btn btn-info" @click="page.option = 'print-pending'"><i class="el-icon-printer" /> Print Preview</a>
+            <a class="btn btn-info" @click="doPrint();"><i class="el-icon-printer" /> Print</a>
           </span>
-          <!-- <span class="pull-right">
-            <a
-              v-if="checkPermission(['create invoice']) && upload_type ==='normal'"
-              class="btn btn-success"
-              @click="upload_type ='bulk'"
-            >Bulk Upload</a>
-            <a
-              v-if="checkPermission(['create invoice']) && upload_type ==='bulk'"
-              class="btn btn-primary"
-              @click="upload_type ='normal'"
-            >Normal Upload</a>
-            <router-link
-              v-if="checkPermission(['view invoice'])"
-              :to="{name:'Invoices'}"
-              class="btn btn-danger"
-            >Cancel</router-link>
-            <el-button
-              type="primary"
-              @click="loadOfflineData()"
-            >Load Unsaved Invoice</el-button>
-
-          </span> -->
         </div>
         <div class="box-body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>
+                  <label>Customer Name</label>
+                  <address>
+                    <label>{{ selectedCustomer.user.name.toUpperCase() }}</label>
+                  </address>
+                </th>
+                <th>
+                  <label>Returns No.: {{ returnedProduct.returns_no }}</label>
+                  <br>
+                  <label>Date:</label>
+                  {{
+                    moment(returnedProduct.date_returned).format('MMMM Do YYYY')
+                  }}
+                  <br>
+                </th>
+                <th>
+                  <label>Returned By</label>
+                  <address>
+                    <strong>{{ returnedProduct.stocker.name }}</strong>
+                  </address>
+                </th>
+                <th>
+                  <h3>Total Amount: {{ currency + totalAmount.toLocaleString() }}</h3>
+                </th>
+              </tr>
+            </thead>
+          </table>
           <el-form ref="form" v-loading="loadForm" :model="form" label-width="120px">
-            <el-row :gutter="5" class="padded">
-              <el-col :xs="24" :sm="12" :md="12">
-                <label for>Select Warehouse</label>
-                <el-select v-model="form.warehouse_id" placeholder="Select Warehouse" filterable class="span">
-                  <el-option
-                    v-for="(warehouse, index) in params.warehouses"
-                    :key="index"
-                    :value="warehouse.id"
-                    :label="warehouse.name"
-                    :disabled="warehouse.id !== 7"
-                  />
-
-                </el-select>
-              </el-col>
-              <el-col :xs="24" :sm="12" :md="12">
-                <label for>
-                  Select Customer
-                </label>
-                <el-select
-                  v-model="selectedCustomer"
-                  placeholder="Select Customer"
-                  filterable
-                  value-key="id"
-                  class="span"
-                  @input="show_product_list = true"
-                >
-                  <el-option
-                    v-for="(customer, customer_index) in customers"
-                    :key="customer_index"
-                    :value="customer"
-                    :label="(customer.user) ? customer.user.name : ''"
-                  />
-                </el-select>
-                <!-- <el-select
-                  v-model="form.customer_id"
-                  placeholder="Select Customer"
-                  filterable
-                  class="span"
-                  @input="show_product_list = true"
-                >
-                  <el-option
-                    v-for="(customer, customer_index) in customers"
-                    :key="customer_index"
-                    :value="customer.id"
-                    :label="(customer.user) ? customer.user.name : ''"
-                  />
-                </el-select> -->
-                <label for>Returned Date</label>
-                <el-date-picker
-                  v-model="form.date_returned"
-                  type="date"
-                  placeholder="Returned Date"
-                  style="width: 100%;"
-                  format="yyyy/MM/dd"
-                  value-format="yyyy-MM-dd"
-                  :picker-options="pickerOptions"
-                />
-              </el-col>
-            </el-row>
             <div>
               <el-row :gutter="2" class="padded">
                 <el-col>
@@ -110,145 +59,30 @@
                       <tbody>
                         <tr v-for="(invoice_item, index) in returns_items" :key="index">
                           <td>
-                            <span v-if="!can_submit">
-                              <a
-                                class="btn btn-danger btn-flat fa fa-trash"
-                                @click="removeLine(index)"
-                              />
-                              <a
-                                v-if="index + 1 === returns_items.length"
-                                class="btn btn-info btn-flat fa fa-plus"
-                                @click="addLine(index)"
-                              />
-                            </span>
-                            <span v-else>
-                              {{ index + 1 }}
-                            </span>
+                            {{ index + 1 }}
                           </td>
                           <td>
-                            <el-select
-                              v-model="invoice_item.item"
-                              value-key="id"
-                              placeholder="Select Product"
-                              filterable
-                              class="span"
-                              :disabled="can_submit"
-                              @input="fetchDeliveredInvoices($event.id, index);"
-                            >
-                              <el-option
-                                v-for="(item, item_index) in params.items"
-                                :key="item_index"
-                                :value="item"
-                                :label="item.name"
-                                :disabled="item.enabled === 0"
-                              />
-                            </el-select>
+                            {{ invoice_item.item ? invoice_item.item.name : '' }}
                           </td>
                           <td v-loading="invoice_item.load">
-                            <el-select
-                              v-model="invoice_item.selectedBatch"
-                              value-key="id"
-                              placeholder="Select Batch"
-                              filterable
-                              class="span"
-                              :disabled="can_submit"
-                              @change="invoice_item.invoice_no = $event.invoice_no; invoice_item.batch_no = $event.batch_no; invoice_item.expiry_date = $event.expiry_date; invoice_item.price = $event.price; invoice_item.max_quantity = $event.max_quantity; invoice_item.dispatched_product_id = $event.dispatched_product_id; invoice_item.batch_id = $event.id"
-                            >
-                              <el-option
-                                v-for="(batch, batch_index) in invoice_item.batches"
-                                :key="batch_index"
-                                :value="batch"
-                                :label="`${batch.batch_no} | ${batch.expiry_date}`"
-                              />
-                            </el-select>
+                            <p>Batch No: {{ invoice_item.batch_no }}</p>
+                            <p>Expiry Date: {{ invoice_item.expiry_date }}</p>
                           </td>
                           <td>
-                            <el-input v-model="invoice_item.quantity" type="text" placeholder="Quantity" class="span" @input="calculateNoOfCartons(index);">
-                              <template slot="append">{{ invoice_item.type }}</template>
-                            </el-input>
-                            <!-- <el-input
-                              v-model="invoice_item.quantity"
-                              type="number"
-                              outline
-                              placeholder="Quantity"
-                              min="0"
-                              :disabled="can_submit"
-                              @input="calculateNoOfCartons(index);"
-                            /> -->
-                            <br>Quantity Returned<code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
-                            <br>
-                            <el-tag type="danger">Maximum Returnable Quantity:
-                              <span v-html="showItemsInCartons(invoice_item.max_quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
-                            </el-tag>
+                            <p>Quantity: {{ invoice_item.quantity }}{{ invoice_item.type }}</p>
+                            <p>Quantity in CTNs: <span v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" /></p>
                           </td>
                           <td>
-                            <el-select v-model="invoice_item.reason" placeholder="Select Reason" filterable class="span">
-                              <el-option v-for="(reason, reason_index) in params.product_return_reasons" :key="reason_index" :value="reason" :label="reason" />
-
-                            </el-select>
-                            <div v-if="invoice_item.reason === 'Others'">
-                              <label for="">Specify Other Reasons</label>
-                              <el-input v-model="invoice_item.other_reason" type="text" placeholder="Specify" class="span" />
-                            </div>
+                            {{ invoice_item.reason === 'Others' ? invoice_item.other_reason : invoice_item.reason }}
                           </td>
                         </tr>
-                        <tr v-if="fill_fields_error">
-                          <td colspan="5">
-                            <label
-                              class="label label-danger"
-                            >Please fill all empty fields before adding another row</label>
-                          </td>
-                        </tr>
-                        <!-- <tr>
-                          <td align="right">Notes</td>
-                          <td colspan="5">
-                            <textarea
-                              v-model="form.notes"
-                              class="form-control"
-                              rows="3"
-                              placeholder="Type extra note on this invoice here..."
-                            />
-                          </td>
-                        </tr> -->
                       </tbody>
                     </table>
                   </div>
                 </el-col>
               </el-row>
-              <el-row v-if="checkPermission(['manage returned products']) && form.auditor_status !== 'confirmed'" :gutter="2" class="padded">
-                <el-col :xs="24" :sm="24" :md="24">
-                  <div align="center">
-                    <el-button type="success" @click="submitNewInvoice">
-                      <i class="el-icon-plus" />
-                      Update Entry
-                    </el-button>
-                    <!-- <div v-if="can_submit">
-
-                      <el-button type="success" @click="submitNewInvoice">
-                        <i class="el-icon-plus" />
-                        Submit Invoice
-                      </el-button>
-                      <el-button type="danger" @click="can_submit = false">
-                        <i class="el-icon-edit" />
-                        Alter Entry
-                      </el-button>
-                    </div>
-                    <el-button v-else :loading="loadPreview" type="primary" @click="checkProductsQuantityInStock">
-                      <i class="el-icon-file" />
-                      Preview Entry
-                    </el-button> -->
-                  </div>
-                </el-col>
-              </el-row>
             </div>
           </el-form>
-          <add-new-customer
-            :dialog-form-visible="dialogFormVisible"
-            :params="params"
-            @created="onCreateUpdate"
-            @close="dialogFormVisible=false"
-          />
-
         </div>
       </div>
     </div>
@@ -261,12 +95,10 @@ import moment from 'moment';
 import checkPermission from '@/utils/permission';
 import checkRole from '@/utils/role';
 import showItemsInCartons from '@/utils/functions';
-import AddNewCustomer from '@/app/users/AddNewCustomer';
 import Resource from '@/api/resource';
 const checkProductsInStock = new Resource('invoice/general/check-product-quantity-in-stock');
 export default {
   // name: 'CreateInvoice',
-  components: { AddNewCustomer },
   props: {
     returnedProduct: {
       type: Object,
@@ -386,6 +218,7 @@ export default {
         // phone: [{ required: true, message: 'Phone is required', trigger: 'blur' }],
       },
       discount_rate: 0,
+      totalAmount: 0,
     };
   },
   computed: {
@@ -418,6 +251,16 @@ export default {
     checkPermission,
     checkRole,
     showItemsInCartons,
+    calculateTotalAmount() {
+      let total = 0;
+      this.returns_items.forEach(product => {
+        total += Number(product.price) * Number(product.quantity);
+      });
+      this.totalAmount = total;
+    },
+    doPrint() {
+      window.print();
+    },
     submitAuditorComment(id, status) {
       const app = this;
       if (status === 'confirmed') {
@@ -476,8 +319,7 @@ export default {
           invoice_no: element.invoice_no,
           max_quantity: element.max_returnable_quantity,
         };
-        // this.fetchDeliveredInvoices(element.item_id, index);
-        this.fetchDeliveredInvoicesWithReturns(element.item_id, index, quantity, selectedBatch);
+        this.fetchInvoicesForBatchNo(element.item_id, index, quantity, selectedBatch, element.batch_no);
       }
     },
     rowIsEmpty() {
@@ -625,31 +467,16 @@ export default {
       const app = this;
       app.customers.push(created_row);
     },
-    fetchDeliveredInvoices(itemId, index) {
-      const app = this;
-      app.fetchItemDetails(index);
-      const form = { item_id: itemId, customer_id: app.selectedCustomer.id };
-      const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-delivered-invoices');
-      fetchDeliveredInvoicesResource
-        .list(form)
-        .then((response) => {
-          const dispatched_products = response.dispatched_products;
-          app.setProductBatches(dispatched_products, index);
-        })
-        .catch((error) => {
-          app.loadForm = false;
-          console.log(error.message);
-        });
-    },
-    fetchDeliveredInvoicesWithReturns(itemId, index, quantity = 1, selectedBatch = null) {
+    fetchInvoicesForBatchNo(itemId, index, quantity, selectedBatch, batch_no) {
       const app = this;
       app.fetchItemDetails(index, quantity);
-      const form = { item_id: itemId, customer_id: app.selectedCustomer.id };
-      const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-delivered-invoices-with-returns');
+      const form = { batch_no, item_id: itemId, customer_id: app.selectedCustomer.id };
+      const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-invoices-for-batch');
       fetchDeliveredInvoicesResource
         .list(form)
         .then((response) => {
           const dispatched_products = response.dispatched_products;
+          app.dispatched_products = response.dispatched_products;
           app.setProductBatches(dispatched_products, index, selectedBatch);
         })
         .catch((error) => {
@@ -657,22 +484,6 @@ export default {
           console.log(error.message);
         });
     },
-    // fetchDeliveredInvoicesWithReturns(itemId, index, quantity = 1, selectedBatch = null) {
-    //   const app = this;
-    //   app.fetchItemDetails(index, quantity);
-    //   const form = { item_id: itemId, customer_id: app.selectedCustomer.id };
-    //   const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-delivered-invoices-with-returns');
-    //   fetchDeliveredInvoicesResource
-    //     .list(form)
-    //     .then((response) => {
-    //       const dispatched_products = response.dispatched_products;
-    //       app.setProductBatches(dispatched_products, index, selectedBatch);
-    //     })
-    //     .catch((error) => {
-    //       app.loadForm = false;
-    //       console.log(error.message);
-    //     });
-    // },
     fetchItemDetails(index, quantity = 1) {
       const app = this;
       const item = app.returns_items[index].item;
@@ -684,7 +495,7 @@ export default {
     },
     setProductBatches(dispatchedProducts, index, selectedBatch = null) {
       const app = this;
-      const batches = [];
+      const batches = [selectedBatch];
       app.returns_items[index].batches = batches;
       app.returns_items[index].selectedBatch = selectedBatch;
       app.returns_items[index].batch_no = (selectedBatch !== null) ? selectedBatch.batch_no : '';
@@ -694,20 +505,8 @@ export default {
       app.returns_items[index].max_quantity = (selectedBatch !== null) ? selectedBatch.max_quantity : 0;
       app.returns_items[index].invoice_no = (selectedBatch !== null) ? selectedBatch.invoice_no : '';
       app.returns_items[index].showMaxQuantity = false;
-      dispatchedProducts.forEach(element => {
-        batches.push({
-          id: element.item_stock_sub_batch_id,
-          batch_id: element.item_stock_sub_batch_id,
-          dispatched_product_id: element.id,
-          batch_no: element.batch_no,
-          expiry_date: element.expiry_date,
-          price: element.rate,
-          invoice_no: element.invoice_number,
-          // max_quantity: (selectedBatch !== null) ? selectedBatch.max_quantity : (element.quantity_returned) ? parseInt(element.quantity_supplied) - parseInt(element.quantity_returned) : parseInt(element.quantity_supplied),
-          max_quantity: (element.max_returnable_quantity) ? parseInt(element.max_returnable_quantity) : (element.quantity_returned) ? parseInt(element.quantity_supplied) - parseInt(element.quantity_returned) : parseInt(element.quantity_supplied),
-        });
-      });
-      app.returns_items[index].batches = batches;
+
+      this.calculateTotalAmount();
     },
     isQuantityOverflow(quantity, maxQuantity) {
       return quantity > maxQuantity;

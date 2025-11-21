@@ -6,6 +6,7 @@
     <edit-returns v-if="page.option== 'edit_returns'" :returned-product="returnedProduct" :selected-customer="returnedProduct.customer" :params="params" :page="page" @update="onEditUpdate" />
     <confirm-returns v-if="page.option== 'confirm_returns'" :returned-product="returnedProduct" :selected-customer="returnedProduct.customer" :params="params" :page="page" @update="onEditUpdate" />
     <print-returned-products v-if="page.option== 'print'" :returned-product="returnedProduct" :selected-customer="returnedProduct.customer" :params="params" :page="page" @update="onEditUpdate" />
+    <print-pending-returned-products v-if="page.option== 'print-pending'" :returned-product="returnedProduct" :selected-customer="returnedProduct.customer" :params="params" :page="page" @update="onEditUpdate" />
     <div v-if="page.option=='list'" class="box">
       <div class="box-header">
         <h4 class="box-title">List of Returned Products {{ in_warehouse }}</h4>
@@ -157,6 +158,8 @@ import AddNewReturns from './partials/AddNewReturns';
 import EditReturns from './partials/EditReturns';
 import ConfirmReturns from './partials/ConfirmReturns';
 import PrintReturnedProducts from './partials/PrintReturnedProducts';
+import PrintPendingReturnedProducts from './partials/PrintPendingReturnedProducts';
+
 import Details from './partials/Details';
 import Resource from '@/api/resource';
 // import Vue from 'vue';
@@ -167,7 +170,7 @@ const approveReturnedProducts = new Resource('stock/returns/approve-products');
 const confirmItemReturned = new Resource('audit/confirm/returned-products');
 export default {
   name: 'Returns',
-  components: { Details, ApprovedReturnedProducts, AddNewReturns, EditReturns, ConfirmReturns, PrintReturnedProducts, Pagination },
+  components: { Details, ApprovedReturnedProducts, AddNewReturns, EditReturns, ConfirmReturns, PrintReturnedProducts, PrintPendingReturnedProducts, Pagination },
   data() {
     return {
       activeActivity: 'unapproved',
