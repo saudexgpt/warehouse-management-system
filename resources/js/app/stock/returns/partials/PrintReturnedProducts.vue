@@ -304,7 +304,33 @@ export default {
         return;
       }
     },
-    loadData() {
+    async loadData() {
+      this.form = this.returnedProduct;
+      const fetchDeliveredInvoicesResource = new Resource('stock/returns/confirm-returned-products');
+      const { returns_items } = await fetchDeliveredInvoicesResource.get(this.returnedProduct.id);
+      this.returns_items = returns_items;
+      for (let index = 0; index < returns_items.length; index++) {
+        const element = returns_items[index];
+        const quantity = element.quantity;
+        const selectedBatch = {
+          id: element.item_stock_sub_batch_id,
+          batch_id: element.item_stock_sub_batch_id,
+          dispatched_product_id: element.dispatched_product_id,
+          batch_no: element.batch_no,
+          expiry_date: element.expiry_date,
+          price: element.price,
+          invoice_no: element.invoice_no,
+          max_quantity: element.max_returnable_quantity,
+        };
+        // this.fetchDeliveredInvoices(element.item_id, index);
+        this.fetchDeliveredInvoicesWithReturns(index, quantity, selectedBatch, element.dispatched_products);
+      }
+    },
+    fetchDeliveredInvoicesWithReturns(index, quantity = 1, selectedBatch = null, dispatched_products) {
+      this.fetchItemDetails(index, quantity);
+      this.setProductBatches(dispatched_products, index, selectedBatch);
+    },
+    loadDataOld() {
       this.form = this.returnedProduct;
       this.returns_items = this.returnedProduct.products;
       if (this.returns_items.length < 1) {

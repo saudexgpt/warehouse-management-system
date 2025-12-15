@@ -101,6 +101,7 @@
                         <tr>
                           <th />
                           <th>Choose Product</th>
+                          <th>Expiry Date</th>
                           <th>Batch No & Expiry Date</th>
                           <th>Quantity</th>
                           <th>Reason for return</th>
@@ -132,7 +133,6 @@
                               filterable
                               class="span"
                               :disabled="can_submit"
-                              @input="fetchDeliveredInvoices($event.id, index);"
                             >
                               <el-option
                                 v-for="(item, item_index) in params.items"
@@ -143,8 +143,20 @@
                               />
                             </el-select>
                           </td>
+                          <td>
+                            <el-date-picker
+                              v-model="invoice_item.expiry_date_query"
+                              type="month"
+                              placeholder="Returned Date"
+                              style="width: 100%;"
+                              format="yyyy/MM"
+                              value-format="yyyy-MM"
+                              @input="fetchDeliveredInvoices(invoice_item.item.id, invoice_item.expiry_date_query, index);"
+                            />
+                          </td>
                           <td v-loading="invoice_item.load">
                             <el-select
+                              v-if="invoice_item.expiry_date_query !== ''"
                               v-model="invoice_item.selectedBatch"
                               value-key="id"
                               placeholder="Select Batch"
@@ -166,10 +178,12 @@
                             <el-tag>Price: {{ invoice_item.price }}</el-tag> -->
                           </td>
                           <td>
-                            <el-input v-model="invoice_item.quantity" type="text" placeholder="Quantity" class="span" @input="calculateNoOfCartons(index);">
-                              <template slot="append">{{ invoice_item.type }}</template>
-                            </el-input>
-                            <!-- <el-input
+                            <div v-if="invoice_item.batch_no !== ''">
+
+                              <el-input v-model="invoice_item.quantity" type="text" placeholder="Quantity" class="span" @input="calculateNoOfCartons(index);">
+                                <template slot="append">{{ invoice_item.type }}</template>
+                              </el-input>
+                              <!-- <el-input
                               v-model="invoice_item.quantity"
                               type="number"
                               outline
@@ -178,20 +192,23 @@
                               :disabled="can_submit"
                               @input="calculateNoOfCartons(index);"
                             /> -->
-                            <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
-                            <br>
-                            <el-tag type="danger">Maximum Returnable Quantity:
-                              <span v-html="showItemsInCartons(invoice_item.max_quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
-                            </el-tag>
+                              <br><code v-html="showItemsInCartons(invoice_item.quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
+                              <br>
+                              <el-tag type="danger">Maximum Returnable Quantity:
+                                <span v-html="showItemsInCartons(invoice_item.max_quantity, invoice_item.quantity_per_carton, invoice_item.type)" />
+                              </el-tag>
+                            </div>
                           </td>
                           <td>
-                            <el-select v-model="invoice_item.reason" placeholder="Select Reason" filterable class="span">
-                              <el-option v-for="(reason, reason_index) in params.product_return_reasons" :key="reason_index" :value="reason" :label="reason" />
+                            <div v-if="invoice_item.batch_no !== ''">
+                              <el-select v-model="invoice_item.reason" placeholder="Select Reason" filterable class="span">
+                                <el-option v-for="(reason, reason_index) in params.product_return_reasons" :key="reason_index" :value="reason" :label="reason" />
 
-                            </el-select>
-                            <div v-if="invoice_item.reason === 'Others'">
-                              <label for="">Specify Other Reasons</label>
-                              <el-input v-model="invoice_item.other_reason" type="text" placeholder="Specify" class="span" />
+                              </el-select>
+                              <div v-if="invoice_item.reason === 'Others'">
+                                <label for="">Specify Other Reasons</label>
+                                <el-input v-model="invoice_item.other_reason" type="text" placeholder="Specify" class="span" />
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -456,6 +473,7 @@ export default {
           dispatched_product_id: null,
           batch_no: '',
           expiry_date: '',
+          expiry_date_query: '',
           date_returned: '',
           reason: null,
           other_reason: null,
@@ -564,10 +582,10 @@ export default {
       const app = this;
       app.customers.push(created_row);
     },
-    fetchDeliveredInvoices(itemId, index) {
+    fetchDeliveredInvoices(itemId, expiry_date, index) {
       const app = this;
       app.fetchItemDetails(index);
-      const form = { item_id: itemId, customer_id: app.selectedCustomer.id };
+      const form = { item_id: itemId, expiry_date: expiry_date, customer_id: app.selectedCustomer.id };
       const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-delivered-invoices');
       fetchDeliveredInvoicesResource
         .list(form)

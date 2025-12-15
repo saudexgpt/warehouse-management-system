@@ -100,6 +100,20 @@ class SetTableUniqueCode extends Command
                 }
             });
     }
+    public function updateDispatchProductBatchNo()
+    {
+        DispatchedProduct::with('itemStock')
+            ->chunkById(200, function ($dispatchedProducts) {
+                foreach ($dispatchedProducts as $dispatchedProduct) {
+
+                    $itemStock = $dispatchedProduct->itemStock;
+                    $dispatchedProduct->batch_no = $itemStock->batch_no;
+                    $dispatchedProduct->expiry_date = $itemStock->expiry_date;
+                    $dispatchedProduct->save();
+                }
+
+            }, $column = 'id');
+    }
     public function setWaybilledInvoices()
     {
         Invoice::with('waybillItems')->where(
@@ -125,6 +139,7 @@ class SetTableUniqueCode extends Command
      */
     public function handle()
     {
+        $this->updateDispatchProductBatchNo();
         $this->updateCustomerCode();
         $this->updateProductCode();
         $this->updateRepsTable();

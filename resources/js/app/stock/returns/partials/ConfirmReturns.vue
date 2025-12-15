@@ -146,6 +146,8 @@
                                 :label="`${dispatched_product.invoice_number} - ${currency} ${dispatched_product.rate}`"
                               />
                             </el-select>
+                            <el-tag>Selected Invoice No: {{ invoice_item.invoice_no }}</el-tag><br>
+                            <el-tag>Price: {{ invoice_item.price }}</el-tag>
                           </td>
                           <td>
                             <el-input v-model="invoice_item.quantity" type="text" placeholder="Quantity" class="span" @input="calculateNoOfCartons(index);">
@@ -474,7 +476,33 @@ export default {
       //   return;
       // }
     },
-    loadData() {
+    async loadData() {
+      this.form = this.returnedProduct;
+      const fetchDeliveredInvoicesResource = new Resource('stock/returns/confirm-returned-products');
+      const { returns_items } = await fetchDeliveredInvoicesResource.get(this.returnedProduct.id);
+      this.returns_items = returns_items;
+      for (let index = 0; index < returns_items.length; index++) {
+        const element = returns_items[index];
+        const quantity = element.quantity;
+        const selectedBatch = {
+          id: element.item_stock_sub_batch_id,
+          batch_id: element.item_stock_sub_batch_id,
+          dispatched_product_id: element.dispatched_product_id,
+          batch_no: element.batch_no,
+          expiry_date: element.expiry_date,
+          price: element.price,
+          invoice_no: element.invoice_no,
+          max_quantity: element.max_returnable_quantity,
+        };
+        // this.fetchDeliveredInvoices(element.item_id, index);
+        this.fetchDeliveredInvoicesWithReturns(index, quantity, selectedBatch, element.dispatched_products);
+      }
+    },
+    fetchDeliveredInvoicesWithReturns(index, quantity = 1, selectedBatch = null, dispatched_products) {
+      this.fetchItemDetails(index, quantity);
+      this.setProductBatches(dispatched_products, index, selectedBatch);
+    },
+    loadDataOld() {
       this.form = this.returnedProduct;
       this.returns_items = this.returnedProduct.products;
       if (this.returns_items.length < 1) {
@@ -675,8 +703,9 @@ export default {
       app.returns_items[index].batches = batches;
       app.returns_items[index].dispatched_products = dispatchedProducts;
       app.returns_items[index].selected_dispatched_product = {
-        invoice_number: selectedBatch.invoice_no,
-        rate: selectedBatch.price,
+        id: (selectedBatch !== null) ? selectedBatch.dispatched_product_id : null,
+        invoice_number: (selectedBatch !== null) ? selectedBatch.invoice_no : null,
+        rate: (selectedBatch !== null) ? selectedBatch.price : null,
       };
       app.returns_items[index].selectedBatch = selectedBatch;
       app.returns_items[index].batch_no = (selectedBatch !== null) ? selectedBatch.batch_no : '';
@@ -685,6 +714,7 @@ export default {
       app.returns_items[index].expiry_date = (selectedBatch !== null) ? selectedBatch.expiry_date : '';
       app.returns_items[index].max_quantity = (selectedBatch !== null) ? selectedBatch.max_quantity : 0;
       app.returns_items[index].invoice_no = (selectedBatch !== null) ? selectedBatch.invoice_no : '';
+      app.returns_items[index].price = (selectedBatch !== null) ? selectedBatch.price : 0;
       app.returns_items[index].showMaxQuantity = false;
     },
     isQuantityOverflow(quantity, maxQuantity) {

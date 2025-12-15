@@ -102,6 +102,7 @@
                         <tr>
                           <th />
                           <th>Choose Product</th>
+                          <th>Expiry Date</th>
                           <th>Batch No & Expiry Date</th>
                           <th>Quantity</th>
                           <th>Reason for return</th>
@@ -133,7 +134,6 @@
                               filterable
                               class="span"
                               :disabled="can_submit"
-                              @input="fetchDeliveredInvoices($event.id, index);"
                             >
                               <el-option
                                 v-for="(item, item_index) in params.items"
@@ -143,6 +143,17 @@
                                 :disabled="item.enabled === 0"
                               />
                             </el-select>
+                          </td>
+                          <td>
+                            <el-date-picker
+                              v-model="invoice_item.expiry_date_query"
+                              type="month"
+                              placeholder="Returned Date"
+                              style="width: 100%;"
+                              format="yyyy/MM"
+                              value-format="yyyy-MM"
+                              @input="fetchDeliveredInvoices(invoice_item.item.id, invoice_item.expiry_date_query, index);"
+                            />
                           </td>
                           <td v-loading="invoice_item.load">
                             <el-select
@@ -161,6 +172,10 @@
                                 :label="`${batch.batch_no} | ${batch.expiry_date}`"
                               />
                             </el-select>
+                            <br>
+                            <el-tag>Batch No: {{ invoice_item.batch_no }} </el-tag><br>
+                            <el-tag>Expiry Date: {{ invoice_item.expiry_date }}
+                            </el-tag>
                           </td>
                           <td>
                             <el-input v-model="invoice_item.quantity" type="text" placeholder="Quantity" class="span" @input="calculateNoOfCartons(index);">
@@ -456,7 +471,53 @@ export default {
         return;
       }
     },
-    loadData() {
+    async loadData() {
+      this.form = this.returnedProduct;
+      const fetchDeliveredInvoicesResource = new Resource('stock/returns/edit-returned-products');
+      const { returns_items } = await fetchDeliveredInvoicesResource.get(this.returnedProduct.id);
+      this.returns_items = returns_items;
+      if (this.returns_items.length < 1) {
+        this.addLine();
+        return;
+      }
+      for (let index = 0; index < returns_items.length; index++) {
+        const element = returns_items[index];
+        const quantity = element.quantity;
+        const selectedBatch = {
+          id: element.item_stock_sub_batch_id,
+          batch_id: element.item_stock_sub_batch_id,
+          dispatched_product_id: element.dispatched_product_id,
+          batch_no: element.batch_no,
+          expiry_date: element.expiry_date,
+          price: element.price,
+          invoice_no: element.invoice_no,
+          max_quantity: element.max_returnable_quantity,
+        };
+        // this.fetchDeliveredInvoices(element.item_id, index);
+        this.fetchDeliveredInvoicesWithReturns(index, quantity, selectedBatch, element.dispatched_products);
+      }
+    },
+    fetchDeliveredInvoicesWithReturns(index, quantity = 1, selectedBatch = null, dispatched_products) {
+      this.fetchItemDetails(index, quantity);
+      this.setProductBatches(dispatched_products, index, selectedBatch);
+    },
+    fetchDeliveredInvoicesWithReturnsOld(itemId, index, quantity = 1, selectedBatch = null) {
+      const app = this;
+      app.fetchItemDetails(index, quantity);
+      const form = { item_id: itemId, customer_id: app.selectedCustomer.id };
+      const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-delivered-invoices-with-returns');
+      fetchDeliveredInvoicesResource
+        .list(form)
+        .then((response) => {
+          const dispatched_products = response.dispatched_products;
+          app.setProductBatches(dispatched_products, index, selectedBatch);
+        })
+        .catch((error) => {
+          app.loadForm = false;
+          console.log(error.message);
+        });
+    },
+    loadDataOld() {
       this.form = this.returnedProduct;
       this.returns_items = this.returnedProduct.products;
       if (this.returns_items.length < 1) {
@@ -514,6 +575,7 @@ export default {
           dispatched_product_id: null,
           batch_no: '',
           expiry_date: '',
+          expiry_date_query: '',
           date_returned: '',
           reason: null,
           other_reason: null,
@@ -641,22 +703,6 @@ export default {
           console.log(error.message);
         });
     },
-    fetchDeliveredInvoicesWithReturns(itemId, index, quantity = 1, selectedBatch = null) {
-      const app = this;
-      app.fetchItemDetails(index, quantity);
-      const form = { item_id: itemId, customer_id: app.selectedCustomer.id };
-      const fetchDeliveredInvoicesResource = new Resource('stock/returns/fetch-delivered-invoices-with-returns');
-      fetchDeliveredInvoicesResource
-        .list(form)
-        .then((response) => {
-          const dispatched_products = response.dispatched_products;
-          app.setProductBatches(dispatched_products, index, selectedBatch);
-        })
-        .catch((error) => {
-          app.loadForm = false;
-          console.log(error.message);
-        });
-    },
     // fetchDeliveredInvoicesWithReturns(itemId, index, quantity = 1, selectedBatch = null) {
     //   const app = this;
     //   app.fetchItemDetails(index, quantity);
@@ -691,6 +737,7 @@ export default {
       app.returns_items[index].batch_id = (selectedBatch !== null) ? selectedBatch.batch_id : null;
       app.returns_items[index].dispatched_product_id = (selectedBatch !== null) ? selectedBatch.dispatched_product_id : null;
       app.returns_items[index].expiry_date = (selectedBatch !== null) ? selectedBatch.expiry_date : '';
+      app.returns_items[index].expiry_date_query = (selectedBatch !== null) ? moment(selectedBatch.expiry_date).format('YYYY-MM') : '';
       app.returns_items[index].max_quantity = (selectedBatch !== null) ? selectedBatch.max_quantity : 0;
       app.returns_items[index].invoice_no = (selectedBatch !== null) ? selectedBatch.invoice_no : '';
       app.returns_items[index].showMaxQuantity = false;

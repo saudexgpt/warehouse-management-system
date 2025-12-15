@@ -390,6 +390,9 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
             $router->group(['middleware' => 'permission:manage returned products'], function () use ($router) {
                 $router->get('fetch-product-batches', 'ReturnsController@fetchProductBatches');
                 $router->post('store', 'ReturnsController@store');
+                $router->get('edit-returned-products/{stockReturn}', 'ReturnsController@editReturnProducts');
+                $router->get('confirm-returned-products/{stockReturn}', 'ReturnsController@confirmReturnProducts');
+
                 $router->put('update/{stockReturn}', 'ReturnsController@update');
                 $router->delete('delete/{returned_product}', 'ReturnsController@destroy');
             });
