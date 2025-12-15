@@ -103,6 +103,7 @@ class SetTableUniqueCode extends Command
     public function updateDispatchProductBatchNo()
     {
         DispatchedProduct::with('itemStock')
+            ->where('batch_no', NULL)
             ->chunkById(200, function ($dispatchedProducts) {
                 foreach ($dispatchedProducts as $dispatchedProduct) {
 
