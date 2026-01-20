@@ -28,6 +28,9 @@
             </span>
             <span v-else><h4 class="alert alert-danger">Items on this Waybill need confirmation by an Auditor</h4></span>
             <!-- </span> -->
+            <div v-if="checkPermission(['audit confirm actions']) && waybill.can_recall === 1">
+              <el-button type="warning" @click="recallWaybill()">Recall Waybill</el-button>
+            </div>
           </div>
           <!-- /.col -->
         </div>
@@ -420,6 +423,20 @@ export default {
         return batch_nos;
       }
       return expiry_dates;
+    },
+    recallWaybill() {
+      const app = this;
+      const message = 'When you recall a delivered waybill, supplies made on it will be reversed and the waybill deleted. It cannot be undone. Click OK to confirm Waybill Recall.';
+      if (confirm(message)) {
+        app.loading = true;
+        const waybillResource = new Resource('invoice/waybill/recall');
+        waybillResource.destroy(app.waybillId)
+          .then(response => {
+            app.loading = false;
+            app.$message('Recall Action Successful');
+            app.page.option = 'list';
+          });
+      }
     },
     fetchWaybill() {
       const app = this;

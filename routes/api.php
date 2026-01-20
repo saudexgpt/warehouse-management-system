@@ -230,6 +230,9 @@ $router->group(['middleware' => 'auth:api'], function () use ($router) {
                 $router->post('store', 'InvoicesController@generateWaybill');
                 $router->put('update/{waybill_id}', 'InvoicesController@updateWaybill');
                 $router->put('change-status/{waybill}', 'InvoicesController@changeWaybillStatus');
+
+                $router->delete('recall/{waybill}', 'InvoicesController@recallWaybill')->middleware('permission:recall delivered waybill');
+
             });
         });
     });

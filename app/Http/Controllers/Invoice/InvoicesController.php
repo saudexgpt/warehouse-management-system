@@ -2023,4 +2023,64 @@ class InvoicesController extends Controller
 
         return response()->json([], 204);
     }
+    public function recallWaybill(Request $request, Waybill $waybill)
+    {
+        set_time_limit(0);
+        if ($waybill->can_recall == 0) {
+            return response()->json(['message' => 'Cannot recall this waybill currently'], 422);
+        }
+        $dispatched_products = $waybill->dispatchProducts;
+        $waybill_items = $waybill->waybillItems;
+        foreach ($dispatched_products as $dispatched_product) {
+            $supplied_quantity = $dispatched_product->quantity_supplied;
+            $item_stock_sub_batch = ItemStockSubBatch::find($dispatched_product->item_stock_sub_batch_id);
+            // reverse the supplied quantity from the stock batch
+            if ($item_stock_sub_batch) {
+                if ($dispatched_product->status == 'delivered') {
+                    $item_stock_sub_batch->supplied -= $supplied_quantity;
+                } else {
+                    $item_stock_sub_batch->in_transit -= $supplied_quantity;
+                }
+                $item_stock_sub_batch->balance += $supplied_quantity;
+                $item_stock_sub_batch->save();
+            }
+            $invoice_item = $dispatched_product->invoiceItem;
+            $invoice_item->quantity_supplied -= $supplied_quantity;
+            $invoice_item->delivery_status = 'pending';
+            $invoice_item->supply_status = 'Partial';
+            if ($invoice_item->quantity_supplied == 0) {
+                $invoice_item->supply_status = 'pending';
+            }
+            $invoice_item->save();
+
+
+            $invoice = $dispatched_product->invoice;
+            $invoice->full_waybill_generated = '0';
+            $invoice->status = 'pending';
+            $invoice->save();
+
+            $dispatched_product->delete();
+        }
+        foreach ($waybill_items as $waybill_item) {
+            $waybill_item->batches()->delete();
+        }
+        $waybill->waybillItems()->delete();
+        $waybill->trips()->detach();
+        $waybill->dispatcher()->delete();
+
+        $actor = $this->getUser();
+
+        $waybill->recalled_by = $actor->id;
+        $waybill->save();
+        $title = "Waybill recalled and trashed";
+        $description = "Waybill ($waybill->waybill_no) was recalled and trashed by $actor->name ($actor->phone)";
+        //log this activity
+        $roles = ['assistant admin', 'warehouse manager', 'warehouse auditor'];
+
+        $this->logUserActivity($title, $description, $roles);
+
+
+        $waybill->delete();
+        return response()->json(null, 204);
+    }
 }

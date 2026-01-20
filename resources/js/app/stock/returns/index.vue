@@ -87,7 +87,7 @@
                     <el-dropdown-item v-if="checkPermission(['manage returned products']) && props.row.auditor_status !== 'confirmed'">
                       <a class="btn btn-primary" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'edit_returns'"><i class="fa fa-edit" /> Edit</a>
                     </el-dropdown-item>
-                    <el-dropdown-item v-if="checkPermission(['audit check returned products'])">
+                    <el-dropdown-item v-if="checkPermission(['audit check returned products', 'update returned products invoice selection'])">
                       <a class="btn btn-warning" @click="returnedProduct=props.row; selected_row_index=props.index; page.option = 'confirm_returns'"><i class="fa fa-check" /> Click to Confirm</a>
                     </el-dropdown-item>
                     <!-- <el-dropdown-item v-if="checkPermission(['audit confirm actions']) && props.row.stocked_by !== userId && props.row.confirmed_by === null">
