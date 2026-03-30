@@ -72,8 +72,8 @@
                 <br><small v-html="showItemsInCartons(row.in_transit, row.item.quantity_per_carton)" />
               </div> -->
               <div slot="supplied" slot-scope="{row}" class="alert alert-danger">
-                {{ (parseInt(row.supplied) + parseInt(row.in_transit)) }} {{ formatPackageType(row.item.package_type) }}
-                <br><small v-html="showItemsInCartons((parseInt(row.supplied) + parseInt(row.in_transit)), row.item.quantity_per_carton)" />
+                {{ parseInt(row.supplied) }} {{ formatPackageType(row.item.package_type) }}
+                <br><small v-html="showItemsInCartons((parseInt(row.supplied)), row.item.quantity_per_carton)" />
               </div>
               <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
                 <a @click="showReservationTransactions(row)">
@@ -86,8 +86,8 @@
                 <br><small v-html="showItemsInCartons(row.balance, row.item.quantity_per_carton)" />
               </div>
               <div slot="balance" slot-scope="{row}" class="alert alert-success">
-                {{ (row.balance - row.reserved_for_supply) }} {{ formatPackageType(row.item.package_type) }}
-                <br><small v-html="showItemsInCartons(row.balance - row.reserved_for_supply, row.item.quantity_per_carton)" />
+                {{ parseInt(row.balance) }} {{ formatPackageType(row.item.package_type) }}
+                <br><small v-html="showItemsInCartons(row.balance, row.item.quantity_per_carton)" />
               </div>
               <div slot="expiry_date" slot-scope="{row}" :class="expiryFlag(moment(row.expiry_date).format('x'))">
                 <span>
@@ -254,7 +254,7 @@ export default {
       warehouses: [],
       items_in_stock: [],
       expired_products: [],
-      columns: ['action', 'stocker.name', 'confirmer.name', 'item.name', 'item.price.sale_price', 'item.quantity_per_carton', 'batch_no', 'goods_received_note', 'quantity', /* 'in_transit'*/ 'supplied', /* 'expired',*/ 'reserved_for_supply', 'balance', 'in_stock', 'created_at', 'expiry_date', 'is_warehouse_transfered'],
+      columns: ['action', 'stocker.name', 'confirmer.name', 'item.name', 'item.price.sale_price', 'item.quantity_per_carton', 'batch_no', 'goods_received_note', 'quantity', /* 'in_transit'*/ 'supplied', 'balance', /* 'expired', 'reserved_for_supply',  'in_stock',*/ 'created_at', 'expiry_date', 'is_warehouse_transfered'],
 
       options: {
         headings: {
@@ -268,7 +268,7 @@ export default {
           quantity: 'QTY Stocked',
           // in_transit: 'On Trans',
           supplied: 'Supplied',
-          reserved_for_supply: 'Waybill Reserved',
+          // reserved_for_supply: 'Waybill Reserved',
           in_stock: 'PHYS. Stock',
           balance: 'Main Bal.',
           expiry_date: 'Expires',

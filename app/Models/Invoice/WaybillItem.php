@@ -30,9 +30,9 @@ class WaybillItem extends Model
     {
         return $this->hasMany(InvoiceItemBatch::class);
     }
-    public function dispatchProduct()
+    public function dispatchProducts()
     {
-        return $this->hasOne(DispatchedProduct::class);
+        return $this->hasMany(DispatchedProduct::class);
     }
     public function invoiceItem()
     {
@@ -57,6 +57,7 @@ class WaybillItem extends Model
             $waybill_item->invoice_item_id = $invoice_item->id;
             $waybill_item->quantity = $for_supply;
             $waybill_item->type = $invoice_item->type;
+            $waybill_item->remitted = $for_supply;
             $waybill_item->save();
 
             $waybill->invoices()->syncWithoutDetaching($invoice_item->invoice_id);

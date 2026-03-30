@@ -22,7 +22,7 @@ class ItemStocksController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
@@ -50,10 +50,8 @@ class ItemStocksController extends Controller
             'stocker',
             'confirmer'
         ])
-            ->where('warehouse_id', $warehouse_id)->where(function ($q) {
-                $q->where('balance', '>', '0');
-                // $q->orWhere('in_transit', '>', '0');
-            })
+            ->whereRaw('quantity - supplied > 0')
+            ->where('warehouse_id', $warehouse_id)
             ->where('expiry_date', '>=', $date)
             ->whereIn('item_id', $item_ids)
             ->orderBy('expiry_date')
@@ -66,8 +64,12 @@ class ItemStocksController extends Controller
             },
             'item.price',
             'stocker'
-        ])->where('warehouse_id', $warehouse_id)->whereRaw('balance > 0')->where('expiry_date', '<', $date)
-            ->orderBy('expiry_date')->get();
+        ])
+            ->where('warehouse_id', $warehouse_id)
+            ->where('expiry_date', '<', $date)
+            ->whereIn('item_id', $item_ids)
+            ->orderBy('expiry_date')
+            ->get();
 
         // $expired_products = ExpiredProduct::with(['item'])->groupBy(['batch_no'])->where('warehouse_id', $warehouse_id)->select('*', \DB::raw('SUM(quantity) as quantity'))->get();
         // $items_in_stock = ItemStockSubBatch::with(['warehouse', 'item' => function ($q) {

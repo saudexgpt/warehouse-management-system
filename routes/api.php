@@ -11,7 +11,7 @@
 */
 // api to fetch all registered products for external requests
 
-// $router->get('stabilize-delivery-trip-to-waybill-relationship', 'Invoice\InvoicesController@stabilizeDeliveryTripToWaybillRelationship');
+$router->get('stabilize-delivery-trip-to-waybill-relationship', 'Invoice\InvoicesController@stabilizeDeliveryTripToWaybillRelationship');
 $router->get('get-warehouse-products', 'ApiController@warehouseProducts');
 // $router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
 

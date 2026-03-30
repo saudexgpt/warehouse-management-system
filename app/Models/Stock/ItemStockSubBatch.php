@@ -46,6 +46,11 @@ class ItemStockSubBatch extends Model
         return $this->belongsTo(User::class, 'confirmed_by', 'id');
     }
 
+    public function supplies()
+    {
+        return $this->belongsTo(DispatchedProduct::class, 'item_stock_batch_id', 'id');
+    }
+
 
     ////////////////////////////////Methods////////////////////////////////
     public function fetchBalanceOfItemsInStock($warehouse_id, $item_id)
@@ -358,11 +363,11 @@ class ItemStockSubBatch extends Model
 
             $dispatch_product->status = 'delivered';
             $dispatch_product->save();
-            $item_stock_sub_batch = ItemStockSubBatch::find($dispatch_product->item_stock_sub_batch_id);
+            // $item_stock_sub_batch = ItemStockSubBatch::find($dispatch_product->item_stock_sub_batch_id);
 
-            $item_stock_sub_batch->in_transit -= $dispatch_product->quantity_supplied;
-            $item_stock_sub_batch->supplied += $dispatch_product->quantity_supplied;
-            $item_stock_sub_batch->save();
+            // $item_stock_sub_batch->in_transit -= $dispatch_product->quantity_supplied;
+            // $item_stock_sub_batch->supplied += $dispatch_product->quantity_supplied;
+            // $item_stock_sub_batch->save();
         }
     }
 }

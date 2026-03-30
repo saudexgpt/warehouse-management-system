@@ -90,23 +90,28 @@
         <label>Dispatched By.: {{ waybill.dispatch_company }}</label>
         <br>
         <label>Date:</label> {{ moment(waybill.created_at).format('MMMM Do YYYY') }}
-        <table v-if="waybill.dispatcher" class="table table-bordered">
-          <tbody>
-            <tr>
-              <td><label>Vehicle No.:</label> {{ waybill.dispatcher.vehicle.plate_no }}<br></td>
-            </tr>
-            <tr>
-              <td>Dispatched By:</td>
-            </tr>
-            <tr v-for="(vehicle_driver, index) in waybill.dispatcher.vehicle.vehicle_drivers" :key="index">
-              <td v-if="vehicle_driver.driver">
-                <label>{{ vehicle_driver.type }} Dispatcher</label><br>
-                <label>Name:</label> {{ vehicle_driver.driver.user.name }}<br>
-                <label>Phone:</label> {{ vehicle_driver.driver.user.phone }}<br>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-if="waybill.dispatcher">
+          <div v-if="waybill.dispatcher.vehicle">
+            <table v-if="waybill.dispatcher.vehicle.vehicle_drivers.length > 0" class="table table-bordered">
+              <tbody>
+                <tr>
+                  <td><label>Vehicle No.:</label> {{ waybill.dispatcher.vehicle.plate_no }}<br></td>
+                </tr>
+                <tr>
+                  <td>Dispatched By:</td>
+                </tr>
+                <tr v-for="(vehicle_driver, index) in waybill.dispatcher.vehicle.vehicle_drivers" :key="index">
+                  <td v-if="vehicle_driver.driver">
+                    <label>{{ vehicle_driver.type }} Dispatcher</label><br>
+                    <label>Name:</label> {{ vehicle_driver.driver.user.name }}<br>
+                    <label>Phone:</label> {{ vehicle_driver.driver.user.phone }}<br>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
       </div>
       <!-- /.col -->
     </div>
