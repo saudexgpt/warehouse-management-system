@@ -545,7 +545,7 @@ class InvoicesController extends Controller
             $total_stocked = ($stock) ? (int) $stock->total_stocked : (int) 0;
             $total_supplied = ($supplied) ? (int) $supplied->total_supplied : (int) 0;
             $total_supplied2 = ($supplied2) ? (int) $supplied2->total_supplied2 : (int) 0;
-            $total_expired = ($supplied) ? (int) $expired->total_expired : (int) 0;
+            $total_expired = ($expired) ? (int) $expired->total_expired : (int) 0;
             // $total_invoice_quantity = ($invoiced_item) ? (int) $invoiced_item->total_invoiced : (int) 0;
             // $diff = $total_stock_balance - $total_invoice_quantity;
 
