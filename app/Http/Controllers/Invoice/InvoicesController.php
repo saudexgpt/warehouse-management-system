@@ -497,11 +497,42 @@ class InvoicesController extends Controller
             $item_id = $item->item_id;
             $quantity = $item->quantity;
             $stock = ItemStockSubBatch::groupBy('item_id')
-                ->where('warehouse_id', '!=', 7)
+                // ->where('warehouse_id', '!=', 7)
                 ->where('item_id', $item_id)
-                ->where('expiry_date', '>=', $date)
-                ->whereRaw('confirmed_by IS NOT NULL')
-                ->select(\DB::raw('(SUM(quantity) -  SUM(supplied)) as total_balance'))
+                // ->where('expiry_date', '>=', $date)
+                ->where(function ($q) {
+                    $q->whereRaw('confirmed_by IS NOT NULL');
+                    $q->orWhere(function ($p) {
+                        $p->whereRaw('confirmed_by IS NULL');
+                        // $p->where('supplied', '>', 0);
+                        $p->whereRaw('supplied + expired > 0');
+                    });
+                })
+                // ->where('is_warehouse_transfered', 0)
+                ->select(\DB::raw('SUM(quantity) as total_stocked'))
+                ->first();
+            $expired = ItemStockSubBatch::groupBy('item_id')
+                ->where('warehouse_id', 8)
+                ->where('item_id', $item_id)
+                ->where(function ($q) {
+                    $q->whereRaw('confirmed_by IS NOT NULL');
+                    $q->orWhere(function ($p) {
+                        $p->whereRaw('confirmed_by IS NULL');
+                        // $p->where('supplied', '>', 0);
+                        $p->whereRaw('supplied + expired > 0');
+                    });
+                })
+                // ->where('is_warehouse_transfered', 0)
+                ->select(\DB::raw('SUM(quantity) as total_expired'))
+                ->first();
+            $supplied = DispatchedProduct::groupBy('item_id')
+                ->where('item_id', $item_id)
+                ->select(\DB::raw('SUM(quantity_supplied) as total_supplied'))
+                ->first();
+            $supplied2 = TransferRequestDispatchedProduct::groupBy(['item_id'])
+                ->where('item_id', $item_id)
+                // ->where('item_stock_sub_batches.confirmed_by', '!=', null)
+                ->select(\DB::raw('SUM(quantity_supplied) as total_supplied2'))
                 ->first();
 
             // $invoiced_item = InvoiceItem::groupBy('item_id')
@@ -511,11 +542,14 @@ class InvoicesController extends Controller
             //     ->whereRaw('quantity > quantity_supplied')
             //     ->select(columns: \DB::raw('(SUM(quantity) -  SUM(quantity_supplied)) as total_invoiced'))
             //     ->first();
-            $total_stock_balance = ($stock) ? (int) $stock->total_balance : (int) 0;
+            $total_stocked = ($stock) ? (int) $stock->total_stocked : (int) 0;
+            $total_supplied = ($supplied) ? (int) $supplied->total_supplied : (int) 0;
+            $total_supplied2 = ($supplied2) ? (int) $supplied2->total_supplied2 : (int) 0;
+            $total_expired = ($supplied) ? (int) $expired->total_expired : (int) 0;
             // $total_invoice_quantity = ($invoiced_item) ? (int) $invoiced_item->total_invoiced : (int) 0;
             // $diff = $total_stock_balance - $total_invoice_quantity;
 
-            $item->stock_balance = $total_stock_balance; // (int) $diff;
+            $item->stock_balance = $total_stocked - $total_expired - $total_supplied - $total_supplied2; // (int) $diff;
 
             if ($quantity > $item->stock_balance) {
                 $insufficient_stock_count++;
