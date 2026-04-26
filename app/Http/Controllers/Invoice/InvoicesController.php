@@ -1526,49 +1526,49 @@ class InvoicesController extends Controller
         return $this->showDeliveryTrip($delivery_trip->id, $delivery_trip->warehouse_id);
     }
 
-    public function stabilizeDeliveryTripToWaybillRelationship()
-    {
-        InvoiceItemBatch::where('quantity', '>', 0)
-            ->chunkById(200, function ($invoice_item_batches) {
-                foreach ($invoice_item_batches as $invoice_item_batch) {
-                    $quantity = $invoice_item_batch->quantity;
+    // public function stabilizeDeliveryTripToWaybillRelationship()
+    // {
+    //     InvoiceItemBatch::where('quantity', '>', 0)
+    //         ->chunkById(200, function ($invoice_item_batches) {
+    //             foreach ($invoice_item_batches as $invoice_item_batch) {
+    //                 $quantity = $invoice_item_batch->quantity;
 
-                    $waybill_item = WaybillItem::find($invoice_item_batch->waybill_item_id);
-                    $item_sub_batch = ItemStockSubBatch::find($invoice_item_batch->item_stock_sub_batch_id);
-                    if ($item_sub_batch) {
-                        $reserved_quantity = $item_sub_batch->reserved_for_supply;
+    //                 $waybill_item = WaybillItem::find($invoice_item_batch->waybill_item_id);
+    //                 $item_sub_batch = ItemStockSubBatch::find($invoice_item_batch->item_stock_sub_batch_id);
+    //                 if ($item_sub_batch) {
+    //                     $reserved_quantity = $item_sub_batch->reserved_for_supply;
 
-                        if ($quantity <= $reserved_quantity) {
-                            $dispatched_product = new DispatchedProduct();
-                            $dispatched_product->warehouse_id = $waybill_item->warehouse_id;
-                            $dispatched_product->customer_id = $waybill_item->invoice->customer_id;
-                            $dispatched_product->item_stock_sub_batch_id = $item_sub_batch->id;
-                            $dispatched_product->waybill_id = $waybill_item->waybill_id;
-                            $dispatched_product->waybill_item_id = $waybill_item->id;
-                            $dispatched_product->invoice_id = $waybill_item->invoice_id;
-                            $dispatched_product->invoice_item_id = $waybill_item->invoice_item_id;
-                            $dispatched_product->item_id = $waybill_item->item_id;
-                            $dispatched_product->remitted = 1;
-                            // $dispatched_product->instant_balance = $item_stock_batch->balance;
-                            $dispatched_product->status = 'on transit';
+    //                     if ($quantity <= $reserved_quantity) {
+    //                         $dispatched_product = new DispatchedProduct();
+    //                         $dispatched_product->warehouse_id = $waybill_item->warehouse_id;
+    //                         $dispatched_product->customer_id = $waybill_item->invoice->customer_id;
+    //                         $dispatched_product->item_stock_sub_batch_id = $item_sub_batch->id;
+    //                         $dispatched_product->waybill_id = $waybill_item->waybill_id;
+    //                         $dispatched_product->waybill_item_id = $waybill_item->id;
+    //                         $dispatched_product->invoice_id = $waybill_item->invoice_id;
+    //                         $dispatched_product->invoice_item_id = $waybill_item->invoice_item_id;
+    //                         $dispatched_product->item_id = $waybill_item->item_id;
+    //                         $dispatched_product->remitted = 1;
+    //                         // $dispatched_product->instant_balance = $item_stock_batch->balance;
+    //                         $dispatched_product->status = 'on transit';
 
-                            $dispatched_product->quantity_supplied = $quantity;
-                            $dispatched_product->save();
-                            $item_sub_batch->reserved_for_supply -= $quantity;
-                            $item_sub_batch->save();
+    //                         $dispatched_product->quantity_supplied = $quantity;
+    //                         $dispatched_product->save();
+    //                         $item_sub_batch->reserved_for_supply -= $quantity;
+    //                         $item_sub_batch->save();
 
-                            $invoice_item_batch->quantity = 0;
-                            $invoice_item_batch->save();
-                        }
-                    }
+    //                         $invoice_item_batch->quantity = 0;
+    //                         $invoice_item_batch->save();
+    //                     }
+    //                 }
 
 
 
-                }
+    //             }
 
-            }, $column = 'id');
+    //         }, $column = 'id');
 
-    }
+    // }
     // public function stabilizeDeliveryTripToWaybillRelationship()
     // {
     //     InvoiceItem::groupBy('invoice_id')
@@ -1614,21 +1614,26 @@ class InvoicesController extends Controller
 
 
     // }
-    // public function stabilizeDeliveryTripToWaybillRelationship()
-    // {
-    //     Waybill::with('trips')->chunkById(200, function ($waybills) {
-    //         foreach ($waybills as $waybill) {
-    //             $trips = $waybill->trips;
-    //             $trip_count = count($trips);
-    //             if ($trip_count > 1) {
-    //                 for ($i = 1; $i < $trip_count; $i++) {
-    //                     $trip_id = $trips[$i]->id;
-    //                     $waybill->trips()->detach($trip_id);
-    //                 }
-    //             }
-    //         }
-    //     }, $column = 'id');
-    // }
+    public function stabilizeDeliveryTripToWaybillRelationship()
+    {
+        $dispatchedProducts = DispatchedProduct::with('itemStock')->groupBy('item_stock_sub_batch_id')
+            ->select('*', \DB::raw('SUM(quantity_supplied) as total_sold'))
+            ->chunkById(200, function ($dispatchedProducts) {
+                foreach ($dispatchedProducts as $dispatchedProduct) {
+                    $itemStock = $dispatchedProduct->itemStock;
+                    if ($itemStock) {
+                        // if ($itemStock->total_sold == 0) {
+                        $itemStock->total_sold = $dispatchedProduct->total_sold;
+                        $itemStock->total_out += $dispatchedProduct->total_sold;
+                        $itemStock->save();
+                        // }
+    
+                    }
+
+                }
+            }, $column = 'id');
+
+    }
     public function changeTripVehicle(Request $request)
     {
         $actor = $this->getUser();

@@ -49,18 +49,25 @@ class WaybillItem extends Model
         }
         if ($for_supply > 0) {
 
-            $waybill_item = new WaybillItem();
-            $waybill_item->warehouse_id = $warehouse_id;
-            $waybill_item->invoice_id = $invoice_item->invoice_id;
-            $waybill_item->waybill_id = $waybill->id;
-            $waybill_item->item_id = $invoice_item->item_id;
-            $waybill_item->invoice_item_id = $invoice_item->id;
-            $waybill_item->quantity = $for_supply;
-            $waybill_item->type = $invoice_item->type;
-            $waybill_item->remitted = $for_supply;
-            $waybill_item->save();
+            $waybill_item = WaybillItem::where('invoice_item_id', $invoice_item->id)
+                ->where('quantity', $for_supply)
+                ->first();
+            if (!$waybill_item) {
+                $waybill_item = new WaybillItem();
+                $waybill_item->warehouse_id = $warehouse_id;
+                $waybill_item->invoice_id = $invoice_item->invoice_id;
+                $waybill_item->waybill_id = $waybill->id;
+                $waybill_item->item_id = $invoice_item->item_id;
+                $waybill_item->invoice_item_id = $invoice_item->id;
+                $waybill_item->quantity = $for_supply;
+                $waybill_item->type = $invoice_item->type;
+                $waybill_item->remitted = $for_supply;
+                $waybill_item->save();
 
-            $waybill->invoices()->syncWithoutDetaching($invoice_item->invoice_id);
+                $waybill->invoices()->syncWithoutDetaching($invoice_item->invoice_id);
+            }
+
+
             return $waybill_item;
         }
         // }
