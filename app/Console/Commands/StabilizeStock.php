@@ -26,7 +26,7 @@ class StabilizeStock extends Command
     public function doStabilizeStock()
     {
 
-        ItemStockSubBatch::whereRaw('quantity - total_out - expired > 0')
+        ItemStockSubBatch::whereRaw('quantity - total_out > 0')
             ->chunkById(200, function ($items_in_stock) {
                 foreach ($items_in_stock as $item_in_stock) {
                     $supplied1 = DispatchedProduct::where('item_stock_sub_batch_id', $item_in_stock->id)
