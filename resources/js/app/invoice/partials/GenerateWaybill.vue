@@ -84,9 +84,9 @@
                             <td>
                               {{ invoice_item.item.name }}
                               <div>
-                                <br><small class="label label-primary">Physical Stock: {{ invoice_item.physical_stock }} {{ invoice_item.item.package_type }}</small>
+                                <!-- <br><small class="label label-primary">Physical Stock: {{ invoice_item.physical_stock }} {{ invoice_item.item.package_type }}</small>
 
-                                <br><small class="label label-danger">Total Reserved: {{ invoice_item.reserved_for_supply }} {{ invoice_item.item.package_type }}</small>
+                                <br><small class="label label-danger">Total Reserved: {{ invoice_item.reserved_for_supply }} {{ invoice_item.item.package_type }}</small> -->
 
                                 <br><small class="label label-success">Total Available: {{ invoice_item.total_batch_balance }} {{ invoice_item.item.package_type }}</small>
                               </div>
@@ -474,14 +474,14 @@ export default {
               batches.push({
                 batch_no: stock_batch.batch_no,
                 expiry_date: stock_batch.expiry_date,
-                balance: stock_batch.balance - stock_batch.reserved_for_supply,
+                balance: stock_batch.quantity - stock_batch.total_out,
                 invoice_item_id: invoice_item.id,
                 supply_quantity: 0,
 
               });
               total_batch_balance +=
-                parseInt(stock_batch.balance) -
-                parseInt(stock_batch.reserved_for_supply);
+                parseInt(stock_batch.quantity) -
+                parseInt(stock_batch.total_out);
               reserved_for_supply += parseInt(stock_batch.reserved_for_supply);
 
               physical_stock += parseInt(stock_batch.balance);
