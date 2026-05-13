@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Customer;
 use App\Models\Invoice\DispatchedProduct;
 use App\Models\Invoice\InvoiceItem;
+use App\Models\Invoice\WaybillItem;
 use App\Models\Stock\Item;
 use App\Models\Stock\ItemStockSubBatch;
 use App\Models\Stock\ReturnedProduct;
@@ -811,5 +812,25 @@ class ApiController extends Controller
         // $items = $items->merge($customer_items);
         return response()->json(['already_sent_stocks' => $customer_items], 200);
         // $invoice_item_stock = InvoiceItemBatch::join
+    }
+
+    public function removeDuplicateWaybills()
+    {
+        $waybill_items = WaybillItem::query();
+        $waybill_items->groupBy('waybill_items.invoice_item_id', 'waybill_items.quantity')
+            ->havingRaw('COUNT(*) > 1')
+            ->select('waybill_items.invoice_item_id', 'waybill_items.quantity', DB::raw('COUNT(*) as count'))
+            ->get()->each(function ($duplicate) {
+                $duplicates_to_delete = WaybillItem::where('invoice_item_id', $duplicate->invoice_item_id)
+                    ->where('quantity', $duplicate->quantity)
+                    ->limit($duplicate->count - 1)
+                    ->get();
+                if ($duplicates_to_delete->isNotEmpty()) {
+                    foreach ($duplicates_to_delete as $duplicate_to_delete) {
+                        $duplicate_to_delete->delete();
+                    }
+                }
+            });
+        return response()->json(['message' => 'Duplicate waybills removed successfully'], 200);
     }
 }

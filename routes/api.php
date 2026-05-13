@@ -11,8 +11,10 @@
 */
 // api to fetch all registered products for external requests
 
-$router->get('stabilize-delivery-trip-to-waybill-relationship', 'Invoice\InvoicesController@stabilizeDeliveryTripToWaybillRelationship');
+// $router->get('stabilize-delivery-trip-to-waybill-relationship', 'Invoice\InvoicesController@stabilizeDeliveryTripToWaybillRelationship');
 $router->get('get-warehouse-products', 'ApiController@warehouseProducts');
+
+$router->get('remove-duplicate-waybills', 'ApiController@removeDuplicateWaybills');
 // $router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
 
 $router->post('receive-rep-stock', 'ApiController@sendRepStock');
