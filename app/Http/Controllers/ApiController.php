@@ -820,6 +820,7 @@ class ApiController extends Controller
         $waybill_items->groupBy('waybill_items.invoice_item_id', 'waybill_items.quantity')
             ->havingRaw('COUNT(*) > 1')
             ->select('waybill_items.invoice_item_id', 'waybill_items.quantity', DB::raw('COUNT(*) as count'))
+            ->where('created_at', 'LIKE', '%2026%')
             ->get()->each(function ($duplicate) {
                 $duplicates_to_delete = WaybillItem::where('invoice_item_id', $duplicate->invoice_item_id)
                     ->where('quantity', $duplicate->quantity)
