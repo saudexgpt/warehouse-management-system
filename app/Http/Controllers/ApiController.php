@@ -820,7 +820,7 @@ class ApiController extends Controller
         WaybillItem::whereIn('invoice_item_id', [242604, 248106, 261043, 261040, 261044, 261042, 260950, 260650, 263461, 263464, 264737, 265279, 265190, 265191, 261602, 261599, 266692, 266902, 267639, 264446, 268052, 265229, 268460, 268470, 268781, 270089, 271239, 270877, 270873, 270876, 270870, 267636, 272546, 272990, 272667, 265307, 272980, 272986, 272943, 272935, 273052, 272973, 273040, 273077, 273079, 273084, 273086, 273159, 273158, 272765, 273135, 273138, 274238, 274239, 274241, 273265])
             ->chunkById(200, function ($waybill_items) {
                 foreach ($waybill_items as $waybill_item) {
-                    $supplied = DispatchedProduct::where('waybill_item_id', $waybill_items->id)->first();
+                    $supplied = DispatchedProduct::where('waybill_item_id', $waybill_item->id)->first();
                     if (!$supplied) {
                         $waybill_item->delete();
                     }
