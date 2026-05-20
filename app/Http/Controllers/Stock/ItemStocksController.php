@@ -50,7 +50,7 @@ class ItemStocksController extends Controller
             'stocker',
             'confirmer'
         ])
-            ->whereRaw('quantity - supplied > 0')
+            ->whereRaw('quantity - total_out - expired > 0')
             ->where('warehouse_id', $warehouse_id)
             ->where('expiry_date', '>=', $date)
             ->whereIn('item_id', $item_ids)
