@@ -50,11 +50,11 @@ class ItemStocksController extends Controller
             'stocker',
             'confirmer'
         ])
-            ->whereRaw('quantity - total_out - expired > 0')
+            ->whereRaw('quantity - supplied - expired > 0')
             ->where('warehouse_id', $warehouse_id)
             ->where('expiry_date', '>=', $date)
             ->whereIn('item_id', $item_ids)
-            ->select('*', \DB::raw('(quantity - total_out - expired) as balance'))
+            ->select('*', \DB::raw('(quantity - supplied - expired) as balance'))
             ->orderBy('expiry_date')
             ->get();
 
