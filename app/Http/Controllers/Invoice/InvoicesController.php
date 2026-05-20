@@ -456,7 +456,7 @@ class InvoicesController extends Controller
             },
             'item.stocks' => function ($p) use ($warehouse_id) {
                 $p->where('warehouse_id', $warehouse_id)
-                    ->whereRaw('quantity - total_out - expired > 0')
+                    ->whereRaw('quantity - supplied - expired > 0')
                     ->whereRaw('confirmed_by IS NOT NULL');
             }
         ])
