@@ -54,6 +54,7 @@ class ItemStocksController extends Controller
             ->where('warehouse_id', $warehouse_id)
             ->where('expiry_date', '>=', $date)
             ->whereIn('item_id', $item_ids)
+            ->select('*', \DB::raw('(quantity - total_out - expired) as balance'))
             ->orderBy('expiry_date')
             ->get();
 

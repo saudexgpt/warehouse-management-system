@@ -72,10 +72,10 @@
                 <br><small v-html="showItemsInCartons(row.in_transit, row.item.quantity_per_carton)" />
               </div> -->
               <div slot="supplied" slot-scope="{row}" class="alert alert-danger">
-                {{ parseInt(row.supplied) }} {{ formatPackageType(row.item.package_type) }}
-                <br><small v-html="showItemsInCartons((parseInt(row.supplied)), row.item.quantity_per_carton)" />
+                {{ parseInt(row.total_sold) }} {{ formatPackageType(row.item.package_type) }}
+                <br><small v-html="showItemsInCartons((parseInt(row.total_sold)), row.item.quantity_per_carton)" />
               </div>
-              <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
+              <!-- <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
                 <a @click="showReservationTransactions(row)">
                   {{ row.reserved_for_supply }} {{ formatPackageType(row.item.package_type) }}
                 </a>
@@ -84,7 +84,7 @@
               <div slot="in_stock" slot-scope="{row}" class="alert alert-primary">
                 {{ row.balance }} {{ formatPackageType(row.item.package_type) }}
                 <br><small v-html="showItemsInCartons(row.balance, row.item.quantity_per_carton)" />
-              </div>
+              </div> -->
               <div slot="balance" slot-scope="{row}" class="alert alert-success">
                 {{ parseInt(row.balance) }} {{ formatPackageType(row.item.package_type) }}
                 <br><small v-html="showItemsInCartons(row.balance, row.item.quantity_per_carton)" />
