@@ -474,14 +474,14 @@ export default {
               batches.push({
                 batch_no: stock_batch.batch_no,
                 expiry_date: stock_batch.expiry_date,
-                balance: stock_batch.quantity - stock_batch.total_out - stock_batch.expired,
+                balance: stock_batch.quantity - stock_batch.supplied - stock_batch.expired,
                 invoice_item_id: invoice_item.id,
                 supply_quantity: 0,
 
               });
               total_batch_balance +=
                 parseInt(stock_batch.quantity) -
-                parseInt(stock_batch.total_out);
+                parseInt(stock_batch.supplied);
               reserved_for_supply += parseInt(stock_batch.reserved_for_supply);
 
               physical_stock += parseInt(stock_batch.balance);
