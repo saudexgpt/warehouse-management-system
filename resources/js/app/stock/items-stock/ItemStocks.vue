@@ -71,9 +71,9 @@
                 {{ row.in_transit }} {{ formatPackageType(row.item.package_type) }}
                 <br><small v-html="showItemsInCartons(row.in_transit, row.item.quantity_per_carton)" />
               </div> -->
-              <div slot="supplied" slot-scope="{row}" class="alert alert-danger">
-                {{ parseInt(row.total_sold) }} {{ formatPackageType(row.item.package_type) }}
-                <br><small v-html="showItemsInCartons((parseInt(row.total_sold)), row.item.quantity_per_carton)" />
+              <div slot="total_out" slot-scope="{row}" class="alert alert-danger">
+                {{ parseInt(row.total_out) }} {{ formatPackageType(row.item.package_type) }}
+                <br><small v-html="showItemsInCartons((parseInt(row.total_out)), row.item.quantity_per_carton)" />
               </div>
               <!-- <div slot="reserved_for_supply" slot-scope="{row}" class="alert alert-default">
                 <a @click="showReservationTransactions(row)">
@@ -254,7 +254,7 @@ export default {
       warehouses: [],
       items_in_stock: [],
       expired_products: [],
-      columns: ['action', 'stocker.name', 'confirmer.name', 'item.name', 'item.price.sale_price', 'item.quantity_per_carton', 'batch_no', 'goods_received_note', 'quantity', /* 'in_transit'*/ 'supplied', 'balance', /* 'expired', 'reserved_for_supply',  'in_stock',*/ 'created_at', 'expiry_date', 'is_warehouse_transfered'],
+      columns: ['action', 'stocker.name', 'confirmer.name', 'item.name', 'item.price.sale_price', 'item.quantity_per_carton', 'batch_no', 'goods_received_note', 'quantity', /* 'in_transit'*/ 'total_out', 'balance', /* 'expired', 'reserved_for_supply',  'in_stock',*/ 'created_at', 'expiry_date', 'is_warehouse_transfered'],
 
       options: {
         headings: {
@@ -267,7 +267,7 @@ export default {
           goods_received_note: 'GRN',
           quantity: 'QTY Stocked',
           // in_transit: 'On Trans',
-          supplied: 'Supplied',
+          total_out: 'Supplied',
           // reserved_for_supply: 'Waybill Reserved',
           in_stock: 'PHYS. Stock',
           balance: 'Main Bal.',
