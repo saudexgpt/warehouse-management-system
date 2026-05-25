@@ -1121,7 +1121,7 @@ class InvoicesController extends Controller
             if ($supply_quantity > 0) {
 
                 $batches_of_items_in_stock = ItemStockSubBatch::where(['warehouse_id' => $waybill_item->warehouse_id, 'item_id' => $item_id])
-                    ->where('batch_no', $batch->batch_no)
+                    // ->where('batch_no', $batch->batch_no)
                     ->where('expiry_date', $batch->expiry_date)
                     // ->whereRaw('balance - reserved_for_supply > 0')
                     ->whereRaw('confirmed_by IS NOT NULL')
