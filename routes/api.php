@@ -14,6 +14,8 @@
 // $router->get('stabilize-delivery-trip-to-waybill-relationship', 'Invoice\InvoicesController@stabilizeDeliveryTripToWaybillRelationship');
 $router->get('get-warehouse-products', 'ApiController@warehouseProducts');
 
+$router->get('do-stabilize-stock', 'ApiController@doStabilizeStock');
+
 $router->get('remove-duplicate-waybills', 'ApiController@removeDuplicateWaybills');
 // $router->get('delete-restored-invoices', 'Invoice\InvoicesController@deleteRestoredInvoices');
 
