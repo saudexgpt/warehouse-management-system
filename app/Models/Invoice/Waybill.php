@@ -11,6 +11,9 @@ class Waybill extends Model
 {
     //
     use SoftDeletes;
+
+
+    protected $fillable = ['warehouse_id', 'waybill_no', 'status'];
     public function invoices()
     {
         return $this->belongsToMany(Invoice::class);

@@ -12,6 +12,21 @@ class DispatchedProduct extends Model
 {
     //
     use SoftDeletes;
+
+    protected $fillable = [
+        'warehouse_id',
+        'customer_id',
+        'item_stock_sub_batch_id',
+        'waybill_id',
+        'waybill_item_id',
+        'invoice_id',
+        'invoice_item_id',
+        'item_id',
+        'quantity_supplied',
+        'remitted',
+        'status',
+        'on transit'
+    ];
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);

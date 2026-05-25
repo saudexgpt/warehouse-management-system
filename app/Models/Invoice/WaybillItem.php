@@ -10,6 +10,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class WaybillItem extends Model
 {
     use SoftDeletes;
+
+    protected $fillable = [
+        'warehouse_id',
+        'invoice_id',
+        'waybill_id',
+        'item_id',
+        'invoice_item_id',
+        'quantity',
+        'type',
+        'remitted'
+    ];
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);
@@ -39,37 +50,5 @@ class WaybillItem extends Model
         return $this->belongsTo(InvoiceItem::class);
     }
 
-    public function createWaybillItems($waybill, $warehouse_id, $invoice_item, $batches)
-    {
-        // foreach ($invoice_items as $invoice_item) {
-        $for_supply = 0;
-        foreach ($batches as $batch) {
 
-            $for_supply += $batch->supply_quantity;
-        }
-        if ($for_supply > 0) {
-
-            $waybill_item = WaybillItem::where('invoice_item_id', $invoice_item->id)
-                ->where('quantity', $for_supply)
-                ->first();
-            if (!$waybill_item) {
-                $waybill_item = new WaybillItem();
-                $waybill_item->warehouse_id = $warehouse_id;
-                $waybill_item->invoice_id = $invoice_item->invoice_id;
-                $waybill_item->waybill_id = $waybill->id;
-                $waybill_item->item_id = $invoice_item->item_id;
-                $waybill_item->invoice_item_id = $invoice_item->id;
-                $waybill_item->quantity = $for_supply;
-                $waybill_item->type = $invoice_item->type;
-                $waybill_item->remitted = $for_supply;
-                $waybill_item->save();
-
-                $waybill->invoices()->syncWithoutDetaching($invoice_item->invoice_id);
-            }
-
-
-            return $waybill_item;
-        }
-        // }
-    }
 }

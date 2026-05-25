@@ -38,6 +38,7 @@ class StabilizeStock extends Command
                     $item_in_stock->total_sold = $supplied1;
                     $item_in_stock->total_transferred = $supplied2;
                     $item_in_stock->total_out = $supplied1 + $supplied2;
+                    $item_in_stock->balance = $item_in_stock->quantity - $item_in_stock->total_out;
                     $item_in_stock->save();
                 }
             }, $column = 'id');

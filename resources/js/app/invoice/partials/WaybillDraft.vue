@@ -55,9 +55,9 @@
           </td>
           <td>
             <div>
-              <small>Physical Stock: {{ invoice_item.physical_stock }} {{ invoice_item.item.package_type }}</small>
+              <!-- <small>Physical Stock: {{ invoice_item.physical_stock }} {{ invoice_item.item.package_type }}</small>
 
-              <br><small>Total Reserved: {{ invoice_item.reserved_for_supply }} {{ invoice_item.item.package_type }}</small>
+              <br><small>Total Reserved: {{ invoice_item.reserved_for_supply }} {{ invoice_item.item.package_type }}</small> -->
 
               <br><small>Total Available: {{ invoice_item.total_batch_balance }} {{ invoice_item.item.package_type }}</small>
             </div>
